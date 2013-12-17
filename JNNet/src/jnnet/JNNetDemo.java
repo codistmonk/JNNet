@@ -8,20 +8,20 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
 import jnnet.JNNetDemo.Neuron.Input;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -41,16 +41,20 @@ public final class JNNetDemo {
 	 * @throws Exception 
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
-		final ModifiableValueSource xSource = new ModifiableValueSource();
-		final ModifiableValueSource ySource = new ModifiableValueSource();
-		final Network network = new Network();
-		
-		network.addInput(xSource);
-		network.addInput(ySource);
-		network.addNeuron(halfspace(xSource, ySource, -10.0, +10.0, +1.0, -1.0));
-		network.addNeuron(halfspace(xSource, ySource, +10.0, +10.0, -1.0, -1.0));
-		network.addNeuron(halfspace(xSource, ySource, + 0.0, -10.0, +0.0, +1.0));
-		network.addOutput(combineLast(network.getNeurons(), 1.0, 1.0, 1.0));
+//		final Network network = new Network();
+//		final ModifiableValueSource xSource = new ModifiableValueSource();
+//		final ModifiableValueSource ySource = new ModifiableValueSource();
+//		
+//		network.addInput(xSource);
+//		network.addInput(ySource);
+////		network.addNeuron(halfspace(xSource, ySource, -10.0, +10.0, +1.0, -1.0));
+////		network.addNeuron(halfspace(xSource, ySource, +10.0, +10.0, -1.0, -1.0));
+////		network.addNeuron(halfspace(xSource, ySource, + 0.0, -10.0, +0.0, +1.0));
+////		network.addOutput(combineLast(network.getNeurons(), 1.0, 1.0, 1.0));
+//		network.addNeuron(halfspace(xSource, ySource, -10.0, +10.0, +0.30, +0.03));
+//		network.addNeuron(halfspace(xSource, ySource, +10.0, +10.0, -0.92, +0.91));
+//		network.addOutput(combineLast(network.getNeurons(), +0.26, -0.96));
+		final Network network = newNetwork(10.0, 2, 3, 1);
 		
 		final int w = 512;
 		final int h = w;
@@ -77,7 +81,7 @@ public final class JNNetDemo {
 				new TrainingItem(new double[] { + 0.0, +90.0 }, new double[] { 0.0 }),
 		};
 		
-		for (int i = 0; i < 1000; ++i) {
+		for (int i = 0; i < 2000; ++i) {
 			Tools.gc(20L);
 			
 			debugPrint(i);
@@ -145,6 +149,59 @@ public final class JNNetDemo {
 		return new Neuron(inputs);
 	}
 	
+	public static final Network newNetwork(final double scale, final int inputCount, final int... layers) {
+		final Network result = new Network();
+		final Random random = new Random(inputCount + Arrays.hashCode(layers));
+		
+		for (int i = 0; i < inputCount; ++i) {
+			result.getInputs().add(new ModifiableValueSource());
+		}
+		
+		final int layerCount = layers.length;
+		
+		for (int i = 0; i < layerCount; ++i) {
+			final int layerSize = layers[i];
+			final List<? extends ValueSource> sources;
+			final int sourceCount;
+			
+			if (i == 0) {
+				sources = result.getInputs();
+				sourceCount = inputCount;
+			} else {
+				sources = result.getNeurons();
+				sourceCount = layers[i - 1];
+			}
+			
+			final List<Neuron> layer = new ArrayList<>(layerSize);
+			
+			for (int j = 0; j < layerSize; ++j) {
+				final Neuron neuron = new Neuron(new Input[sourceCount + 1]);
+				
+				for (int k = 0; k < sourceCount; ++k) {
+					neuron.getInputs()[k] = new Input(sources.get(sources.size() - sourceCount + k), 2.0 * random.nextDouble() - 1.0);
+					debugPrint(neuron.getInputs()[k].getWeight());
+				}
+				
+				neuron.getInputs()[sourceCount] = new Input(ONE, (2.0 * random.nextDouble() - 1.0) * scale);
+				debugPrint(neuron.getInputs()[sourceCount].getWeight());
+				
+				layer.add(neuron);
+			}
+			
+			for (final Neuron neuron : layer) {
+				if (i < layerCount - 1) {
+					debugPrint();
+					result.addNeuron(neuron);
+				} else {
+					debugPrint();
+					result.addOutput(neuron);
+				}
+			}
+		}
+		
+		return result;
+	}
+	
 	public static final Neuron halfspace(final ValueSource xSource, final ValueSource ySource,
 			final double locationX, final double locationY, final double directionX, final double directionY) {
 		return new Neuron(
@@ -192,8 +249,8 @@ public final class JNNetDemo {
 					
 					double newError = this.computeError(network);
 					
-					debugPrint(Arrays.toString(this.getInputs()), Arrays.toString(this.getOutputs()), network.getOutputs().get(0).getValue());
-					debugPrint(error, newError);
+//					debugPrint(Arrays.toString(this.getInputs()), Arrays.toString(this.getOutputs()), network.getOutputs().get(0).getValue());
+//					debugPrint(error, newError);
 					
 					if (error < newError) {
 						input.setWeight(weight - weightDelta * error);
