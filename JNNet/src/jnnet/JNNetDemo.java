@@ -1,12 +1,16 @@
 package jnnet;
 
+import static java.util.Collections.sort;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.SampleModel;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -15,8 +19,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
+import jnnet.JNNetDemo.EvolutionaryMinimizer.ValuedSample;
 import jnnet.Neuron.Input;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -38,7 +42,8 @@ public final class JNNetDemo {
 	 * @throws Exception 
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
-		final Network network = newNetwork(5.0, 2, 3, 1);
+		final double scale = 5.0;
+		final Network network = newNetwork(scale, 2, 3, 1);
 		
 		final int w = 256;
 		final int h = w;
@@ -64,14 +69,25 @@ public final class JNNetDemo {
 				new TrainingItem(new double[] { +90.0, -90.0 }, new double[] { 0.0 }),
 				new TrainingItem(new double[] { + 0.0, +90.0 }, new double[] { 0.0 }),
 		};
+		final int trainingItemCount = trainingItems.length;
+		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(3, NetworkEvaluator.makeScale(network, scale));
+		final NetworkEvaluator[] evaluators = new NetworkEvaluator[trainingItemCount];
+		
+		for (int i = 0; i < trainingItemCount; ++i) {
+			evaluators[i] = new NetworkEvaluator(network, trainingItems[i]);
+		}
 		
 		for (int i = 0; i < 200; ++i) {
 			Tools.gc(20L);
 			
 			debugPrint(i);
 			
-			for (final TrainingItem trainingItem : trainingItems) {
-				trainingItem.train(network, 0.01);
+//			for (final TrainingItem trainingItem : trainingItems) {
+//				trainingItem.train(network, 0.01);
+//			}
+			
+			for (final NetworkEvaluator evaluator : evaluators) {
+				minimizer.update(evaluator);
 			}
 			
 			updateImage(network, image);
@@ -189,6 +205,202 @@ public final class JNNetDemo {
 	
 	public static final <T> T get(final List<T> list, final int index) {
 		return 0 <= index ? list.get(index) : list.get(index + list.size());
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-12-17)
+	 */
+	public static final class NetworkEvaluator implements EvolutionaryMinimizer.Evaluator {
+		
+		private final Network network;
+		
+		private final TrainingItem trainingItem;
+		
+		public NetworkEvaluator(final Network network, final TrainingItem trainingItem) {
+			this.network = network;
+			this.trainingItem = trainingItem;
+		}
+		
+		@Override
+		public final double evaluate(final double[] sample) {
+			int i = 0;
+			
+			for (final Neuron neuron : this.network.getNeurons()) {
+				for (final Input input : neuron.getInputs()) {
+					input.setWeight(sample[i++]);
+				}
+			}
+			
+			this.trainingItem.setInputs(this.network);
+			
+			return this.trainingItem.computeError(this.network);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 4159192974740277150L;
+		
+		public static final void setWeights(final Network network, final double[] weights) {
+			int i = 0;
+			
+			for (final Neuron neuron : network.getNeurons()) {
+				for (final Input input : neuron.getInputs()) {
+					input.setWeight(weights[i++]);
+				}
+			}
+		}
+		
+		public static final double[] makeScale(final Network network, final double scale) {
+			final List<Double> protoresult = new ArrayList<Double>();
+			
+			for (final Neuron neuron : network.getNeurons()) {
+				for (final Input input : neuron.getInputs()) {
+					if (!(input.getValueSource() instanceof ConstantValueSource)) {
+						protoresult.add(-1.0);
+					} else {
+						protoresult.add(-scale);
+					}
+				}
+			}
+			
+			final int n = protoresult.size();
+			final double[] result = new double[n];
+			
+			for (int i = 0; i < n; ++i) {
+				result[i] = protoresult.get(i);
+			}
+			
+			return result;
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-12-17)
+	 */
+	public static final class EvolutionaryMinimizer implements Serializable {
+		
+		private final Random random;
+		
+		private final List<ValuedSample> population;
+		
+		private final double[] scale;
+		
+		private Evaluator evaluator;
+		
+		public EvolutionaryMinimizer(final int populationSize, final double... scale) {
+			this.random = new Random(populationSize + Arrays.hashCode(scale));
+			this.population = new ArrayList<ValuedSample>(populationSize);
+			this.scale = scale;
+			
+			for (int i = 0; i < populationSize; ++i) {
+				this.getPopulation().add(this.new ValuedSample(this.randomize(null)));
+			}
+		}
+		
+		public final double[] randomize(final double[] sample) {
+			final int n = this.scale.length;
+			final double[] result = sample != null ? sample : new double[n];
+			
+			for (int i = 0; i < n; ++i) {
+				final double scale = this.scale[i];
+				final double random = this.random.nextDouble();
+				result[i] = scale * (scale < 0.0 ? 2.0 * random - 1.0 : random);
+			}
+			
+			return result;
+		}
+		
+		public final void update(final Evaluator evaluator) {
+			this.evaluator = evaluator;
+			
+			sort(this.getPopulation());
+			
+			final int populationSize = this.getPopulation().size();
+			
+			this.randomize(this.getPopulation().get(populationSize - 1).getSample());
+			
+			final ValuedSample sample0 = this.getPopulation().get(0);
+			
+			for (int i = 1; i < populationSize; ++i) {
+				this.getPopulation().get(i).mergeWith(sample0.getSample());
+			}
+			
+			sort(this.getPopulation());
+			
+			this.evaluator = null;
+		}
+		
+		public final Evaluator getEvaluator() {
+			return this.evaluator;
+		}
+		
+		public final List<ValuedSample> getPopulation() {
+			return this.population;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -763903170794513358L;
+		
+		/**
+		 * @author codistmonk (creation 2013-12-17)
+		 */
+		public static abstract interface Evaluator extends Serializable {
+			
+			public abstract double evaluate(final double[] sample);
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2013-12-17)
+		 */
+		public final class ValuedSample implements Serializable, Comparable<ValuedSample> {
+			
+			private final double[] sample;
+			
+			private double value;
+			
+			public ValuedSample(final double[] sample) {
+				this.sample = sample;
+			}
+			
+			public final double[] getSample() {
+				return this.sample;
+			}
+			
+			public final double getValue() {
+				return this.value;
+			}
+			
+			public final void updateValue() {
+				this.value = EvolutionaryMinimizer.this.getEvaluator().evaluate(sample);
+			}
+			
+			public final void mergeWith(final double[] sample) {
+				final int n = sample.length;
+				
+				for (int i = 0; i < n; ++i) {
+					this.getSample()[i] = (this.getSample()[i] + sample[i]) / 2.0;
+				}
+				
+				this.updateValue();
+			}
+			
+			@Override
+			public final int compareTo(final ValuedSample that) {
+				return Double.compare(this.getValue(), that.getValue());
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -1359740563674338330L;
+			
+		}
+		
 	}
 	
 }

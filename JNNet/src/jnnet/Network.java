@@ -16,9 +16,9 @@ public final class Network implements Serializable {
 	private final List<Neuron> outputs;
 	
 	public Network() {
-		this.inputs = new ArrayList<>();
-		this.neurons = new ArrayList<>();
-		this.outputs = new ArrayList<>();
+		this.inputs = new ArrayList<ModifiableValueSource>();
+		this.neurons = new ArrayList<Neuron>();
+		this.outputs = new ArrayList<Neuron>();
 	}
 	
 	public final List<ModifiableValueSource> getInputs() {
