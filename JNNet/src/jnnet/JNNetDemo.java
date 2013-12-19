@@ -6,11 +6,9 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.SampleModel;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -19,8 +17,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
-import jnnet.JNNetDemo.EvolutionaryMinimizer.ValuedSample;
 import jnnet.Neuron.Input;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -69,26 +67,26 @@ public final class JNNetDemo {
 				new TrainingItem(new double[] { +90.0, -90.0 }, new double[] { 0.0 }),
 				new TrainingItem(new double[] { + 0.0, +90.0 }, new double[] { 0.0 }),
 		};
-		final int trainingItemCount = trainingItems.length;
-		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(3, NetworkEvaluator.makeScale(network, scale));
-		final NetworkEvaluator[] evaluators = new NetworkEvaluator[trainingItemCount];
+		final NetworkEvaluator evaluator = new NetworkEvaluator(network, trainingItems);
+		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(
+				evaluator, 100, NetworkEvaluator.makeScale(network, scale));
 		
-		for (int i = 0; i < trainingItemCount; ++i) {
-			evaluators[i] = new NetworkEvaluator(network, trainingItems[i]);
-		}
-		
-		for (int i = 0; i < 200; ++i) {
+		for (int i = 0; i < 400; ++i) {
 			Tools.gc(20L);
 			
 			debugPrint(i);
 			
-//			for (final TrainingItem trainingItem : trainingItems) {
-//				trainingItem.train(network, 0.01);
-//			}
-			
-			for (final NetworkEvaluator evaluator : evaluators) {
-				minimizer.update(evaluator);
+			if (true) {
+				for (final TrainingItem trainingItem : trainingItems) {
+					trainingItem.train(network, 0.1);
+				}
+			} else {
+				minimizer.update();
+				
+				NetworkEvaluator.setWeights(network, minimizer.getPopulation().get(0).getSample());
 			}
+			
+			debugPrint(evaluator.evaluate());
 			
 			updateImage(network, image);
 			
@@ -214,26 +212,30 @@ public final class JNNetDemo {
 		
 		private final Network network;
 		
-		private final TrainingItem trainingItem;
+		private final TrainingItem[] trainingItems;
 		
-		public NetworkEvaluator(final Network network, final TrainingItem trainingItem) {
+		public NetworkEvaluator(final Network network, final TrainingItem... trainingItems) {
 			this.network = network;
-			this.trainingItem = trainingItem;
+			this.trainingItems = trainingItems;
 		}
 		
 		@Override
 		public final double evaluate(final double[] sample) {
-			int i = 0;
+			setWeights(this.network, sample);
 			
-			for (final Neuron neuron : this.network.getNeurons()) {
-				for (final Input input : neuron.getInputs()) {
-					input.setWeight(sample[i++]);
-				}
+			return this.evaluate();
+		}
+		
+		public final double evaluate() {
+			double result = 0.0;
+			
+			for (final TrainingItem trainingItem : this.trainingItems) {
+				trainingItem.setInputs(this.network);
+				
+				result += trainingItem.computeError(this.network);
 			}
 			
-			this.trainingItem.setInputs(this.network);
-			
-			return this.trainingItem.computeError(this.network);
+			return result;
 		}
 		
 		/**
@@ -287,16 +289,19 @@ public final class JNNetDemo {
 		
 		private final double[] scale;
 		
-		private Evaluator evaluator;
+		private final Evaluator evaluator;
 		
-		public EvolutionaryMinimizer(final int populationSize, final double... scale) {
+		public EvolutionaryMinimizer(final Evaluator evaluator, final int populationSize, final double... scale) {
 			this.random = new Random(populationSize + Arrays.hashCode(scale));
 			this.population = new ArrayList<ValuedSample>(populationSize);
 			this.scale = scale;
+			this.evaluator = evaluator;
 			
 			for (int i = 0; i < populationSize; ++i) {
-				this.getPopulation().add(this.new ValuedSample(this.randomize(null)));
+				this.getPopulation().add(this.new ValuedSample(this.randomize(null)).updateValue());
 			}
+			
+			sort(this.getPopulation());
 		}
 		
 		public final double[] randomize(final double[] sample) {
@@ -312,24 +317,16 @@ public final class JNNetDemo {
 			return result;
 		}
 		
-		public final void update(final Evaluator evaluator) {
-			this.evaluator = evaluator;
-			
-			sort(this.getPopulation());
-			
+		public final void update() {
 			final int populationSize = this.getPopulation().size();
 			
 			this.randomize(this.getPopulation().get(populationSize - 1).getSample());
 			
-			final ValuedSample sample0 = this.getPopulation().get(0);
-			
-			for (int i = 1; i < populationSize; ++i) {
-				this.getPopulation().get(i).mergeWith(sample0.getSample());
+			for (int i = populationSize - 1; 1 <= i; --i) {
+				this.getPopulation().get(i).mergeWith(this.getPopulation().get((i + 1) % populationSize).getSample());
 			}
 			
 			sort(this.getPopulation());
-			
-			this.evaluator = null;
 		}
 		
 		public final Evaluator getEvaluator() {
@@ -375,15 +372,19 @@ public final class JNNetDemo {
 				return this.value;
 			}
 			
-			public final void updateValue() {
-				this.value = EvolutionaryMinimizer.this.getEvaluator().evaluate(sample);
+			public final ValuedSample updateValue() {
+				this.value = EvolutionaryMinimizer.this.getEvaluator().evaluate(this.getSample());
+				
+				return this;
 			}
 			
 			public final void mergeWith(final double[] sample) {
 				final int n = sample.length;
+				final double preservation = 0.5;
+				final double renewal = 1.0 - preservation;
 				
 				for (int i = 0; i < n; ++i) {
-					this.getSample()[i] = (this.getSample()[i] + sample[i]) / 2.0;
+					this.getSample()[i] = this.getSample()[i] * preservation + sample[i] * renewal;
 				}
 				
 				this.updateValue();
