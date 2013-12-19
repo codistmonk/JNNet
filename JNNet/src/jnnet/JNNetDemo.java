@@ -185,7 +185,7 @@ public final class JNNetDemo {
 				sourceCount = layers[i - 1];
 			}
 			
-			final List<Neuron> layer = new ArrayList<>(layerSize);
+			final List<Neuron> layer = new ArrayList<Neuron>(layerSize);
 			
 			for (int j = 0; j < layerSize; ++j) {
 				final Neuron neuron = new Neuron(new Input[sourceCount + 1]);
