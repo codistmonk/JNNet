@@ -1,5 +1,8 @@
 package jnnet;
 
+import static java.lang.Math.PI;
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
 import static java.util.Collections.sort;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
@@ -40,7 +43,7 @@ public final class JNNetDemo {
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final double scale = 5.0;
-		final Network network = newNetwork(scale, 2, 6, 6, 6, 1);
+		final Network network = newNetwork(scale, 2, 6, 1);
 		
 		final int w = 256;
 		final int h = w;
@@ -58,19 +61,40 @@ public final class JNNetDemo {
 		
 		SwingTools.show(imageComponent, "ANN output", false);
 		
-		final TrainingItem[] trainingItems = {
-				new TrainingItem(new double[] { -15.0, -15.0 }, new double[] { 1.0 }),
-				new TrainingItem(new double[] { +15.0, -15.0 }, new double[] { 1.0 }),
-				new TrainingItem(new double[] { + 0.0, +15.0 }, new double[] { 1.0 }),
-				new TrainingItem(new double[] { -90.0, -90.0 }, new double[] { 0.0 }),
-				new TrainingItem(new double[] { +90.0, -90.0 }, new double[] { 0.0 }),
-				new TrainingItem(new double[] { + 0.0, +90.0 }, new double[] { 0.0 }),
-		};
-		final NetworkEvaluator evaluator = new NetworkEvaluator(network, trainingItems);
+		final List<TrainingItem> trainingItems = new ArrayList<TrainingItem>();
+		
+		{
+			final double r1 = 20.0;
+			final double r2 = 80.0;
+			final int n1 = (int) r1 * 2;
+			final int n2 = (int) r2 * 2;
+			final Random random = new Random(n1 + n2);
+			
+			for (int i = 0; i < n1; ++i) {
+				final double angle = random.nextDouble() * 2.0 * PI;
+				final double r = r1 * (1.0 + (random.nextDouble() - 0.5) / 4.0);
+				trainingItems.add(new TrainingItem(new double[] { r * cos(angle), r * sin(angle) }, new double[] { 1.0 }));
+			}
+			
+			for (int i = 0; i < n1; ++i) {
+				final double angle = random.nextDouble() * 2.0 * PI;
+				final double r = r2 * (1.0 + (random.nextDouble() - 0.5) / 4.0);
+				trainingItems.add(new TrainingItem(new double[] { r * cos(angle), r * sin(angle) }, new double[] { 0.0 }));
+			}
+		}
+//		final TrainingItem[] trainingItems = {
+//				new TrainingItem(new double[] { -15.0, -15.0 }, new double[] { 1.0 }),
+//				new TrainingItem(new double[] { +15.0, -15.0 }, new double[] { 1.0 }),
+//				new TrainingItem(new double[] { + 0.0, +15.0 }, new double[] { 1.0 }),
+//				new TrainingItem(new double[] { -90.0, -90.0 }, new double[] { 0.0 }),
+//				new TrainingItem(new double[] { +90.0, -90.0 }, new double[] { 0.0 }),
+//				new TrainingItem(new double[] { + 0.0, +90.0 }, new double[] { 0.0 }),
+//		};
+		final NetworkEvaluator evaluator = new NetworkEvaluator(network, trainingItems.toArray(new TrainingItem[0]));
 		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(
 				evaluator, 100, NetworkEvaluator.makeScale(network, scale));
 		
-		for (int i = 0; i < 1000; ++i) {
+		for (int i = 0; i < 800; ++i) {
 			Tools.gc(20L);
 			
 			debugPrint(i);
@@ -242,7 +266,7 @@ public final class JNNetDemo {
 				for (final Input input : neuron.getInputs()) {
 					final double weight = input.getWeight();
 					
-					input.setWeight(weight + weightDelta * error);
+					input.setWeight(weight + weightDelta * error * (Math.random() - 0.5));
 					
 					double newError = this.evaluate();
 					
