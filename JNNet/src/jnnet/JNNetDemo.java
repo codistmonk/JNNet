@@ -18,7 +18,6 @@ import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
 import jnnet.Neuron.Input;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -41,7 +40,7 @@ public final class JNNetDemo {
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final double scale = 5.0;
-		final Network network = newNetwork(scale, 2, 3, 1);
+		final Network network = newNetwork(scale, 2, 6, 6, 6, 1);
 		
 		final int w = 256;
 		final int h = w;
@@ -71,15 +70,13 @@ public final class JNNetDemo {
 		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(
 				evaluator, 100, NetworkEvaluator.makeScale(network, scale));
 		
-		for (int i = 0; i < 400; ++i) {
+		for (int i = 0; i < 1000; ++i) {
 			Tools.gc(20L);
 			
 			debugPrint(i);
 			
 			if (true) {
-				for (final TrainingItem trainingItem : trainingItems) {
-					trainingItem.train(network, 0.1);
-				}
+				evaluator.train(0.1);
 			} else {
 				minimizer.update();
 				
@@ -236,6 +233,31 @@ public final class JNNetDemo {
 			}
 			
 			return result;
+		}
+		
+		public final void train(final double weightDelta) {
+			double error = this.evaluate();
+			
+			for (final Neuron neuron : this.network.getNeurons()) {
+				for (final Input input : neuron.getInputs()) {
+					final double weight = input.getWeight();
+					
+					input.setWeight(weight + weightDelta * error);
+					
+					double newError = this.evaluate();
+					
+					if (error < newError) {
+						input.setWeight(weight - weightDelta * error);
+						newError = this.evaluate();
+					}
+					
+					if (error <= newError) {
+						input.setWeight(weight);
+					} else {
+						error = newError;
+					}
+				}
+			}
 		}
 		
 		/**
