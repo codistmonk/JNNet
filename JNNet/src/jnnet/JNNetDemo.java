@@ -4,6 +4,7 @@ import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.util.Collections.sort;
+import static jnnet.ConstantValueSource.ONE;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.Color;
@@ -35,15 +36,13 @@ public final class JNNetDemo {
 		throw new IllegalInstantiationException();
 	}
 	
-	public static final ConstantValueSource ONE = new ConstantValueSource(1.0);
-	
 	/**
 	 * @param commandLineArguments
 	 * @throws Exception 
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final double scale = 5.0;
-		final Network network = newNetwork(scale, 2, 6, 1);
+		final Network network = newNetwork(scale, 2, 64, 1);
 		
 		final int w = 256;
 		final int h = w;
@@ -64,23 +63,12 @@ public final class JNNetDemo {
 		final List<TrainingItem> trainingItems = new ArrayList<TrainingItem>();
 		
 		{
-			final double r1 = 20.0;
-			final double r2 = 80.0;
-			final int n1 = (int) r1 * 2;
-			final int n2 = (int) r2 * 2;
-			final Random random = new Random(n1 + n2);
+			final Random random = new Random(w + h);
+			final int k = 6;
 			
-			for (int i = 0; i < n1; ++i) {
-				final double angle = random.nextDouble() * 2.0 * PI;
-				final double r = r1 * (1.0 + (random.nextDouble() - 0.5) / 4.0);
-				trainingItems.add(new TrainingItem(new double[] { r * cos(angle), r * sin(angle) }, new double[] { 1.0 }));
-			}
-			
-			for (int i = 0; i < n1; ++i) {
-				final double angle = random.nextDouble() * 2.0 * PI;
-				final double r = r2 * (1.0 + (random.nextDouble() - 0.5) / 4.0);
-				trainingItems.add(new TrainingItem(new double[] { r * cos(angle), r * sin(angle) }, new double[] { 0.0 }));
-			}
+			makeCircle(trainingItems, random, new double[] { 1.0 }, 50.0, k);
+			makeCircle(trainingItems, random, new double[] { 0.0 }, 80.0, k);
+			makeCircle(trainingItems, random, new double[] { 0.0 }, 30.0, k);
 		}
 //		final TrainingItem[] trainingItems = {
 //				new TrainingItem(new double[] { -15.0, -15.0 }, new double[] { 1.0 }),
@@ -90,14 +78,16 @@ public final class JNNetDemo {
 //				new TrainingItem(new double[] { +90.0, -90.0 }, new double[] { 0.0 }),
 //				new TrainingItem(new double[] { + 0.0, +90.0 }, new double[] { 0.0 }),
 //		};
-		final NetworkEvaluator evaluator = new NetworkEvaluator(network, trainingItems.toArray(new TrainingItem[0]));
+		final NetworkEvaluator evaluator = new NetworkEvaluator(network, scale, trainingItems.toArray(new TrainingItem[0]));
 		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(
 				evaluator, 100, NetworkEvaluator.makeScale(network, scale));
+		
+		timer.tic();
 		
 		for (int i = 0; i < 800; ++i) {
 			Tools.gc(20L);
 			
-			debugPrint(i);
+			debugPrint("iteration:", i);
 			
 			if (true) {
 				evaluator.train(0.1);
@@ -107,7 +97,7 @@ public final class JNNetDemo {
 				NetworkEvaluator.setWeights(network, minimizer.getPopulation().get(0).getSample());
 			}
 			
-			debugPrint(evaluator.evaluate());
+			debugPrint("totalTime:", timer.toc(), "error:", evaluator.evaluate());
 			
 			updateImage(network, image);
 			
@@ -127,6 +117,18 @@ public final class JNNetDemo {
 					imageComponent.repaint();
 				}
 			});
+		}
+	}
+
+	public static void makeCircle(final List<TrainingItem> trainingItems,
+			final Random random, final double[] output, final double radius,
+			final int k) {
+		final int n = (int) radius * k;
+		
+		for (int i = 0; i < n; ++i) {
+			final double angle = random.nextDouble() * 2.0 * PI;
+			final double r = radius * (1.0 + (random.nextDouble() - 0.5) / 4.0);
+			trainingItems.add(new TrainingItem(new double[] { r * cos(angle), r * sin(angle) }, output));
 		}
 	}
 
@@ -235,9 +237,15 @@ public final class JNNetDemo {
 		
 		private final TrainingItem[] trainingItems;
 		
-		public NetworkEvaluator(final Network network, final TrainingItem... trainingItems) {
+		private final double[] scale;
+		
+		private final Random random;
+		
+		public NetworkEvaluator(final Network network, final double scale, final TrainingItem... trainingItems) {
 			this.network = network;
 			this.trainingItems = trainingItems;
+			this.scale = makeScale(network, scale);
+			this.random = new Random(Arrays.hashCode(this.scale));
 		}
 		
 		@Override
@@ -261,17 +269,19 @@ public final class JNNetDemo {
 		
 		public final void train(final double weightDelta) {
 			double error = this.evaluate();
+			int i = 0;
 			
 			for (final Neuron neuron : this.network.getNeurons()) {
 				for (final Input input : neuron.getInputs()) {
+					final double scale = this.scale[i++] * (this.random.nextDouble() - 0.5);
 					final double weight = input.getWeight();
 					
-					input.setWeight(weight + weightDelta * error * (Math.random() - 0.5));
+					input.setWeight(weight + weightDelta * error * scale);
 					
 					double newError = this.evaluate();
 					
 					if (error < newError) {
-						input.setWeight(weight - weightDelta * error);
+						input.setWeight(weight - weightDelta * error * scale);
 						newError = this.evaluate();
 					}
 					
