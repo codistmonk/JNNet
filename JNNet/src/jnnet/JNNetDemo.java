@@ -3,8 +3,10 @@ package jnnet;
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
+import static java.lang.Math.sqrt;
 import static java.util.Collections.sort;
 import static jnnet.ConstantValueSource.ONE;
+import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.Color;
@@ -24,6 +26,7 @@ import javax.swing.SwingUtilities;
 import jnnet.Neuron.Input;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -42,7 +45,7 @@ public final class JNNetDemo {
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final double scale = 5.0;
-		final Network network = newNetwork(scale, 2, 64, 1);
+		final Network network = newNetwork(scale, 2, 16, 1);
 		
 		final int w = 256;
 		final int h = w;
@@ -81,6 +84,7 @@ public final class JNNetDemo {
 		final NetworkEvaluator evaluator = new NetworkEvaluator(network, scale, trainingItems.toArray(new TrainingItem[0]));
 		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(
 				evaluator, 100, NetworkEvaluator.makeScale(network, scale));
+		final int algo = 0;
 		
 		timer.tic();
 		
@@ -89,7 +93,7 @@ public final class JNNetDemo {
 			
 			debugPrint("iteration:", i);
 			
-			if (true) {
+			if (algo == 0) {
 				evaluator.train(0.1);
 			} else {
 				minimizer.update();
@@ -268,36 +272,169 @@ public final class JNNetDemo {
 		}
 		
 		public final void train(final double weightDelta) {
+			final int algo = 1;
 			double error = this.evaluate();
 			int i = 0;
 			
 			for (final Neuron neuron : this.network.getNeurons()) {
-				for (final Input input : neuron.getInputs()) {
-					final double scale = this.scale[i++] * (this.random.nextDouble() - 0.5);
-					final double weight = input.getWeight();
+				if (algo == 0) {
+					for (final Input input : neuron.getInputs()) {
+						final double dw = this.scale[i++] * (this.random.nextDouble() - 0.5) * error * weightDelta;
+						error = this.updateWeight(input, dw, error);
+					}
+				} else if (algo == 1) {
+					final double norm = getNorm(neuron);
+					final List<Input> orientation = new ArrayList<Input>();
+					final List<Double> positionDw = new ArrayList<Double>();
+					Input constantInput = null;
+					double constantInputDw = 0.0;
 					
-					input.setWeight(weight + weightDelta * error * scale);
-					
-					double newError = this.evaluate();
-					
-					if (error < newError) {
-						input.setWeight(weight - weightDelta * error * scale);
-						newError = this.evaluate();
+					for (final Input input : neuron.getInputs()) {
+						final double dw = this.scale[i++] * (this.random.nextDouble() - 0.5) * error * weightDelta;
+						
+						if (input.getValueSource() instanceof ConstantValueSource) {
+							constantInput = input;
+							constantInputDw = dw;
+						} else {
+							orientation.add(input);
+							positionDw.add(dw);
+						}
 					}
 					
-					if (error <= newError) {
-						input.setWeight(weight);
-					} else {
-						error = newError;
+					if (constantInput != null) {
+						error = this.updateWeight(constantInput, constantInputDw, error);
 					}
+					
+					{
+						int j = 0;
+						
+						for (final Input input : orientation) {
+							error = this.updateWeight(input, positionDw.get(j++), error, orientation, norm);
+						}
+					}
+					
+					if (true) {
+						final double scale = 1.0 + (this.random.nextDouble() - 0.5);
+						
+						scale(orientation, scale);
+						
+						double newError = this.evaluate();
+						
+						if (error <= newError) {
+							scale(orientation, 1 / square(scale));
+							
+							newError = this.evaluate();
+							
+							if (error <= newError) {
+								scale(orientation, scale);
+							} else {
+								error = newError;
+							}
+						}
+					}
+				} else {
+					throw new IllegalArgumentException();
 				}
 			}
+		}
+		
+		public static final void scale(final Iterable<Input> inputs, final double scale) {
+			if (!Double.isNaN(scale) && !Double.isInfinite(scale)) {
+				for (final Input input : inputs) {
+					input.setWeight(input.getWeight() * scale);
+				}
+			}
+		}
+		
+		public final double updateWeight(final Input input, final double dw,
+				final double error) {
+			final double weight = input.getWeight();
+			
+			input.setWeight(weight + dw);
+			
+			double newError = this.evaluate();
+			
+			if (error < newError) {
+				input.setWeight(weight - dw);
+				newError = this.evaluate();
+			}
+			
+			if (newError < error) {
+				return newError;
+			}
+			
+			input.setWeight(weight);
+			
+			return error;
+		}
+		
+		public final double updateWeight(final Input input, final double dw,
+				final double error, final Iterable<Input> orientation, final double norm) {
+			final double weight = input.getWeight();
+			final List<Double> initialWeights = new ArrayList<Double>();
+			
+			for (final Input i : orientation) {
+				initialWeights.add(i.getWeight());
+			}
+			
+			input.setWeight(weight + dw);
+			scale(orientation, norm / getNorm(orientation));
+			
+			double newError = this.evaluate();
+			
+			if (error < newError) {
+				int j = 0;
+				
+				for (final Input i : orientation) {
+					i.setWeight(initialWeights.get(j++));
+				}
+				
+				input.setWeight(weight - dw);
+				scale(orientation, norm / getNorm(orientation));
+				newError = this.evaluate();
+			}
+			
+			if (newError < error) {
+				return newError;
+			}
+			
+			{
+				int j = 0;
+				
+				for (final Input i : orientation) {
+					i.setWeight(initialWeights.get(j++));
+				}
+			}
+			
+			return error;
 		}
 		
 		/**
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 4159192974740277150L;
+		
+		public static final double getNorm(final Neuron neuron) {
+			double norm2 = 0.0;
+			
+			for (final Input input : neuron.getInputs()) {
+				if (!(input.getValueSource() instanceof ConstantValueSource)) {
+					norm2 += square(input.getWeight());
+				}
+			}
+			
+			return sqrt(norm2);
+		}
+		
+		public static final double getNorm(final Iterable<Input> inputs) {
+			double norm2 = 0.0;
+			
+			for (final Input input : inputs) {
+				norm2 += square(input.getWeight());
+			}
+			
+			return sqrt(norm2);
+		}
 		
 		public static final void setWeights(final Network network, final double[] weights) {
 			int i = 0;
