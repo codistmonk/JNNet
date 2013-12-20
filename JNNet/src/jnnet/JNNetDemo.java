@@ -276,13 +276,15 @@ public final class JNNetDemo {
 			double error = this.evaluate();
 			int i = 0;
 			
-			for (final Neuron neuron : this.network.getNeurons()) {
-				if (algo == 0) {
+			if (algo == 0) {
+				for (final Neuron neuron : this.network.getNeurons()) {
 					for (final Input input : neuron.getInputs()) {
 						final double dw = this.scale[i++] * (this.random.nextDouble() - 0.5) * error * weightDelta;
 						error = this.updateWeight(input, dw, error);
 					}
-				} else if (algo == 1) {
+				}
+			} else if (algo == 1) {
+				for (final Neuron neuron : this.network.getNeurons()) {
 					final double norm = getNorm(neuron);
 					final List<Input> orientation = new ArrayList<Input>();
 					final List<Double> positionDw = new ArrayList<Double>();
@@ -313,7 +315,7 @@ public final class JNNetDemo {
 						}
 					}
 					
-					if (true) {
+					{
 						final double scale = 1.0 + (this.random.nextDouble() - 0.5);
 						
 						scale(orientation, scale);
@@ -332,9 +334,9 @@ public final class JNNetDemo {
 							}
 						}
 					}
-				} else {
-					throw new IllegalArgumentException();
 				}
+			} else {
+				throw new IllegalArgumentException();
 			}
 		}
 		
