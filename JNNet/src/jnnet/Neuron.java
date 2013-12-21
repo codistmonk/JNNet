@@ -44,6 +44,12 @@ public final class Neuron implements ValueSource {
 		return 1.0 / (1.0 + exp(-x));
 	}
 	
+	public static final double dSigmoid(final double x) {
+		final double s = sigmoid(x);
+		
+		return (1.0 - s) * s;
+	}
+	
 	/**
 	 * @author codistmonk (creation 2013-12-14)
 	 */
