@@ -7,6 +7,7 @@ import static jnnet2.JNNetTools.add;
 import static jnnet2.JNNetTools.dSigmoid;
 import static jnnet2.JNNetTools.getDeclaredField;
 import static jnnet2.JNNetTools.sigmoid;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -127,6 +128,7 @@ public final class ArtificialNeuralNetwork implements Serializable {
 		return this.getValues()[this.getValues().length - outputCount + outputNeuronIndex];
 	}
 	
+	/*
 	public final void backpropagate(final double error, final double learningRate, final int outputNeuronIndex) {
 		final int outputCount = this.getOutputNeurons().length;
 		final int neuronIndex = this.getNeurons().length - outputCount + outputNeuronIndex;
@@ -147,6 +149,41 @@ public final class ArtificialNeuralNetwork implements Serializable {
 			
 			if (1 + this.getInputCount() <= sourceIndex) {
 				this.privateBackpropagate(deltaDelta * weight, learningRate, sourceIndex - 1 - this.getInputCount());
+			}
+		}
+	}
+	*/
+	
+	public final void backpropagate(final double learningRate, final double... errors) {
+		Arrays.fill(this.deltas, 0.0);
+		final int outputCount = this.getOutputNeurons().length;
+		
+		for (int i = 0; i < outputCount; ++i) {
+			final int neuronIndex = this.getNeurons().length - outputCount + i;
+			final int neuronValueIndex = 1 + this.getInputCount() + neuronIndex;
+			final double delta = this.deltas[neuronValueIndex] = errors[i] * this.dValues[neuronValueIndex];
+			final int neuron = this.getNeurons()[neuronIndex];
+			final int nextNeuron = this.getNextNeuron(neuronIndex);
+			
+			for (int weightIndex = neuron; weightIndex < nextNeuron; ++weightIndex) {
+				final int sourceIndex = this.getInputIndices()[weightIndex];
+				final double weight = this.getWeights()[weightIndex] += learningRate * delta * this.getValues()[sourceIndex];
+				this.deltas[sourceIndex] += delta * weight;
+			}
+		}
+		
+		final int lastNonoutputNeuronIndex = this.getNeurons().length - 1 - this.getOutputNeurons().length;
+		
+		for (int neuronIndex = lastNonoutputNeuronIndex; 0 <= neuronIndex; --neuronIndex) {
+			final int neuronValueIndex = 1 + this.getInputCount() + neuronIndex;
+			final double delta = this.deltas[neuronValueIndex] *= this.dValues[neuronValueIndex];
+			final int neuron = this.getNeurons()[neuronIndex];
+			final int nextNeuron = this.getNextNeuron(neuronIndex);
+			
+			for (int weightIndex = neuron; weightIndex < nextNeuron; ++weightIndex) {
+				final int sourceIndex = this.getInputIndices()[weightIndex];
+				final double weight = this.getWeights()[weightIndex] += learningRate * delta * this.getValues()[sourceIndex];
+				this.deltas[sourceIndex] += delta * weight;
 			}
 		}
 	}
@@ -200,11 +237,21 @@ public final class ArtificialNeuralNetwork implements Serializable {
 		public final void train(final ArtificialNeuralNetwork ann, final double learningRate) {
 			for (final Item item : this.getItems()) {
 				final double[] errors = item.computeErrors(ann);
-				
-				for (int i = 0; i < errors.length; ++i) {
-					ann.backpropagate(errors[i], learningRate * abs(errors[i]), i);
-				}
+				ann.backpropagate(learningRate * norm2(errors), errors);
+//				for (int i = 0; i < errors.length; ++i) {
+//					ann.backpropagate(errors[i], learningRate * abs(errors[i]), i);
+//				}
 			}
+		}
+		
+		public static final double norm2(final double... v) {
+			double result = 0.0;
+			
+			for (final double value : v) {
+				result += value * value;
+			}
+			
+			return result;
 		}
 		
 		/**
