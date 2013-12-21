@@ -10,8 +10,8 @@ import java.lang.reflect.Field;
 import jnnet2.ArtificialNeuralNetwork;
 import jnnet2.ArtificialNeuralNetwork.Training;
 import jnnet2.ArtificialNeuralNetwork.Training.Item;
-
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-12-21)
