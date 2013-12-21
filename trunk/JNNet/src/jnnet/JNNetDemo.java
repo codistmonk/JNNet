@@ -24,9 +24,9 @@ import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
 import jnnet.Neuron.Input;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -73,14 +73,7 @@ public final class JNNetDemo {
 			makeCircle(trainingItems, random, new double[] { 0.0 }, 80.0, k);
 			makeCircle(trainingItems, random, new double[] { 0.0 }, 30.0, k);
 		}
-//		final TrainingItem[] trainingItems = {
-//				new TrainingItem(new double[] { -15.0, -15.0 }, new double[] { 1.0 }),
-//				new TrainingItem(new double[] { +15.0, -15.0 }, new double[] { 1.0 }),
-//				new TrainingItem(new double[] { + 0.0, +15.0 }, new double[] { 1.0 }),
-//				new TrainingItem(new double[] { -90.0, -90.0 }, new double[] { 0.0 }),
-//				new TrainingItem(new double[] { +90.0, -90.0 }, new double[] { 0.0 }),
-//				new TrainingItem(new double[] { + 0.0, +90.0 }, new double[] { 0.0 }),
-//		};
+		
 		final NetworkEvaluator evaluator = new NetworkEvaluator(network, scale, trainingItems.toArray(new TrainingItem[0]));
 		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(
 				evaluator, 100, NetworkEvaluator.makeScale(network, scale));
@@ -268,10 +261,10 @@ public final class JNNetDemo {
 				result += trainingItem.computeError(this.network);
 			}
 			
-			return result;
+			return result / 2.0;
 		}
 		
-		public final void train(final double weightDelta) {
+		public final void train(final double deltaWeight) {
 			final int algo = 1;
 			double error = this.evaluate();
 			int i = 0;
@@ -279,7 +272,7 @@ public final class JNNetDemo {
 			if (algo == 0) {
 				for (final Neuron neuron : this.network.getNeurons()) {
 					for (final Input input : neuron.getInputs()) {
-						final double dw = this.scale[i++] * (this.random.nextDouble() - 0.5) * error * weightDelta;
+						final double dw = this.scale[i++] * (this.random.nextDouble() - 0.5) * error * deltaWeight;
 						error = this.updateWeight(input, dw, error);
 					}
 				}
@@ -292,7 +285,7 @@ public final class JNNetDemo {
 					double constantInputDw = 0.0;
 					
 					for (final Input input : neuron.getInputs()) {
-						final double dw = this.scale[i++] * (this.random.nextDouble() - 0.5) * error * weightDelta;
+						final double dw = this.scale[i++] * (this.random.nextDouble() - 0.5) * error * deltaWeight;
 						
 						if (input.getValueSource() instanceof ConstantValueSource) {
 							constantInput = input;
