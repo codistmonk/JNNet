@@ -1,4 +1,4 @@
-package jnnet2;
+package jnnet3;
 
 import static java.lang.Math.exp;
 import static java.util.Arrays.copyOf;
@@ -7,9 +7,9 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
 
-import jnnet2.ArtificialNeuralNetwork;
-import jnnet2.ArtificialNeuralNetwork.Training;
-import jnnet2.ArtificialNeuralNetwork.Training.Item;
+import jnnet3.ArtificialNeuralNetwork;
+import jnnet3.ArtificialNeuralNetwork.Training;
+import jnnet3.ArtificialNeuralNetwork.Training.Item;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
