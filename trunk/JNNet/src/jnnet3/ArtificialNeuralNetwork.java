@@ -4,10 +4,14 @@ import static java.lang.System.arraycopy;
 import static jnnet3.JNNetTools.add;
 import static jnnet3.JNNetTools.getDeclaredField;
 import static jnnet3.JNNetTools.sigmoid;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Random;
+
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2013-12-20)
@@ -145,8 +149,11 @@ public final class ArtificialNeuralNetwork implements Serializable {
 		
 		private final Item[] items;
 		
+		private final Random random;
+		
 		public Training(final Item... items) {
 			this.items = items;
+			this.random = new Random(items.length);
 		}
 		
 		public final Item[] getItems() {
@@ -154,10 +161,39 @@ public final class ArtificialNeuralNetwork implements Serializable {
 		}
 		
 		public final void train(final ArtificialNeuralNetwork ann, final double learningRate) {
-			for (final Item item : this.getItems()) {
-				final double[] errors = item.computeErrors(ann);
-				// TODO
+			final int algo = 0;
+			
+			if (algo == 0) {
+				final int weightCount = ann.getWeights().length;
+				double error = this.computeError(ann);
+				
+				for (int i = 0; i < weightCount; ++i) {
+					final double dw = (random.nextDouble() - 0.5) * learningRate * error;
+					final double weight = ann.getWeights()[i];
+					
+					ann.getWeights()[i] = weight + dw;
+					
+					final double newError = this.computeError(ann);
+					
+					if (error <= newError) {
+						ann.getWeights()[i] = weight;
+					} else {
+						error = newError;
+					}
+				}
+			} else if (algo == 1) {
+				
 			}
+		}
+		
+		public final double computeError(final ArtificialNeuralNetwork ann) {
+			double result = 0.0;
+			
+			for (final Item item : this.getItems()) {
+				result += norm2(item.computeErrors(ann));
+			}
+			
+			return result;
 		}
 		
 		public static final double norm2(final double... v) {
