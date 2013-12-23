@@ -14,8 +14,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
 
-import net.sourceforge.aprog.tools.Tools;
-
 /**
  * @author codistmonk (creation 2013-12-20)
  */
@@ -237,7 +235,7 @@ public final class ArtificialNeuralNetwork implements Serializable {
 				double error = this.computeError(ann);
 				
 				for (int i = 0; i < weightCount; ++i) {
-					final double dw = (random.nextDouble() - 0.5) * learningRate * error;
+					final double dw = (this.random.nextDouble() - 0.5) * learningRate * error;
 					final double weight = ann.getWeights()[i];
 					
 					ann.getWeights()[i] = weight + dw;
