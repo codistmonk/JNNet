@@ -1,6 +1,8 @@
 package jnnet3;
 
+import static java.lang.Math.min;
 import static java.lang.System.arraycopy;
+import static java.util.Arrays.sort;
 import static jnnet3.JNNetTools.add;
 import static jnnet3.JNNetTools.getDeclaredField;
 import static jnnet3.JNNetTools.sigmoid;
@@ -9,6 +11,7 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Random;
 
 import net.sourceforge.aprog.tools.Tools;
@@ -107,7 +110,7 @@ public final class ArtificialNeuralNetwork implements Serializable {
 		return this;
 	}
 	
-	private final int getNextNeuron(final int neuronIndex) {
+	public final int getNextNeuron(final int neuronIndex) {
 		return neuronIndex + 1 < this.getNeurons().length ? this.getNeurons()[neuronIndex + 1] : this.getWeights().length;
 	}
 	
@@ -158,6 +161,72 @@ public final class ArtificialNeuralNetwork implements Serializable {
 		
 		public final Item[] getItems() {
 			return this.items;
+		}
+		
+		public final void initializeWeights(final ArtificialNeuralNetwork ann) {
+			sort(this.getItems(), new Comparator<Item>() {
+				
+				@Override
+				public final int compare(final Item item1, final Item item2) {
+					return DoubleArrayComparator.INSTANCE.compare(item1.getOutputs(), item2.getOutputs());
+				}
+				
+			});
+			
+			final int itemCount = this.getItems().length;
+			final int neuronCount = ann.getNeurons().length;
+			
+			for (int neuronIndex = 0, item1Index = 0, item2Index = itemCount - 1; neuronIndex < neuronCount; ++neuronIndex) {
+				final int neuron = ann.getNeurons()[neuronIndex];
+				final int nextNeuron = ann.getNextNeuron(neuronIndex);
+				
+				// TODO better layer handling
+				debugPrint(neuronIndex, 1 + ann.getInputCount(), neuron, nextNeuron);
+				if (1 + ann.getInputCount() < nextNeuron - neuron || ann.getOutputNeurons()[0] <= neuron) {
+					break;
+				}
+				
+				Item item1 = this.getItems()[item1Index];
+				Item item2 = this.getItems()[item2Index];
+				
+				if (Arrays.equals(item1.getOutputs(), item2.getOutputs())) {
+					item1Index = 0;
+					item2Index = itemCount - 1;
+					item1 = this.getItems()[item1Index];
+					item2 = this.getItems()[item2Index];
+				}
+				
+				final double[] item1Location = item1.getInputs();
+				final double[] item2Location = item2.getInputs();
+				final double[] neuronLocation = combine(item1Location, 0.5, item2Location, 0.5);
+				
+				ann.getWeights()[neuron] = 0.0;
+				
+				for (int weightIndex = neuron + 1; weightIndex < nextNeuron; ++weightIndex) {
+					ann.getWeights()[neuron] -= ann.getWeights()[weightIndex] * neuronLocation[weightIndex - 1 - neuron];
+				}
+				
+				debugPrint(Arrays.toString(neuronLocation), Arrays.toString(Arrays.copyOfRange(ann.getWeights(), neuron, nextNeuron)));
+				
+				++item1Index;
+				--item2Index;
+				
+				if (item2Index <= item1Index) {
+					item1Index = 0;
+					item2Index = itemCount - 1;
+				}
+			}
+		}
+		
+		public static final double[] combine(final double[] values1, final double weight1, final double[] values2, final double weight2) {
+			final int n = values1.length;
+			final double[] result = new double[n];
+			
+			for (int i = 0; i < n; ++i) {
+				result[i] = values1[i] * weight1 + values2[i] * weight2;
+			}
+			
+			return result;
 		}
 		
 		public final void train(final ArtificialNeuralNetwork ann, final double learningRate) {
@@ -252,6 +321,27 @@ public final class ArtificialNeuralNetwork implements Serializable {
 			private static final long serialVersionUID = -1465267783319711989L;
 			
 		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2013-12-23)
+	 */
+	public static final class DoubleArrayComparator implements Comparator<double[]>, Serializable {
+		
+		@Override
+		public final int compare(final double[] array1, final double[] array2) {
+			final int n = min(array1.length, array2.length);
+			int result = 0;
+			
+			for (int i = 0; i < n && result == 0; ++i) {
+				result = Double.compare(array1[i], array2[i]);
+			}
+			
+			return result;
+		}
+		
+		public static final DoubleArrayComparator INSTANCE = new DoubleArrayComparator();
 		
 	}
 	

@@ -2,15 +2,11 @@ package jnnet3;
 
 import static java.lang.Math.exp;
 import static java.util.Arrays.copyOf;
-import static jnnet.ConstantValueSource.ONE;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Random;
 
 import jnnet3.ArtificialNeuralNetwork;
@@ -176,16 +172,20 @@ public final class JNNetTools {
 		final Random random = new Random(inputCount + Arrays.hashCode(layers));
 		
 		final int layerCount = layers.length;
-		int sourceOffset = 0;
-		int layerSize = 1 + inputCount;
+		int sourceOffset = 1;
+		int sourceSize = inputCount;
 		
-		for (int i = 0; i < layerCount; sourceOffset += layerSize, layerSize = layers[i], ++i) {
-			final double[] weights = newValues(random, 1 + layerSize);
+		for (int i = 0, layerSize = layers[i]; i < layerCount; sourceOffset += sourceSize, sourceSize = layerSize, ++i) {
+			layerSize = layers[i];
 			
-			if (i < layerCount - 1) {
-				result.addNeuron(sourceOffset, weights);
-			} else {
-				result.addOutputNeuron(sourceOffset, weights);
+			for (int j = 0; j < layerSize; ++j) {
+				final double[] weights = newValues(random, 1 + sourceSize);
+				
+				if (i < layerCount - 1) {
+					result.addNeuron(sourceOffset, weights);
+				} else {
+					result.addOutputNeuron(sourceOffset, weights);
+				}
 			}
 		}
 		

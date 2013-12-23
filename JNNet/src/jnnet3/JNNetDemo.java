@@ -36,6 +36,10 @@ public final class JNNetDemo {
 				new Item(inputs(40.0, 80.0), outputs(1.0))
 		);
 		
+		training.initializeWeights(ann);
+		
+		debugPrint(ann);
+		
 		{
 			final int w = 256;
 			final int h = w;
@@ -49,8 +53,8 @@ public final class JNNetDemo {
 				SwingTools.show(image, "ANN output before training", false);
 			}
 			
-			for (int i = 0; i < 1000; ++i) {
-				training.train(ann, 0.1);
+			for (int i = 0; i < 500; ++i) {
+				training.train(ann, 0.5);
 				debugPrint(i, training.computeError(ann));
 			}
 			debugPrint(ann);
