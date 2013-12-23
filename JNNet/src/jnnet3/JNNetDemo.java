@@ -27,12 +27,13 @@ public final class JNNetDemo {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final ArtificialNeuralNetwork ann = new ArtificialNeuralNetwork(2);
-		ann.addOutputNeuron(1, 0.0, 0.4, 0.1);
+		final ArtificialNeuralNetwork ann = JNNetTools.newNetwork(2, 2, 1);
 		debugPrint(ann);
 		final Training training = new Training(
 				new Item(inputs(40.0, 40.0), outputs(0.0)),
-				new Item(inputs(80.0, 80.0), outputs(1.0))
+				new Item(inputs(80.0, 40.0), outputs(1.0)),
+				new Item(inputs(80.0, 80.0), outputs(0.0)),
+				new Item(inputs(40.0, 80.0), outputs(1.0))
 		);
 		
 		{
@@ -48,9 +49,9 @@ public final class JNNetDemo {
 				SwingTools.show(image, "ANN output before training", false);
 			}
 			
-			for (int i = 0; i < 10000; ++i) {
+			for (int i = 0; i < 1000; ++i) {
 				training.train(ann, 0.1);
-				debugPrint(i, ann.evaluate(50.0, 50.0).getOutputValue(0), ann.evaluate(70.0, 70.0).getOutputValue(0));
+				debugPrint(i, training.computeError(ann));
 			}
 			debugPrint(ann);
 			

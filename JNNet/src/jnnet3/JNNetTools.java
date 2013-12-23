@@ -2,10 +2,16 @@ package jnnet3;
 
 import static java.lang.Math.exp;
 import static java.util.Arrays.copyOf;
+import static jnnet.ConstantValueSource.ONE;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
 import jnnet3.ArtificialNeuralNetwork;
 import jnnet3.ArtificialNeuralNetwork.Training;
@@ -163,6 +169,37 @@ public final class JNNetTools {
 		final double s = sigmoid(x);
 		
 		return s * (1.0 - s);
+	}
+	
+	public static final ArtificialNeuralNetwork newNetwork(final int inputCount, final int... layers) {
+		final ArtificialNeuralNetwork result = new ArtificialNeuralNetwork(inputCount);
+		final Random random = new Random(inputCount + Arrays.hashCode(layers));
+		
+		final int layerCount = layers.length;
+		int sourceOffset = 0;
+		int layerSize = 1 + inputCount;
+		
+		for (int i = 0; i < layerCount; sourceOffset += layerSize, layerSize = layers[i], ++i) {
+			final double[] weights = newValues(random, 1 + layerSize);
+			
+			if (i < layerCount - 1) {
+				result.addNeuron(sourceOffset, weights);
+			} else {
+				result.addOutputNeuron(sourceOffset, weights);
+			}
+		}
+		
+		return result;
+	}
+	
+	public static final double[] newValues(final Random random, final int n) {
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = (random.nextDouble() - 0.5) * 2.0;
+		}
+		
+		return result;
 	}
 	
 }
