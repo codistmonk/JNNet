@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import jnnet.Neuron.Input;
+
 /**
  * @author codistmonk (creation 2013-12-17)
  */
@@ -55,6 +57,23 @@ public final class Network implements Serializable {
 		this.getOutputs().add(neuron);
 		
 		return this.addNeuron(neuron);
+	}
+	
+	@Override
+	public final String toString() {
+		final StringBuilder resultBuilder = new StringBuilder();
+		
+		resultBuilder.append('\n');
+		resultBuilder.append("weights: ");
+		
+		for (final Neuron neuron : this.getNeurons()) {
+			for (final Input input : neuron.getInputs()) {
+				resultBuilder.append(input.getWeight());
+				resultBuilder.append(' ');
+			}
+		}
+		
+		return resultBuilder.toString();
 	}
 	
 	/**

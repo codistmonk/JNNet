@@ -81,7 +81,7 @@ public final class JNNetDemo {
 		
 		timer.tic();
 		
-		for (int i = 0; i < 800; ++i) {
+		for (int i = 0; i < 200; ++i) {
 			Tools.gc(20L);
 			
 			debugPrint("iteration:", i);
@@ -115,6 +115,8 @@ public final class JNNetDemo {
 				}
 			});
 		}
+		
+		debugPrint(network);
 	}
 
 	public static void makeCircle(final List<TrainingItem> trainingItems,
