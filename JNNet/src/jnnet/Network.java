@@ -73,6 +73,14 @@ public final class Network implements Serializable {
 			}
 		}
 		
+		resultBuilder.append('\n');
+		resultBuilder.append("values: ");
+		
+		for (final Neuron neuron : this.getNeurons()) {
+			resultBuilder.append(neuron.getValue());
+			resultBuilder.append(' ');
+		}
+		
 		return resultBuilder.toString();
 	}
 	
