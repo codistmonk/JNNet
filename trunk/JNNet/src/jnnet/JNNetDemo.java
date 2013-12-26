@@ -44,9 +44,6 @@ public final class JNNetDemo {
 	 * @throws Exception 
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
-		final double scale = 5.0;
-		final Network network = newNetwork(scale, 2, 16, 1);
-		
 		final int w = 256;
 		final int h = w;
 		final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
@@ -55,7 +52,7 @@ public final class JNNetDemo {
 		
 		debugPrint(new Date(timer.tic()));
 		
-		updateImage(network, image);
+//		updateImage(network, image);
 		
 		debugPrint(timer.toc());
 		
@@ -65,19 +62,60 @@ public final class JNNetDemo {
 		
 		final List<TrainingItem> trainingItems = new ArrayList<TrainingItem>();
 		
-		{
-			final Random random = new Random(w + h);
+		final Random random = new Random(w + h);
+		
+		if (false) {
 			final int k = 6;
 			
 			makeCircle(trainingItems, random, new double[] { 1.0 }, 50.0, k);
 			makeCircle(trainingItems, random, new double[] { 0.0 }, 80.0, k);
 			makeCircle(trainingItems, random, new double[] { 0.0 }, 30.0, k);
+		} else {
+			final int k = 60;
+			
+			makeBox(trainingItems, random, new double[] { 1.0 }, + 0.0, + 0.0, +20.0, +20.0, k);
+			makeBox(trainingItems, random, new double[] { 1.0 }, -20.0, -20.0, + 0.0, + 0.0, k);
+			makeBox(trainingItems, random, new double[] { 0.0 }, -20.0, + 0.0, + 0.0, +20.0, k);
+			makeBox(trainingItems, random, new double[] { 0.0 }, + 0.0, -20.0, +20.0, + 0.0, k);
 		}
+		
+		final double scale = 5.0;
+		final Network network = newNetwork(scale, 2, 8, 1);
+//		final Network network = newNetwork(scale, 2, 2, 2, 1);
+//		
+//		network.getNeurons().get(0).getInputs()[0].setWeight(+10.0);
+//		network.getNeurons().get(0).getInputs()[1].setWeight(+0.0);
+//		network.getNeurons().get(0).getInputs()[2].setWeight(+0.0);
+//		network.getNeurons().get(1).getInputs()[0].setWeight(+0.0);
+//		network.getNeurons().get(1).getInputs()[1].setWeight(+10.0);
+//		network.getNeurons().get(1).getInputs()[2].setWeight(+0.0);
+//		
+//		network.getNeurons().get(2).getInputs()[0].setWeight(+ 6.0);
+//		network.getNeurons().get(2).getInputs()[1].setWeight(+ 6.0);
+//		network.getNeurons().get(2).getInputs()[2].setWeight(- 9.0);
+//		network.getNeurons().get(3).getInputs()[0].setWeight(- 6.0);
+//		network.getNeurons().get(3).getInputs()[1].setWeight(- 6.0);
+//		network.getNeurons().get(3).getInputs()[2].setWeight(+ 3.0);
+//		
+//		network.getNeurons().get(4).getInputs()[0].setWeight(+10.0);
+//		network.getNeurons().get(4).getInputs()[1].setWeight(+10.0);
+//		network.getNeurons().get(4).getInputs()[2].setWeight(- 5.0);
 		
 		final NetworkEvaluator evaluator = new NetworkEvaluator(network, scale, trainingItems.toArray(new TrainingItem[0]));
 		final EvolutionaryMinimizer minimizer = new EvolutionaryMinimizer(
-				evaluator, 100, NetworkEvaluator.makeScale(network, scale));
+				evaluator, 0, NetworkEvaluator.makeScale(network, scale));
 		final int algo = 0;
+		
+		debugPrint("error:", evaluator.evaluate());
+		
+		evaluate(network, +20.0, +20.0);
+		debugPrint(network);
+		evaluate(network, -20.0, +20.0);
+		debugPrint(network);
+		evaluate(network, -20.0, -20.0);
+		debugPrint(network);
+		evaluate(network, +20.0, -20.0);
+		debugPrint(network);
 		
 		timer.tic();
 		
@@ -118,20 +156,62 @@ public final class JNNetDemo {
 		
 		debugPrint(network);
 	}
-
-	public static void makeCircle(final List<TrainingItem> trainingItems,
-			final Random random, final double[] output, final double radius,
+	
+	public static final double[] evaluate(final Network network, final double... inputs) {
+		final int inputCount = network.getInputs().size();
+		final int outputCount = network.getOutputs().size();
+		final double[] result = new double[outputCount];
+		
+		for (int i = 0; i < inputCount; ++i) {
+			network.getInputs().get(i).setValue(inputs[i]);
+		}
+		
+		network.update();
+		
+		for (int i = 0; i < outputCount; ++i) {
+			result[i] = network.getOutputs().get(i).getValue();
+		}
+		
+		return result;
+	}
+	
+	public static final double[] inputs(final double... values) {
+		return values;
+	}
+	
+	public static final double[] outputs(final double... values) {
+		return values;
+	}
+	
+	public static final void makeBox(final List<TrainingItem> trainingItems,
+			final Random random, final double[] outputs,
+			final double left, final double bottom, final double right, final double top,
+			final int k) {
+		final double w = right - left;
+		final double h = top - bottom;
+		
+		for (int i = 0; i < k; ++i) {
+			final double x = left + random.nextDouble() * w;
+			final double y = bottom + random.nextDouble() * h;
+			
+			trainingItems.add(new TrainingItem(inputs(x, y), outputs));
+		}
+	}
+	
+	public static final void makeCircle(final List<TrainingItem> trainingItems,
+			final Random random, final double[] outputs, final double radius,
 			final int k) {
 		final int n = (int) radius * k;
 		
 		for (int i = 0; i < n; ++i) {
 			final double angle = random.nextDouble() * 2.0 * PI;
 			final double r = radius * (1.0 + (random.nextDouble() - 0.5) / 4.0);
-			trainingItems.add(new TrainingItem(new double[] { r * cos(angle), r * sin(angle) }, output));
+			
+			trainingItems.add(new TrainingItem(new double[] { r * cos(angle), r * sin(angle) }, outputs));
 		}
 	}
 
-	public static void updateImage(final Network network, final BufferedImage image) {
+	public static final void updateImage(final Network network, final BufferedImage image) {
 		final ModifiableValueSource xSource = network.getInputs().get(0);
 		final ModifiableValueSource ySource = network.getInputs().get(1);
 		final Neuron output = network.getOutputs().get(0);
@@ -203,10 +283,8 @@ public final class JNNetDemo {
 			
 			for (final Neuron neuron : layer) {
 				if (i < layerCount - 1) {
-					debugPrint();
 					result.addNeuron(neuron);
 				} else {
-					debugPrint();
 					result.addOutput(neuron);
 				}
 			}
