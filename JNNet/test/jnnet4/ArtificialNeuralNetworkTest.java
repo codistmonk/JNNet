@@ -122,4 +122,23 @@ public final class ArtificialNeuralNetworkTest {
 		assertArrayEquals(doubles(sqrt(2.0), 2.0 / sqrt(2.0), 1.0 / sqrt(2.0), -1.0 / sqrt(2.0)), sharpnessOffsetDirection, 0.0);
 	}
 	
+	@Test
+	public final void test5() {
+		final ArtificialNeuralNetwork network = new ArtificialNeuralNetwork(3, BiasSourceIndex.LAST);
+		final double[] expectedSharpnessOffsetDirection = { sqrt(2.0), 2.0 / sqrt(2.0), 1.0 / sqrt(2.0), -1.0 / sqrt(2.0) };
+		
+		network.addLayer();
+		network.addNeuron(0.0, 0.0, 0.0);
+		
+		assertEquals(0.0, network.getWeight(3, 0), 0.0);
+		assertEquals(0.0, network.getWeight(3, 1), 0.0);
+		assertEquals(0.0, network.getWeight(3, 2), 0.0);
+		
+		network.recomposeNeuron(3, expectedSharpnessOffsetDirection);
+		
+		assertEquals(1.0, network.getWeight(3, 0), 0.0);
+		assertEquals(-1.0, network.getWeight(3, 1), 0.0);
+		assertEquals(2.0, network.getWeight(3, 2), 0.0);
+	}
+	
 }

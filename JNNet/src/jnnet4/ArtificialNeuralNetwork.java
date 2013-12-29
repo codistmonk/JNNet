@@ -77,6 +77,18 @@ public final class ArtificialNeuralNetwork {
 		return this;
 	}
 	
+	public final ArtificialNeuralNetwork setBias(final int neuronIndex, final double bias) {
+		if (this.getBiasSourceIndex() < 0) {
+			return this;
+		}
+		
+		if (this.getBiasSourceIndex() == 0) {
+			return this.setWeight(neuronIndex, 0, bias);
+		}
+		
+		return this.setWeight(neuronIndex, this.getNeuronWeightCount(neuronIndex) - 1, bias);
+	}
+	
 	public final double getBias(final int neuronIndex) {
 		if (this.getBiasSourceIndex() < 0) {
 			return 0.0;
@@ -198,6 +210,20 @@ public final class ArtificialNeuralNetwork {
 		
 		for (int weightIndex = firstNonbiasWeightIndex; weightIndex < endNonbiasWeightIndex; ++weightIndex) {
 			sharpnessOffsetDirection[weightIndex - firstNonbiasWeightIndex + 2] = this.getWeights()[weightIndex] / sharpness;
+		}
+	}
+	
+	public final void recomposeNeuron(final int neuronIndex, final double[] sharpnessOffsetDirection) {
+		final int firstWeightIndex = this.getNeuronFirstWeightIndex(neuronIndex);
+		final int endWeightIndex = this.getNeuronEndWeightIndex(neuronIndex);
+		final int firstNonbiasWeightIndex = firstWeightIndex + (this.getBiasSourceIndex() == 0 ? 1 : 0);
+		final int endNonbiasWeightIndex = endWeightIndex - (0 < this.getBiasSourceIndex() ? 1 : 0);
+		final double sharpness = sharpnessOffsetDirection[0];
+		
+		this.setBias(neuronIndex, sharpnessOffsetDirection[1] * sharpness);
+		
+		for (int weightIndex = firstNonbiasWeightIndex; weightIndex < endNonbiasWeightIndex; ++weightIndex) {
+			this.getWeights()[weightIndex] = sharpnessOffsetDirection[weightIndex - firstNonbiasWeightIndex + 2] * sharpness;
 		}
 	}
 	
