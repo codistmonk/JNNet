@@ -1,5 +1,7 @@
 package jnnet4;
 
+import static java.lang.Math.sqrt;
+import static jnnet4.JNNetTools.doubles;
 import static jnnet4.JNNetTools.outputs;
 import static jnnet4.JNNetTools.sigmoid;
 import static org.junit.Assert.*;
@@ -81,6 +83,12 @@ public final class ArtificialNeuralNetworkTest {
 		network.setInputs(1.0, 3.0).updateAllLayers();
 		
 		assertArrayEquals(outputs(sigmoid(0.0)), network.getOutputLayerValues(), 0.0);
+		
+		final double[] sharpnessOffsetDirection = new double[4];
+		
+		network.decomposeNeuron(3, sharpnessOffsetDirection);
+		
+		assertArrayEquals(doubles(sqrt(2.0), 2.0 / sqrt(2.0), 1.0 / sqrt(2.0), -1.0 / sqrt(2.0)), sharpnessOffsetDirection, 0.0);
 	}
 	
 	@Test
@@ -106,6 +114,12 @@ public final class ArtificialNeuralNetworkTest {
 		network.setInputs(1.0, 3.0).updateAllLayers();
 		
 		assertArrayEquals(outputs(sigmoid(0.0)), network.getOutputLayerValues(), 0.0);
+		
+		final double[] sharpnessOffsetDirection = new double[4];
+		
+		network.decomposeNeuron(3, sharpnessOffsetDirection);
+		
+		assertArrayEquals(doubles(sqrt(2.0), 2.0 / sqrt(2.0), 1.0 / sqrt(2.0), -1.0 / sqrt(2.0)), sharpnessOffsetDirection, 0.0);
 	}
 	
 }

@@ -1,11 +1,15 @@
 package jnnet4;
 
+import static java.lang.Math.sqrt;
 import static jnnet4.JNNetTools.add;
 import static jnnet4.JNNetTools.getDeclaredField;
 import static jnnet4.JNNetTools.sigmoid;
+import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+
+import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 /**
  * @author codistmonk (creation 2013-12-26)
@@ -175,6 +179,26 @@ public final class ArtificialNeuralNetwork {
 		}
 		
 		return this;
+	}
+	
+	public final void decomposeNeuron(final int neuronIndex, final double[] sharpnessOffsetDirection) {
+		final int firstWeightIndex = this.getNeuronFirstWeightIndex(neuronIndex);
+		final int endWeightIndex = this.getNeuronEndWeightIndex(neuronIndex);
+		final int firstNonbiasWeightIndex = firstWeightIndex + (this.getBiasSourceIndex() == 0 ? 1 : 0);
+		final int endNonbiasWeightIndex = endWeightIndex - (0 < this.getBiasSourceIndex() ? 1 : 0);
+		double sharpness = 0.0;
+		
+		for (int weightIndex = firstNonbiasWeightIndex; weightIndex < endNonbiasWeightIndex; ++weightIndex) {
+			sharpness += square(this.getWeights()[weightIndex]);
+		}
+		
+		sharpness = sqrt(sharpness);
+		sharpnessOffsetDirection[0] = sharpness;
+		sharpnessOffsetDirection[1] = this.getBias(neuronIndex) / sharpness;
+		
+		for (int weightIndex = firstNonbiasWeightIndex; weightIndex < endNonbiasWeightIndex; ++weightIndex) {
+			sharpnessOffsetDirection[weightIndex - firstNonbiasWeightIndex + 2] = this.getWeights()[weightIndex] / sharpness;
+		}
 	}
 	
 	public final ArtificialNeuralNetwork setValues(final int offset, final double... values) {
