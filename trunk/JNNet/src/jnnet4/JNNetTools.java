@@ -20,6 +20,10 @@ public final class JNNetTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final double[] doubles(final double... values) {
+		return values;
+	}
+	
 	public static final double[] inputs(final double... values) {
 		return values;
 	}
