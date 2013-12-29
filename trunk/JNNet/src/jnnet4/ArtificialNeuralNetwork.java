@@ -14,7 +14,7 @@ public final class ArtificialNeuralNetwork {
 	
 	private double[] weights;
 	
-	private int[] sources;
+	private int[] sourceIndices;
 	
 	private int[] layers;
 	
@@ -22,18 +22,41 @@ public final class ArtificialNeuralNetwork {
 	
 	private int[] firstWeightIndices;
 	
-	public ArtificialNeuralNetwork(final int inputCount) {
+	private final int biasSourceIndex;
+	
+	public ArtificialNeuralNetwork(final int inputCount, final BiasSourceIndex biasSourceIndex) {
 		if (inputCount < 1) {
 			throw new IllegalArgumentException();
 		}
 		
 		this.weights = new double[0];
-		this.sources = new int[0];
+		this.sourceIndices = new int[0];
 		this.layers = new int[] { 0 };
 		this.values = new double[inputCount];
 		this.firstWeightIndices = new int[inputCount];
+		this.biasSourceIndex = biasSourceIndex.getIndex(this);
 		
 		Arrays.fill(this.firstWeightIndices, -1);
+		
+		if (0 <= this.getBiasSourceIndex()) {
+			this.values[this.getBiasSourceIndex()] = 1.0;
+		}
+	}
+	
+	public final int getVariableInputCount() {
+		return this.getInputCount() - (0 <= this.getBiasSourceIndex() ? 1 : 0);
+	}
+	
+	public final int getInputCount() {
+		return this.getLayerNeuronCount(0);
+	}
+	
+	public final int getBiasSourceIndex() {
+		return this.biasSourceIndex;
+	}
+	
+	public final int getSourceIndex(final int weightIndex) {
+		return this.sourceIndices[weightIndex];
 	}
 	
 	public final int getWeightIndex(final int neuronIndex, final int localWeightIndex) {
@@ -48,6 +71,18 @@ public final class ArtificialNeuralNetwork {
 		this.getWeights()[this.getWeightIndex(neuronIndex, localWeightIndex)] = weight;
 		
 		return this;
+	}
+	
+	public final double getBias(final int neuronIndex) {
+		if (this.getBiasSourceIndex() < 0) {
+			return 0.0;
+		}
+		
+		if (this.getBiasSourceIndex() == 0) {
+			return this.getWeight(neuronIndex, 0);
+		}
+		
+		return this.getWeight(neuronIndex, this.getNeuronWeightCount(neuronIndex) - 1);
 	}
 	
 	public final double[] getWeights() {
@@ -116,18 +151,44 @@ public final class ArtificialNeuralNetwork {
 		add(this, VALUES, 0.0);
 		add(this, FIRST_WEIGHT_INDICES, this.getWeights().length);
 		
-		for (int i = 0; i < neuronWeightCount; ++i) {
-			add(this, WEIGHTS, weights[i]);
-			add(this, SOURCES, sourceOffset + i);
+		if (this.getBiasSourceIndex() < 0) {
+			for (int i = 0; i < neuronWeightCount; ++i) {
+				add(this, WEIGHTS, weights[i]);
+				add(this, SOURCE_INDICES, sourceOffset + i);
+			}
+		} else if (this.getBiasSourceIndex() == 0) {
+			add(this, WEIGHTS, weights[0]);
+			add(this, SOURCE_INDICES, 0);
+			
+			for (int i = 1; i < neuronWeightCount; ++i) {
+				add(this, WEIGHTS, weights[i]);
+				add(this, SOURCE_INDICES, sourceOffset + i);
+			}
+		} else {
+			for (int i = 0; i < neuronWeightCount - 1; ++i) {
+				add(this, WEIGHTS, weights[i]);
+				add(this, SOURCE_INDICES, sourceOffset + i);
+			}
+			
+			add(this, WEIGHTS, weights[neuronWeightCount - 1]);
+			add(this, SOURCE_INDICES, this.getBiasSourceIndex());
 		}
 		
 		return this;
 	}
 	
-	public final ArtificialNeuralNetwork setFirstValues(final double... values) {
-		System.arraycopy(values, 0, this.values, 0, values.length);
+	public final ArtificialNeuralNetwork setValues(final int offset, final double... values) {
+		System.arraycopy(values, 0, this.values, offset, values.length);
 		
 		return this;
+	}
+	
+	public final ArtificialNeuralNetwork setInputs(final double... variableInputs) {
+		if (variableInputs.length != this.getVariableInputCount()) {
+			throw new IllegalArgumentException();
+		}
+		
+		return this.setValues(this.getBiasSourceIndex() == 0 ? 1 : 0, variableInputs);
 	}
 	
 	public final ArtificialNeuralNetwork updateAllLayers() {
@@ -146,7 +207,7 @@ public final class ArtificialNeuralNetwork {
 				this.values[neuronIndex] = 0.0;
 				
 				for (int weightIndex = firstWeightIndex; weightIndex < endWeightIndex; ++weightIndex) {
-					this.values[neuronIndex] += this.getWeights()[weightIndex] * this.values[this.sources[weightIndex]];
+					this.values[neuronIndex] += this.getWeights()[weightIndex] * this.values[this.sourceIndices[weightIndex]];
 				}
 				
 				this.values[neuronIndex] = sigmoid(this.values[neuronIndex]);
@@ -174,12 +235,44 @@ public final class ArtificialNeuralNetwork {
 	
 	private static final Field WEIGHTS = getDeclaredField(ArtificialNeuralNetwork.class, "weights");
 	
-	private static final Field SOURCES = getDeclaredField(ArtificialNeuralNetwork.class, "sources");
+	private static final Field SOURCE_INDICES = getDeclaredField(ArtificialNeuralNetwork.class, "sourceIndices");
 	
 	private static final Field LAYERS = getDeclaredField(ArtificialNeuralNetwork.class, "layers");
 	
 	private static final Field VALUES = getDeclaredField(ArtificialNeuralNetwork.class, "values");
 	
 	private static final Field FIRST_WEIGHT_INDICES = getDeclaredField(ArtificialNeuralNetwork.class, "firstWeightIndices");
+	
+	/**
+	 * @author codistmonk (creation 2013-12-29)
+	 */
+	public static enum BiasSourceIndex {
+		
+		NONE {
+			
+			@Override
+			public final int getIndex(final ArtificialNeuralNetwork network) {
+				return -1;
+			}
+			
+		}, FIRST {
+			
+			@Override
+			public final int getIndex(final ArtificialNeuralNetwork network) {
+				return 0;
+			}
+			
+		}, LAST {
+			
+			@Override
+			public final int getIndex(final ArtificialNeuralNetwork network) {
+				return network.getLayerNeuronCount(0) - 1;
+			}
+			
+		};
+		
+		public abstract int getIndex(ArtificialNeuralNetwork network);
+		
+	}
 	
 }
