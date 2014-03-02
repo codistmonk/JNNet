@@ -10,6 +10,7 @@ import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import java.util.Scanner;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -61,26 +63,42 @@ public final class JNNetDemo {
 		SwingTools.show(imageComponent, "ANN output", false);
 		
 		final List<TrainingItem> trainingItems = new ArrayList<TrainingItem>();
-		
 		final Random random = new Random(w + h);
+		final int trainingSetIndex = 2;
 		
-		if (false) {
+		if (trainingSetIndex == 0) {
 			final int k = 6;
 			
 			makeCircle(trainingItems, random, new double[] { 1.0 }, 50.0, k);
 			makeCircle(trainingItems, random, new double[] { 0.0 }, 80.0, k);
 			makeCircle(trainingItems, random, new double[] { 0.0 }, 30.0, k);
-		} else {
-			final int k = 60;
+		} else if (trainingSetIndex == 1) {
+			final double s = 50.0;
+			final int k = 200;
 			
-			makeBox(trainingItems, random, new double[] { 1.0 }, + 0.0, + 0.0, +20.0, +20.0, k);
-			makeBox(trainingItems, random, new double[] { 1.0 }, -20.0, -20.0, + 0.0, + 0.0, k);
-			makeBox(trainingItems, random, new double[] { 0.0 }, -20.0, + 0.0, + 0.0, +20.0, k);
-			makeBox(trainingItems, random, new double[] { 0.0 }, + 0.0, -20.0, +20.0, + 0.0, k);
+			makeBox(trainingItems, random, new double[] { 1.0 }, +0.0, +0.0, +  s, +  s, k);
+			makeBox(trainingItems, random, new double[] { 1.0 }, -  s, -  s, +0.0, +0.0, k);
+			makeBox(trainingItems, random, new double[] { 0.0 }, -  s, +0.0, +0.0, +  s, k);
+			makeBox(trainingItems, random, new double[] { 0.0 }, +0.0, -  s, +  s, +0.0, k);
+		} else if (trainingSetIndex == 2) {
+			final double scale = 20.0;
+			final Scanner scanner = new Scanner(Tools.getResourceAsStream("jnnet/2spirals.txt"));
+			
+			while (scanner.hasNext()) {
+				final Scanner line = new Scanner(scanner.nextLine());
+				final double x = line.nextDouble() * scale;
+				final double y = line.nextDouble() * scale;
+				final double label = line.nextDouble();
+				
+				trainingItems.add(new TrainingItem(inputs(x, y), outputs(label == 1.0 ? 1.0 : 0.0)));
+			}
+			
+			debugPrint(trainingItems.size());
 		}
 		
 		final double scale = 5.0;
-		final Network network = newNetwork(scale, 2, 8, 1);
+//		final Network network = newNetwork(scale, 2, 16, 1);
+		final Network network = newNetwork(scale, 2, 48, 8, 1);
 //		final Network network = newNetwork(scale, 2, 2, 2, 1);
 //		
 //		network.getNeurons().get(0).getInputs()[0].setWeight(+10.0);
@@ -119,7 +137,9 @@ public final class JNNetDemo {
 		
 		timer.tic();
 		
-		for (int i = 0; i < 200; ++i) {
+		double error = Double.POSITIVE_INFINITY;
+		
+		for (int i = 0; i < 400; ++i) {
 			Tools.gc(20L);
 			
 			debugPrint("iteration:", i);
@@ -132,17 +152,13 @@ public final class JNNetDemo {
 				NetworkEvaluator.setWeights(network, minimizer.getPopulation().get(0).getSample());
 			}
 			
-			debugPrint("totalTime:", timer.toc(), "error:", evaluator.evaluate());
+			final double newError = evaluator.evaluate();
 			
-			updateImage(network, image);
+			debugPrint("totalTime:", timer.toc(), "error:", newError);
 			
-			for (final TrainingItem trainingItem : trainingItems) {
-				final int x = (int) (w / 2.0 + trainingItem.getInputs()[0]);
-				final int y = (int) (h / 2.0 - trainingItem.getInputs()[1]);
-				
-				g.setColor(trainingItem.getOutputs()[0] < 0.5 ? Color.RED : Color.GREEN);
-				g.fillOval(x - 1, y - 1, 3, 3);
-			}
+			drawOutputs(network, image);
+//			drawFirstLayerNeurons(network, g, w, h);
+			drawTrainingItems(trainingItems, g, w, h);
 			
 			SwingUtilities.invokeAndWait(new Runnable() {
 				
@@ -152,6 +168,12 @@ public final class JNNetDemo {
 					imageComponent.repaint();
 				}
 			});
+			
+			if (newError == 0.0 || newError - error == 0.0) {
+				break;
+			}
+			
+			error = newError;
 		}
 		
 		debugPrint(network);
@@ -210,8 +232,8 @@ public final class JNNetDemo {
 			trainingItems.add(new TrainingItem(new double[] { r * cos(angle), r * sin(angle) }, outputs));
 		}
 	}
-
-	public static final void updateImage(final Network network, final BufferedImage image) {
+	
+	public static final void drawOutputs(final Network network, final BufferedImage image) {
 		final ModifiableValueSource xSource = network.getInputs().get(0);
 		final ModifiableValueSource ySource = network.getInputs().get(1);
 		final Neuron output = network.getOutputs().get(0);
@@ -228,6 +250,52 @@ public final class JNNetDemo {
 				
 				image.setRGB(x, y, 0xFF000000 | (0x00010101 * (int) (output.getValue() * 255.0)));
 			}
+		}
+	}
+	
+	public static final void drawFirstLayerNeurons(final Network network, final Graphics g, final int w, final int h) {
+		final double halfW = w / 2.0;
+		final double halfH = h / 2.0;
+		
+		g.setColor(Color.BLUE);
+		
+		for (final Neuron neuron : network.getNeurons()) {
+			if (neuron.getInputs()[0].getValueSource() instanceof Neuron) {
+				break;
+			}
+			
+			// a x + b y + c = 0
+			final double a = neuron.getInputs()[0].getWeight();
+			final double b = neuron.getInputs()[1].getWeight();
+			final double c = neuron.getInputs()[2].getWeight();
+			final double x1;
+			final double y1;
+			final double x2;
+			final double y2;
+			
+			if (b != 0.0) {
+				x1 = -halfW;
+				y1 = (-c - a * x1) / b;
+				x2 = +halfW;
+				y2 = (-c - a * x2) / b;
+			} else {
+				y1 = -halfH;
+				x1 = (-c - b * y1) / a;
+				y2 = +halfH;
+				x2 = (-c - b * y2) / a;
+			}
+			g.drawLine((int) (halfW + x1), (int) (halfH - y1), (int) (halfW + x2), (int) (halfH - y2));
+		}
+	}
+	
+	public static final void drawTrainingItems(final List<TrainingItem> trainingItems,
+			final Graphics g, final int w, final int h) {
+		for (final TrainingItem trainingItem : trainingItems) {
+			final int x = (int) (w / 2.0 + trainingItem.getInputs()[0]);
+			final int y = (int) (h / 2.0 - trainingItem.getInputs()[1]);
+			
+			g.setColor(trainingItem.getOutputs()[0] < 0.5 ? Color.RED : Color.GREEN);
+			g.fillOval(x - 1, y - 1, 3, 3);
 		}
 	}
 	
