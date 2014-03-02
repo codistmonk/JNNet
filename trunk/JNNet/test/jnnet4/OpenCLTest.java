@@ -11,6 +11,7 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisMethodName;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -21,7 +22,9 @@ import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 
+import com.amd.aparapi.Device;
 import com.amd.aparapi.Kernel;
+import com.amd.aparapi.OpenCLDevice;
 import com.amd.aparapi.Range;
 import com.amd.aparapi.Kernel.EXECUTION_MODE;
 
@@ -93,11 +96,17 @@ public final class OpenCLTest {
 	public final void test3() throws Exception {
 		loadDLL("aparapi");
 		
+		{
+			final OpenCLDevice gpu1 = (OpenCLDevice) Device.firstGPU();
+			debugPrint(gpu1.getMaxWorkGroupSize(), Arrays.toString(gpu1.getMaxWorkItemSize()));
+			debugPrint(gpu1.getMaxMemAllocSize(), gpu1.getGlobalMemSize());
+		}
+		
 		final TicToc timer = new TicToc();
 		
 		debugPrint(new Date(timer.tic()));
 		
-		final int step = N / 2000;
+		final int step = N / (1 << 11);
 		final int n = (N + step - 1) / step;
 		final double[] sums = new double[n];
 		
@@ -150,7 +159,7 @@ public final class OpenCLTest {
 		return exp(log(exp(log(exp(log(sigmoid(weights[i] * sources[i])))))));
 	}
 	
-	public static final int N = 10000000;
+	public static final int N = 0x0FFFF000;
 	
 	public static final double[] WEIGHTS = new double[N];
 	
@@ -163,6 +172,8 @@ public final class OpenCLTest {
 			WEIGHTS[i] = random.nextGaussian();
 			SOURCES[i] = random.nextGaussian();
 		}
+		
+		debugPrint("dataSize:", 2L * N * Double.SIZE / Byte.SIZE);
 	}
 	
 }
