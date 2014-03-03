@@ -2,6 +2,7 @@ package jnnet4;
 
 import static java.util.Arrays.copyOf;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_SIGMOID;
+import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_STEP;
 import static jnnet4.JNNetTools.sigmoid;
 import static jnnet4.JNNetTools.uint8;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
@@ -11,6 +12,7 @@ import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -32,18 +34,13 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			network.execute(1);
 			
-			assertEquals("[0.0]", Arrays.toString(network.getNeuronValues()));
-			
-			network.getNeuronValues()[0] = 42.0;
-			
-			assertEquals("[42.0]", Arrays.toString(network.getNeuronValues()));
+			assertEquals("[1.0]", Arrays.toString(network.getNeuronValues()));
 			
 			network.newNeuron();
 			network.newNeuron();
 			network.newLayer();
 			network.newNeuron();
 			
-			network.getNeuronValues()[0] = 1.0;
 			network.getNeuronValues()[1] = 2.0;
 			network.getNeuronValues()[2] = 3.0;
 			network.getNeuronTypes()[3] = NEURON_TYPE_SUM_SIGMOID;
@@ -63,7 +60,45 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			assertEquals("[1.0, 2.0, 3.0, " + sigmoid(0.4 * 2.0 + 0.6 * 3.0) + "]", Arrays.toString(network.getNeuronValues()));
 			
-			show(network, 512, 1.0);
+			network.getWeights()[network.getNeuronFirstWeightId(3) + 0] = -1.0;
+			network.getWeights()[network.getNeuronFirstWeightId(3) + 1] = +1.0;
+			network.newNeuronSource(0, -0.5);
+			network.getNeuronTypes()[3] = NEURON_TYPE_SUM_STEP;
+			
+			network.newNeuron();
+			network.newNeuronSource(1, +1.0);
+			network.newNeuronSource(2, -1.0);
+			network.newNeuronSource(0, -0.5);
+			network.getNeuronTypes()[4] = NEURON_TYPE_SUM_STEP;
+			
+			network.newLayer();
+			
+			network.newNeuron();
+			network.newNeuronSource(3, +1.0);
+			network.newNeuronSource(4, +1.0);
+			network.getNeuronTypes()[5] = NEURON_TYPE_SUM_STEP;
+			
+			network.getNeuronValues()[1] = 0.0;
+			network.getNeuronValues()[2] = 1.0;
+			network.execute(1);
+			assertEquals("[1.0, 0.0, 1.0, 1.0, 0.0, 1.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronValues()[1] = 1.0;
+			network.getNeuronValues()[2] = 0.0;
+			network.execute(1);
+			assertEquals("[1.0, 1.0, 0.0, 0.0, 1.0, 1.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronValues()[1] = 0.0;
+			network.getNeuronValues()[2] = 0.0;
+			network.execute(1);
+			assertEquals("[1.0, 0.0, 0.0, 0.0, 0.0, 0.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronValues()[1] = 1.0;
+			network.getNeuronValues()[2] = 1.0;
+			network.execute(1);
+			assertEquals("[1.0, 1.0, 1.0, 0.0, 0.0, 0.0]", Arrays.toString(network.getNeuronValues()));
+			
+			show(network, 256, 0.01);
 		} finally {
 			network.dispose();
 		}
@@ -116,7 +151,7 @@ public final class FeedforwardNeuralNetworkTest {
 	 */
 	public final class FeedforwardNeuralNetwork extends Kernel {
 		
-		private double[] neuronValues = { 0.0 };
+		private double[] neuronValues = { 1.0 };
 		
 		private byte[] neuronTypes = { 0 };
 		
@@ -160,8 +195,8 @@ public final class FeedforwardNeuralNetworkTest {
 			final int neuronIdEnd = neuronOffset + this.getNeuronCount();
 			
 			for (int neuronId = neuronOffset + noninputLayerOffset; neuronId < neuronIdEnd; ++neuronId) {
-				final int weightIdStart = this.neuronFirstWeightIds[neuronId];
-				final int weightIdEnd = this.neuronFirstWeightIds[neuronId + 1];
+				final int weightIdStart = this.getNeuronFirstWeightId(neuronId);
+				final int weightIdEnd = this.getNeuronFirstWeightId(neuronId + 1);
 				final int neurontType = this.getNeuronTypes()[neuronId];
 				double aggregate = 0.0;
 				
@@ -198,7 +233,9 @@ public final class FeedforwardNeuralNetworkTest {
 						aggregate += weight * sourceValue;
 					}
 					
-					aggregate = 0.5 <= aggregate ? 1.0 : 0.0;
+//					Tools.debugPrint(neuronId, aggregate);
+					
+					aggregate = 0.0 < aggregate ? 1.0 : 0.0;
 				} else if (neurontType == NEURON_TYPE_MAX_ID) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
@@ -232,7 +269,7 @@ public final class FeedforwardNeuralNetworkTest {
 						aggregate = max(aggregate, weight * sourceValue);
 					}
 					
-					aggregate = 0.5 <= aggregate ? 1.0 : 0.0;
+					aggregate = 0.0 < aggregate ? 1.0 : 0.0;
 				}
 				
 				this.getNeuronValues()[neuronOffset + neuronId] = aggregate;
@@ -263,13 +300,10 @@ public final class FeedforwardNeuralNetworkTest {
 			this.neuronValues = copyOf(this.getNeuronValues(), result + 1);
 			this.neuronTypes = copyOf(this.getNeuronTypes(), result + 1);
 			this.neuronFirstWeightIds = copyOf(this.neuronFirstWeightIds, result + 2);
-			this.weights = copyOf(this.getWeights(), weightCount + 1);
-			this.sourceIds = copyOf(this.getSourceIds(), weightCount + 1);
 			
 			this.neuronFirstWeightIds[result] = weightCount;
-			this.neuronFirstWeightIds[result + 1] = weightCount + 1;
+			this.neuronFirstWeightIds[result + 1] = weightCount;
 			++this.neuronCount;
-			++this.weightCount;
 			++this.layerFirstNeuronIds[this.getLayerCount()];
 			
 			return result;
@@ -302,6 +336,14 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		public final int getLayerNeuronCount(final int layerId) {
 			return this.layerFirstNeuronIds[layerId + 1] - this.layerFirstNeuronIds[layerId];
+		}
+		
+		public final int getNeuronFirstWeightId(final int neuronId) {
+			return this.neuronFirstWeightIds[neuronId];
+		}
+		
+		public final int getNeuronLastWeightId(final int neuronId) {
+			return this.getNeuronFirstWeightId(neuronId + 1) - this.getNeuronFirstWeightId(neuronId);
 		}
 		
 		/**
