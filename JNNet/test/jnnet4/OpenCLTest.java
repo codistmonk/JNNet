@@ -96,12 +96,6 @@ public final class OpenCLTest {
 	public final void test3() throws Exception {
 		loadDLL("aparapi");
 		
-		{
-			final OpenCLDevice gpu1 = (OpenCLDevice) Device.firstGPU();
-			debugPrint(gpu1.getMaxWorkGroupSize(), Arrays.toString(gpu1.getMaxWorkItemSize()));
-			debugPrint(gpu1.getMaxMemAllocSize(), gpu1.getGlobalMemSize());
-		}
-		
 		final TicToc timer = new TicToc();
 		
 		debugPrint(new Date(timer.tic()));
@@ -159,7 +153,7 @@ public final class OpenCLTest {
 		return exp(log(exp(log(exp(log(sigmoid(weights[i] * sources[i])))))));
 	}
 	
-	public static final int N = 0x0FFFF000;
+	public static final int N = 0x00FFF000;
 	
 	public static final double[] WEIGHTS = new double[N];
 	
