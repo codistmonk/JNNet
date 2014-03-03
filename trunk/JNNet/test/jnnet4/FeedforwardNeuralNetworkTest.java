@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.util.Arrays.copyOf;
+import static jnnet.DLLTools.loadDLL;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_SIGMOID;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_STEP;
 import static jnnet4.JNNetTools.sigmoid;
@@ -11,6 +12,7 @@ import static org.junit.Assert.*;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
+import jnnet.DLLTools;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -98,10 +100,65 @@ public final class FeedforwardNeuralNetworkTest {
 			network.execute(1);
 			assertEquals("[1.0, 1.0, 1.0, 0.0, 0.0, 0.0]", Arrays.toString(network.getNeuronValues()));
 			
-			show(network, 256, 0.01);
+//			show(network, 256, 0.01);
 		} finally {
 			network.dispose();
 		}
+	}
+	
+	@Test
+	public final void test2() {
+		final FeedforwardNeuralNetwork network = new FeedforwardNeuralNetwork();
+		
+		try {
+			network.newNeuron();
+			network.newNeuron();
+			network.newLayer();
+			network.newNeuron();
+			network.newNeuronSource(1, 1.0);
+			network.newNeuronSource(2, 2.0);
+			
+			network.getNeuronValues()[1] = 3.0;
+			network.getNeuronValues()[2] = 4.0;
+			
+			network.getNeuronTypes()[3] = FeedforwardNeuralNetwork.NEURON_TYPE_SUM_ID;
+			network.execute(1);
+			assertEquals("[1.0, 3.0, 4.0, 11.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronTypes()[3] = FeedforwardNeuralNetwork.NEURON_TYPE_SUM_CLAMP;
+			network.execute(1);
+			assertEquals("[1.0, 3.0, 4.0, 1.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronTypes()[3] = FeedforwardNeuralNetwork.NEURON_TYPE_SUM_SIGMOID;
+			network.execute(1);
+			assertEquals("[1.0, 3.0, 4.0, " + sigmoid(11.0) + "]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronTypes()[3] = FeedforwardNeuralNetwork.NEURON_TYPE_SUM_STEP;
+			network.execute(1);
+			assertEquals("[1.0, 3.0, 4.0, 1.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronTypes()[3] = FeedforwardNeuralNetwork.NEURON_TYPE_MAX_ID;
+			network.execute(1);
+			assertEquals("[1.0, 3.0, 4.0, 8.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronTypes()[3] = FeedforwardNeuralNetwork.NEURON_TYPE_MAX_CLAMP;
+			network.execute(1);
+			assertEquals("[1.0, 3.0, 4.0, 1.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronTypes()[3] = FeedforwardNeuralNetwork.NEURON_TYPE_MAX_SIGMOID;
+			network.execute(1);
+			assertEquals("[1.0, 3.0, 4.0, " + sigmoid(8.0) + "]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronTypes()[3] = FeedforwardNeuralNetwork.NEURON_TYPE_MAX_STEP;
+			network.execute(1);
+			assertEquals("[1.0, 3.0, 4.0, 1.0]", Arrays.toString(network.getNeuronValues()));
+		} finally {
+			network.dispose();
+		}
+	}
+	
+	static {
+		loadDLL("aparapi");
 	}
 	
 	public static final void show(final FeedforwardNeuralNetwork network, final int imageSize, final double scale) {
