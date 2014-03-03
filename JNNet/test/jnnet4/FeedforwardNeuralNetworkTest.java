@@ -20,49 +20,53 @@ import com.amd.aparapi.Kernel;
  * @author codistmonk (creation 2014-03-02)
  */
 public final class FeedforwardNeuralNetworkTest {
-
+	
 	@Test
 	public final void test1() {
 		final FeedforwardNeuralNetwork network = new FeedforwardNeuralNetwork();
 		
-		assertEquals(1, network.getNeuronCount());
-		assertEquals(0, network.getWeightCount());
-		assertEquals(1, network.getLayerCount());
-		
-		network.update(0);
-		
-		assertEquals("[0.0]", Arrays.toString(network.getNeuronValues()));
-		
-		network.getNeuronValues()[0] = 42.0;
-		
-		assertEquals("[42.0]", Arrays.toString(network.getNeuronValues()));
-		
-		network.newNeuron();
-		network.newNeuron();
-		network.newLayer();
-		network.newNeuron();
-		
-		network.getNeuronValues()[0] = 1.0;
-		network.getNeuronValues()[1] = 2.0;
-		network.getNeuronValues()[2] = 3.0;
-		network.getNeuronTypes()[3] = NEURON_TYPE_SUM_SIGMOID;
-		
-		network.update(0);
-		
-		assertEquals("[1.0, 2.0, 3.0, 0.5]", Arrays.toString(network.getNeuronValues()));
-		
-		network.update(0);
-		
-		assertEquals("[1.0, 2.0, 3.0, 0.5]", Arrays.toString(network.getNeuronValues()));
-		
-		network.newNeuronSource(1, 0.4);
-		network.newNeuronSource(2, 0.6);
-		
-		network.update(0);
-		
-		assertEquals("[1.0, 2.0, 3.0, " + sigmoid(0.4 * 2.0 + 0.6 * 3.0) + "]", Arrays.toString(network.getNeuronValues()));
-		
-		show(network, 512, 1.0);
+		try {
+			assertEquals(1, network.getNeuronCount());
+			assertEquals(0, network.getWeightCount());
+			assertEquals(1, network.getLayerCount());
+			
+			network.execute(1);
+			
+			assertEquals("[0.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.getNeuronValues()[0] = 42.0;
+			
+			assertEquals("[42.0]", Arrays.toString(network.getNeuronValues()));
+			
+			network.newNeuron();
+			network.newNeuron();
+			network.newLayer();
+			network.newNeuron();
+			
+			network.getNeuronValues()[0] = 1.0;
+			network.getNeuronValues()[1] = 2.0;
+			network.getNeuronValues()[2] = 3.0;
+			network.getNeuronTypes()[3] = NEURON_TYPE_SUM_SIGMOID;
+			
+			network.execute(1);
+			
+			assertEquals("[1.0, 2.0, 3.0, 0.5]", Arrays.toString(network.getNeuronValues()));
+			
+			network.execute(1);
+			
+			assertEquals("[1.0, 2.0, 3.0, 0.5]", Arrays.toString(network.getNeuronValues()));
+			
+			network.newNeuronSource(1, 0.4);
+			network.newNeuronSource(2, 0.6);
+			
+			network.execute(1);
+			
+			assertEquals("[1.0, 2.0, 3.0, " + sigmoid(0.4 * 2.0 + 0.6 * 3.0) + "]", Arrays.toString(network.getNeuronValues()));
+			
+			show(network, 512, 1.0);
+		} finally {
+			network.dispose();
+		}
 	}
 	
 	public static final void show(final FeedforwardNeuralNetwork network, final int imageSize, final double scale) {
@@ -120,11 +124,11 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		private int neuronCount = 1;
 		
-		private double[] weights = {};
+		private double[] weights = { Double.NaN };
 		
 		private int weightCount = 0;
 		
-		private int[] sourceIds = {};
+		private int[] sourceIds = { -1 };
 		
 		private int[] layerFirstNeuronIds = { 0, 1 };
 		
@@ -132,7 +136,7 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		@Override
 		public final void run() {
-			this.update(0);
+			this.update(this.getGlobalId() * this.getNeuronCount());
 		}
 		
 		public final double[] getNeuronValues() {
@@ -161,17 +165,14 @@ public final class FeedforwardNeuralNetworkTest {
 				final int neurontType = this.getNeuronTypes()[neuronId];
 				double aggregate = 0.0;
 				
-				switch (neurontType) {
-				case NEURON_TYPE_SUM_ID:
+				if (neurontType == NEURON_TYPE_SUM_ID) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
 						final int sourceId = neuronOffset + this.getSourceIds()[weightId];
 						final double sourceValue = this.getNeuronValues()[sourceId];
 						aggregate += weight * sourceValue;
 					}
-					
-					break;
-				case NEURON_TYPE_SUM_CLAMP:
+				} else if (neurontType == NEURON_TYPE_SUM_CLAMP) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
 						final int sourceId = neuronOffset + this.getSourceIds()[weightId];
@@ -180,9 +181,7 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 					
 					aggregate = max(-1.0, min(aggregate, 1.0));
-					
-					break;
-				case NEURON_TYPE_SUM_SIGMOID:
+				} else if (neurontType == NEURON_TYPE_SUM_SIGMOID) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
 						final int sourceId = neuronOffset + this.getSourceIds()[weightId];
@@ -191,9 +190,7 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 					
 					aggregate = sigmoid(aggregate);
-					
-					break;
-				case NEURON_TYPE_SUM_STEP:
+				} else if (neurontType == NEURON_TYPE_SUM_STEP) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
 						final int sourceId = neuronOffset + this.getSourceIds()[weightId];
@@ -202,18 +199,14 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 					
 					aggregate = 0.5 <= aggregate ? 1.0 : 0.0;
-					
-					break;
-				case NEURON_TYPE_MAX_ID:
+				} else if (neurontType == NEURON_TYPE_MAX_ID) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
 						final int sourceId = neuronOffset + this.getSourceIds()[weightId];
 						final double sourceValue = this.getNeuronValues()[sourceId];
 						aggregate = max(aggregate, weight * sourceValue);
 					}
-					
-					break;
-				case NEURON_TYPE_MAX_CLAMP:
+				} else if (neurontType == NEURON_TYPE_MAX_CLAMP) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
 						final int sourceId = neuronOffset + this.getSourceIds()[weightId];
@@ -222,9 +215,7 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 					
 					aggregate = max(-1.0, min(aggregate, 1.0));
-					
-					break;
-				case NEURON_TYPE_MAX_SIGMOID:
+				} else if (neurontType == NEURON_TYPE_MAX_SIGMOID) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
 						final int sourceId = neuronOffset + this.getSourceIds()[weightId];
@@ -233,9 +224,7 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 					
 					aggregate = sigmoid(aggregate);
-					
-					break;
-				case NEURON_TYPE_MAX_STEP:
+				} else if (neurontType == NEURON_TYPE_MAX_STEP) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
 						final int sourceId = neuronOffset + this.getSourceIds()[weightId];
@@ -244,8 +233,6 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 					
 					aggregate = 0.5 <= aggregate ? 1.0 : 0.0;
-					
-					break;
 				}
 				
 				this.getNeuronValues()[neuronOffset + neuronId] = aggregate;
