@@ -12,10 +12,12 @@ import static org.junit.Assert.*;
 
 import com.amd.aparapi.Kernel;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -26,6 +28,7 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	@Test
 	public final void test1() {
+		final boolean showNetwork = false;
 		final FeedforwardNeuralNetwork network = new FeedforwardNeuralNetwork();
 		
 		try {
@@ -100,7 +103,9 @@ public final class FeedforwardNeuralNetworkTest {
 			network.execute(1);
 			assertEquals("[1.0, 1.0, 1.0, 0.0, 0.0, 0.0]", Arrays.toString(network.getNeuronValues()));
 			
-//			show(network, 256, 0.01);
+			if (showNetwork) {
+				show(network, 256, 100.0);
+			}
 		} finally {
 			network.dispose();
 		}
@@ -159,6 +164,7 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	@Test
 	public final void test3() {
+		final boolean showNetwork = false;
 		final double epsilon = 1.0E-4;
 		final FeedforwardNeuralNetwork network = newFunctionApproximation1D(
 				0.0, 1.0,
@@ -204,6 +210,10 @@ public final class FeedforwardNeuralNetworkTest {
 			network.getNeuronValues()[1] = 2.0;
 			network.execute(1);
 			assertEquals("0.0", "" + network.getNeuronValues()[outputId]);
+			
+			if (showNetwork) {
+				show(network, 256, 50.0);
+			}
 		} finally {
 			network.dispose();
 		}
@@ -260,7 +270,7 @@ public final class FeedforwardNeuralNetworkTest {
 		final int inputDimension = network.getLayerNeuronCount(0) - 1;
 		final int outputDimension = network.getLayerNeuronCount(network.getLayerCount() - 1);
 		
-		if (inputDimension != 2 || (outputDimension != 1 && outputDimension != 3)) {
+		if ((inputDimension != 1 && inputDimension != 2) || (outputDimension != 1 && outputDimension != 3)) {
 			throw new IllegalArgumentException();
 		}
 		
@@ -269,25 +279,42 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		for (int y = 0; y < h; ++y) {
 			for (int x = 0; x < w; ++x) {
-				final double inputX = scale * (x - w / 2.0);
-				final double inputY = scale * (h / 2.0 - y);
-				network.getNeuronValues()[1] = inputX;
-				network.getNeuronValues()[2] = inputY;
-				network.update(0);
-				int rgb = 0xFF000000;
+				network.getNeuronValues()[1] = (x - w / 2.0) / scale;
 				
-				if (outputDimension == 1) {
-					rgb |= uint8(network.getNeuronValues()[network.getNeuronCount() - 1]) * 0x00010101;
-				} else if (outputDimension == 3) {
-					final int red = uint8(network.getNeuronValues()[network.getNeuronCount() - 3]);
-					final int green = uint8(network.getNeuronValues()[network.getNeuronCount() - 2]);
-					final int blue = uint8(network.getNeuronValues()[network.getNeuronCount() - 1]);
-					rgb |= (red << 16) | (green << 8) | (blue << 0);
+				if (inputDimension == 2) {
+					network.getNeuronValues()[2] = (h / 2.0 - y) / scale;
 				}
 				
-				image.setRGB(x, y, rgb);
+				network.update(0);
+				
+				if (inputDimension == 1 && outputDimension == 1) {
+					final int yy = (int) (h / 2 - scale * network.getNeuronValues()[network.getNeuronCount() - 1]);
+					image.setRGB(x, yy, Color.WHITE.getRGB());
+				} else if (inputDimension == 2) {
+					image.setRGB(x, y, getOutputAsRGB(network));
+				}
+			}
+			
+			if (inputDimension == 1) {
+				break;
 			}
 		}
+	}
+
+	public static int getOutputAsRGB(final FeedforwardNeuralNetwork network) {
+		final int outputDimension = network.getLayerNeuronCount(network.getLayerCount() - 1);
+		int result = 0xFF000000;
+		
+		if (outputDimension == 1) {
+			result |= uint8(network.getNeuronValues()[network.getNeuronCount() - 1]) * 0x00010101;
+		} else if (outputDimension == 3) {
+			final int red = uint8(network.getNeuronValues()[network.getNeuronCount() - 3]);
+			final int green = uint8(network.getNeuronValues()[network.getNeuronCount() - 2]);
+			final int blue = uint8(network.getNeuronValues()[network.getNeuronCount() - 1]);
+			result |= (red << 16) | (green << 8) | (blue << 0);
+		}
+		
+		return result;
 	}
 	
 	/**
