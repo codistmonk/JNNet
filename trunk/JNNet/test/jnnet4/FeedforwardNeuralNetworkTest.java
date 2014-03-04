@@ -77,6 +77,7 @@ public final class FeedforwardNeuralNetworkTest {
 			network.newNeuron();
 			network.newNeuronSource(3, +1.0);
 			network.newNeuronSource(4, +1.0);
+			network.newNeuronSource(0, -1.0);
 			network.getNeuronTypes()[5] = NEURON_TYPE_SUM_STEP;
 			
 			network.getNeuronValues()[1] = 0.0;
@@ -158,9 +159,11 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	@Test
 	public final void test3() {
+		final double epsilon = 1.0E-4;
 		final FeedforwardNeuralNetwork network = newFunctionApproximation1D(
 				0.0, 1.0,
-				1.0, 2.0
+				1.0, 2.0,
+				1.5, -1.0
 		);
 		
 		try {
@@ -170,13 +173,33 @@ public final class FeedforwardNeuralNetworkTest {
 			network.execute(1);
 			assertEquals("0.0", "" + network.getNeuronValues()[outputId]);
 			
+			network.getNeuronValues()[1] = 0.0 - epsilon;
+			network.execute(1);
+			assertEquals("0.0", "" + network.getNeuronValues()[outputId]);
+			
 			network.getNeuronValues()[1] = 0.0;
 			network.execute(1);
 			assertEquals("1.0", "" + network.getNeuronValues()[outputId]);
 			
+			network.getNeuronValues()[1] = 0.5;
+			network.execute(1);
+			assertEquals("2.0", "" + network.getNeuronValues()[outputId]);
+			
 			network.getNeuronValues()[1] = 1.0;
 			network.execute(1);
 			assertEquals("2.0", "" + network.getNeuronValues()[outputId]);
+			
+			network.getNeuronValues()[1] = 1.25;
+			network.execute(1);
+			assertEquals("-1.0", "" + network.getNeuronValues()[outputId]);
+			
+			network.getNeuronValues()[1] = 1.5 - epsilon;
+			network.execute(1);
+			assertEquals("-1.0", "" + network.getNeuronValues()[outputId]);
+			
+			network.getNeuronValues()[1] = 1.5;
+			network.execute(1);
+			assertEquals("0.0", "" + network.getNeuronValues()[outputId]);
 			
 			network.getNeuronValues()[1] = 2.0;
 			network.execute(1);
@@ -201,12 +224,14 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		for (int i = 0; i < n; i += 2) {
 			final double input = inputOutputs[i];
+			final double previous = 2 <= i ? inputOutputs[i - 2] : input;
+			final double next = i + 2 < n ? inputOutputs[i + 2] : input;
 			
 			result.newNeuron(NEURON_TYPE_SUM_STEP);
-			result.newNeuronSource(0, -input + 0.5);
+			result.newNeuronSource(0, -input + (input - previous) / 2.0);
 			result.newNeuronSource(1, 1.0);
 			result.newNeuron(NEURON_TYPE_SUM_STEP);
-			result.newNeuronSource(0, -input - 0.5);
+			result.newNeuronSource(0, -input - (next - input) / 2.0);
 			result.newNeuronSource(1, 1.0);
 		}
 		
@@ -352,9 +377,7 @@ public final class FeedforwardNeuralNetworkTest {
 						aggregate += weight * sourceValue;
 					}
 					
-//					Tools.debugPrint(neuronId, aggregate);
-					
-					aggregate = 0.0 < aggregate ? 1.0 : 0.0;
+					aggregate = 0.0 <= aggregate ? 1.0 : 0.0;
 				} else if (neurontType == NEURON_TYPE_MAX_ID) {
 					for (int weightId = weightIdStart; weightId < weightIdEnd; ++weightId) {
 						final double weight = this.getWeights()[weightId];
@@ -388,7 +411,7 @@ public final class FeedforwardNeuralNetworkTest {
 						aggregate = max(aggregate, weight * sourceValue);
 					}
 					
-					aggregate = 0.0 < aggregate ? 1.0 : 0.0;
+					aggregate = 0.0 <= aggregate ? 1.0 : 0.0;
 				}
 				
 				this.getNeuronValues()[neuronOffset + neuronId] = aggregate;
