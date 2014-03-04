@@ -2,6 +2,7 @@ package jnnet4;
 
 import static java.util.Arrays.copyOf;
 import static jnnet.DLLTools.loadDLL;
+import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_ID;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_SIGMOID;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_STEP;
 import static jnnet4.JNNetTools.sigmoid;
@@ -9,16 +10,14 @@ import static jnnet4.JNNetTools.uint8;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static org.junit.Assert.*;
 
+import com.amd.aparapi.Kernel;
+
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
-import jnnet.DLLTools;
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
-
-import com.amd.aparapi.Kernel;
 
 /**
  * @author codistmonk (creation 2014-03-02)
@@ -157,8 +156,71 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 	}
 	
+	@Test
+	public final void test3() {
+		final FeedforwardNeuralNetwork network = newFunctionApproximation1D(
+				0.0, 1.0,
+				1.0, 2.0
+		);
+		
+		try {
+			final int outputId = network.getNeuronCount() - 1;
+			
+			network.getNeuronValues()[1] = -1.0;
+			network.execute(1);
+			assertEquals("0.0", "" + network.getNeuronValues()[outputId]);
+			
+			network.getNeuronValues()[1] = 0.0;
+			network.execute(1);
+			assertEquals("1.0", "" + network.getNeuronValues()[outputId]);
+			
+			network.getNeuronValues()[1] = 1.0;
+			network.execute(1);
+			assertEquals("2.0", "" + network.getNeuronValues()[outputId]);
+			
+			network.getNeuronValues()[1] = 2.0;
+			network.execute(1);
+			assertEquals("0.0", "" + network.getNeuronValues()[outputId]);
+		} finally {
+			network.dispose();
+		}
+	}
+	
 	static {
 		loadDLL("aparapi");
+	}
+	
+	public static final FeedforwardNeuralNetwork newFunctionApproximation1D(final double... inputOutputs) {
+		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
+		
+		result.newNeuron();
+		
+		result.newLayer();
+		
+		final int n = inputOutputs.length;
+		
+		for (int i = 0; i < n; i += 2) {
+			final double input = inputOutputs[i];
+			
+			result.newNeuron(NEURON_TYPE_SUM_STEP);
+			result.newNeuronSource(0, -input + 0.5);
+			result.newNeuronSource(1, 1.0);
+			result.newNeuron(NEURON_TYPE_SUM_STEP);
+			result.newNeuronSource(0, -input - 0.5);
+			result.newNeuronSource(1, 1.0);
+		}
+		
+		result.newLayer();
+		result.newNeuron(NEURON_TYPE_SUM_ID);
+		
+		for (int i = 0; i < n; i += 2) {
+			final double output = inputOutputs[i + 1];
+			
+			result.newNeuronSource(2 + i, output);
+			result.newNeuronSource(2 + i + 1, -output);
+		}
+		
+		return result;
 	}
 	
 	public static final void show(final FeedforwardNeuralNetwork network, final int imageSize, final double scale) {
@@ -206,7 +268,7 @@ public final class FeedforwardNeuralNetworkTest {
 	/**
 	 * @author codistmonk (creation 2014-03-02)
 	 */
-	public final class FeedforwardNeuralNetwork extends Kernel {
+	public static final class FeedforwardNeuralNetwork extends Kernel {
 		
 		private double[] neuronValues = { 1.0 };
 		
@@ -362,6 +424,14 @@ public final class FeedforwardNeuralNetworkTest {
 			this.neuronFirstWeightIds[result + 1] = weightCount;
 			++this.neuronCount;
 			++this.layerFirstNeuronIds[this.getLayerCount()];
+			
+			return result;
+		}
+		
+		public final int newNeuron(final byte type) {
+			final int result = this.newNeuron();
+			
+			this.getNeuronTypes()[result] = type;
 			
 			return result;
 		}
