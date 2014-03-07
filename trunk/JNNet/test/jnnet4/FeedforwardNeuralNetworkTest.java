@@ -317,6 +317,12 @@ public final class FeedforwardNeuralNetworkTest {
 		assertEquals(0L, confusionMatrix.getTotalErrorCount());
 	}
 	
+	public static final Random RANDOM = new Random(0L);
+	
+	static {
+		loadDLL("aparapi");
+	}
+	
 	public static final FeedforwardNeuralNetwork newClassifier(final TrainingData trainingData) {
 		final boolean debug = true;
 		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
@@ -480,81 +486,83 @@ public final class FeedforwardNeuralNetworkTest {
 		return result;
 	}
 	
-	public static final Random RANDOM = new Random(0L);
-	
-	static {
-		loadDLL("aparapi");
-	}
-	
 	public static final FeedforwardNeuralNetwork newFunctionApproximation1D(final byte hiddenNeuronType,
 			final int outputDimension, final double... inputOutputs) {
 		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
-		
-		result.newNeuron();
-		
-		result.newLayer();
-		
 		final int n = inputOutputs.length;
 		final int step = 1 + outputDimension;
 		
-		for (int i = 0; i < n; i += step) {
-			final double input = inputOutputs[i];
-			final double previous = step <= i ? inputOutputs[i - step] : input;
-			final double next = i + step < n ? inputOutputs[i + step] : input;
+		// Finish input layer
+		{
+			result.newNeuron();
+		}
+		
+		// Build hidden layer (basis functions)
+		{
+			result.newLayer();
 			
-			result.newNeuron(hiddenNeuronType);
-			
-			if (hiddenNeuronType == NEURON_TYPE_SUM_THRESHOLD) {
-				result.newNeuronSource(0, -input + (input - previous) / 2.0);
-				result.newNeuronSource(1, 1.0);
-			} else if (hiddenNeuronType == NEURON_TYPE_SUM_LINEAR) {
-				// a * input + b = 0.5
-				// a * previous + b = -0.5
-				// det = input - previous
-				// a = (0.5 - (-0.5)) / det = 1.0 / det
-				// b = (input * -0.5 - previous * 0.5) / det = -(input + previous) / det / 2.0
-				final double d = input - previous;
+			for (int i = 0; i < n; i += step) {
+				final double input = inputOutputs[i];
+				final double previous = step <= i ? inputOutputs[i - step] : input;
+				final double next = i + step < n ? inputOutputs[i + step] : input;
 				
-				if (d != 0.0) {
-					result.newNeuronSource(0, -(input + previous) / d / 2.0);
-					result.newNeuronSource(1, 1.0 / d);
-				} else {
-					result.newNeuronSource(0, 0.5);
-					result.newNeuronSource(1, 0.0);
+				result.newNeuron(hiddenNeuronType);
+				
+				if (hiddenNeuronType == NEURON_TYPE_SUM_THRESHOLD) {
+					result.newNeuronSource(0, -input + (input - previous) / 2.0);
+					result.newNeuronSource(1, 1.0);
+				} else if (hiddenNeuronType == NEURON_TYPE_SUM_LINEAR) {
+					// a * input + b = 0.5
+					// a * previous + b = -0.5
+					// det = input - previous
+					// a = (0.5 - (-0.5)) / det = 1.0 / det
+					// b = (input * -0.5 - previous * 0.5) / det = -(input + previous) / det / 2.0
+					final double d = input - previous;
+					
+					if (d != 0.0) {
+						result.newNeuronSource(0, -(input + previous) / d / 2.0);
+						result.newNeuronSource(1, 1.0 / d);
+					} else {
+						result.newNeuronSource(0, 0.5);
+						result.newNeuronSource(1, 0.0);
+					}
 				}
-			}
-			
-			result.newNeuron(hiddenNeuronType);
-			
-			if (hiddenNeuronType == NEURON_TYPE_SUM_THRESHOLD) {
-				result.newNeuronSource(0, -input - (next - input) / 2.0);
-				result.newNeuronSource(1, 1.0);
-			} else if (hiddenNeuronType == NEURON_TYPE_SUM_LINEAR) {
-				// a * next + b = 0.5
-				// a * input + b = -0.5
-				// det = next - input
-				final double d = next - input;
 				
-				if (d != 0.0) {
-					result.newNeuronSource(0, -(input + next) / d / 2.0);
-					result.newNeuronSource(1, 1.0 / d);
-				} else {
-					result.newNeuronSource(0, -0.5);
-					result.newNeuronSource(1, 0.0);
+				result.newNeuron(hiddenNeuronType);
+				
+				if (hiddenNeuronType == NEURON_TYPE_SUM_THRESHOLD) {
+					result.newNeuronSource(0, -input - (next - input) / 2.0);
+					result.newNeuronSource(1, 1.0);
+				} else if (hiddenNeuronType == NEURON_TYPE_SUM_LINEAR) {
+					// a * next + b = 0.5
+					// a * input + b = -0.5
+					// det = next - input
+					final double d = next - input;
+					
+					if (d != 0.0) {
+						result.newNeuronSource(0, -(input + next) / d / 2.0);
+						result.newNeuronSource(1, 1.0 / d);
+					} else {
+						result.newNeuronSource(0, -0.5);
+						result.newNeuronSource(1, 0.0);
+					}
 				}
 			}
 		}
 		
-		result.newLayer();
-		
-		for (int d = 1; d <= outputDimension; ++d) {
-			result.newNeuron(NEURON_TYPE_SUM_ID);
+		// Build output layer
+		{
+			result.newLayer();
 			
-			for (int i = 0; i < n; i += step) {
-				final double output = inputOutputs[i + d];
+			for (int d = 1; d <= outputDimension; ++d) {
+				result.newNeuron(NEURON_TYPE_SUM_ID);
 				
-				result.newNeuronSource(2 * (1 + i / step), output);
-				result.newNeuronSource(2 * (1 + i / step) + 1, -output);
+				for (int i = 0; i < n; i += step) {
+					final double output = inputOutputs[i + d];
+					
+					result.newNeuronSource(2 * (1 + i / step), output);
+					result.newNeuronSource(2 * (1 + i / step) + 1, -output);
+				}
 			}
 		}
 		
