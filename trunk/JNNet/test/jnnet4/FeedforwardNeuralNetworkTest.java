@@ -279,153 +279,13 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	@Test
 	public final void test5() {
-		final Random random = new Random(2L);
 		final boolean showNetwork = true;
-		final FeedforwardNeuralNetwork network = new FeedforwardNeuralNetwork();
 		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
-		final double[] data = trainingData.getData();
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
-		
-		for (int i = 0; i < inputDimension; ++i) {
-			network.newNeuron();
-		}
-		
-		network.newLayer();
-		
-		final List<List<Integer>> todo = new ArrayList<List<Integer>>();
-		final int n = data.length / step;
-		final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
-		
-		todo.add(range(0, n - 1));
-		
-		while (!todo.isEmpty()) {
-			final List<Integer> indices = todo.remove(0);
-			final VectorStatistics[] statistics = instances(2, vectorStatisticsFactory);
-			
-			for (final int i : indices) {
-				final int sampleOffset = i * step;
-				final int labelOffset = sampleOffset + step - 1;
-				statistics[(int) data[labelOffset]].addValues(copyOfRange(data, sampleOffset, labelOffset));
-			}
-			
-			if (statistics[0].getCount() == 0 || statistics[1].getCount() == 0) {
-				continue;
-			}
-			
-			final double[] cluster0 = statistics[0].getMeans();
-			final double[] cluster1 = statistics[1].getMeans();
-			final double[] neuronWeights = subtract(cluster1, cluster0);
-			
-			if (Arrays.equals(cluster0, cluster1)) {
-				for (int i = 0; i < inputDimension; ++i) {
-					neuronWeights[i] = random.nextDouble();
-				}
-			}
-			
-			final double[] neuronLocation = scaled(add(cluster1, cluster0), 0.5);
-			final double neuronBias = -dot(neuronWeights, neuronLocation);
-			
-//			debugPrint(indices);
-//			debugPrint(Arrays.toString(cluster0));
-//			debugPrint(Arrays.toString(cluster1));
-//			debugPrint(Arrays.toString(neuronWeights));
-//			debugPrint(Arrays.toString(neuronLocation));
-//			debugPrint(dot(neuronWeights, cluster0) + neuronBias, dot(neuronWeights, cluster1) + neuronBias, dot(neuronWeights, neuronLocation) + neuronBias);
-			
-			network.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
-			
-			network.newNeuronSource(0, neuronBias);
-			
-			for (int i = 0; i < inputDimension; ++i) {
-				network.newNeuronSource(i + 1, neuronWeights[i]);
-			}
-			
-			{
-				final int m = indices.size();
-				int j = 0;
-				
-				for (int i = 0; i < m; ++i) {
-					final int sampleOffset = indices.get(i) * step;
-					final double d = dot(neuronWeights, copyOfRange(data, sampleOffset, sampleOffset + inputDimension)) + neuronBias;
-					
-					if (0 <= d) {
-						swap(indices, i, j++);
-					}
-				}
-				
-				todo.add(indices.subList(0, j));
-				todo.add(indices.subList(j, m));
-			}
-		}
-		
-		final int layer1NeuronCount = network.getLayerNeuronCount(1);
-		@SuppressWarnings("unchecked")
-		final Set<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
-		
-		debugPrint(layer1NeuronCount);
-		
-		for (int i = 0; i < data.length; i += step) {
-			for (int j = 0; j < inputDimension; ++j) {
-				network.getNeuronValues()[1 + j] = data[i + j];
-			}
-			
-			network.update(0);
-			
-			final BitSet code = new BitSet(layer1NeuronCount);
-			
-			for (int j = 1 + inputDimension; j < 1 + inputDimension + layer1NeuronCount; ++j) {
-				if (0.0 < network.getNeuronValues()[j]) {
-					code.set(j - (1 + inputDimension));
-				}
-			}
-			
-//			debugPrint(Arrays.toString(network.getNeuronValues()), (int) data[i + step - 1]);
-//			debugPrint(code);
-			
-			codes[(int) data[i + step - 1]].add(code);
-		}
-		
-//		debugPrint(codes[0]);
-//		debugPrint(codes[1]);
-		debugPrint(codes[0].size());
-		debugPrint(codes[1].size());
-		
-		final Set<BitSet> ambiguous = new HashSet<BitSet>(codes[0]);
-		
-		ambiguous.retainAll(codes[1]);
-		
-		assertEquals(0, ambiguous.size());
-		
-		network.newLayer();
-		
-		for (final BitSet code : codes[1]) {
-			network.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
-			
-			network.newNeuronSource(0, -code.cardinality());
-			
-			for (int i = 0; i < layer1NeuronCount; ++i) {
-				network.newNeuronSource(1 + inputDimension + i, code.get(i) ? 1.0 : -1.0);
-			}
-			
-//			debugPrint(code);
-//			debugPrint(Arrays.toString(network.getSourceIds()));
-//			debugPrint(Arrays.toString(network.getWeights()));
-		}
-		
-		final int layer2NeuronCount = network.getLayerNeuronCount(2);
-		
-		debugPrint(layer2NeuronCount);
-		
-		network.newLayer();
-		
-		network.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
-		
-		network.newNeuronSource(0, -0.5);
-		
-		for (int i = 0; i < layer2NeuronCount; ++i) {
-			network.newNeuronSource(1 + inputDimension + layer1NeuronCount + i, 1.0);
-		}
+		final int n = trainingData.getItemCount();
+		final double[] data = trainingData.getData();
+		final FeedforwardNeuralNetwork network = newClassifier(trainingData);
 		
 		final int outputId = network.getNeuronCount() - 1;
 		int falsePositiveCount = 0;
@@ -464,6 +324,155 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 		
 		assertEquals(0, errorCount);
+	}
+
+	public static final FeedforwardNeuralNetwork newClassifier(final TrainingData trainingData) {
+		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
+		final int step = trainingData.getStep();
+		final int inputDimension = step - 1;
+		final int n = trainingData.getItemCount();
+		final double[] data = trainingData.getData();
+		
+		for (int i = 0; i < inputDimension; ++i) {
+			result.newNeuron();
+		}
+		
+		result.newLayer();
+		
+		final List<List<Integer>> todo = new ArrayList<List<Integer>>();
+		final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
+		
+		todo.add(range(0, n - 1));
+		
+		while (!todo.isEmpty()) {
+			final List<Integer> indices = todo.remove(0);
+			final VectorStatistics[] statistics = instances(2, vectorStatisticsFactory);
+			
+			for (final int i : indices) {
+				final int sampleOffset = i * step;
+				final int labelOffset = sampleOffset + step - 1;
+				statistics[(int) data[labelOffset]].addValues(copyOfRange(data, sampleOffset, labelOffset));
+			}
+			
+			if (statistics[0].getCount() == 0 || statistics[1].getCount() == 0) {
+				continue;
+			}
+			
+			final double[] cluster0 = statistics[0].getMeans();
+			final double[] cluster1 = statistics[1].getMeans();
+			final double[] neuronWeights = subtract(cluster1, cluster0);
+			
+			if (Arrays.equals(cluster0, cluster1)) {
+				for (int i = 0; i < inputDimension; ++i) {
+					neuronWeights[i] = RANDOM.nextDouble();
+				}
+			}
+			
+			final double[] neuronLocation = scaled(add(cluster1, cluster0), 0.5);
+			final double neuronBias = -dot(neuronWeights, neuronLocation);
+			
+//			debugPrint(indices);
+//			debugPrint(Arrays.toString(cluster0));
+//			debugPrint(Arrays.toString(cluster1));
+//			debugPrint(Arrays.toString(neuronWeights));
+//			debugPrint(Arrays.toString(neuronLocation));
+//			debugPrint(dot(neuronWeights, cluster0) + neuronBias, dot(neuronWeights, cluster1) + neuronBias, dot(neuronWeights, neuronLocation) + neuronBias);
+			
+			result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+			
+			result.newNeuronSource(0, neuronBias);
+			
+			for (int i = 0; i < inputDimension; ++i) {
+				result.newNeuronSource(i + 1, neuronWeights[i]);
+			}
+			
+			{
+				final int m = indices.size();
+				int j = 0;
+				
+				for (int i = 0; i < m; ++i) {
+					final int sampleOffset = indices.get(i) * step;
+					final double d = dot(neuronWeights, copyOfRange(data, sampleOffset, sampleOffset + inputDimension)) + neuronBias;
+					
+					if (0 <= d) {
+						swap(indices, i, j++);
+					}
+				}
+				
+				todo.add(indices.subList(0, j));
+				todo.add(indices.subList(j, m));
+			}
+		}
+		
+		final int layer1NeuronCount = result.getLayerNeuronCount(1);
+		@SuppressWarnings("unchecked")
+		final Set<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
+		
+		debugPrint(layer1NeuronCount);
+		
+		for (int i = 0; i < data.length; i += step) {
+			for (int j = 0; j < inputDimension; ++j) {
+				result.getNeuronValues()[1 + j] = data[i + j];
+			}
+			
+			result.update(0);
+			
+			final BitSet code = new BitSet(layer1NeuronCount);
+			
+			for (int j = 1 + inputDimension; j < 1 + inputDimension + layer1NeuronCount; ++j) {
+				if (0.0 < result.getNeuronValues()[j]) {
+					code.set(j - (1 + inputDimension));
+				}
+			}
+			
+//			debugPrint(Arrays.toString(network.getNeuronValues()), (int) data[i + step - 1]);
+//			debugPrint(code);
+			
+			codes[(int) data[i + step - 1]].add(code);
+		}
+		
+//		debugPrint(codes[0]);
+//		debugPrint(codes[1]);
+		debugPrint(codes[0].size());
+		debugPrint(codes[1].size());
+		
+		final Set<BitSet> ambiguous = new HashSet<BitSet>(codes[0]);
+		
+		ambiguous.retainAll(codes[1]);
+		
+		assertEquals(0, ambiguous.size());
+		
+		result.newLayer();
+		
+		for (final BitSet code : codes[1]) {
+			result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+			
+			result.newNeuronSource(0, -code.cardinality());
+			
+			for (int i = 0; i < layer1NeuronCount; ++i) {
+				result.newNeuronSource(1 + inputDimension + i, code.get(i) ? 1.0 : -1.0);
+			}
+			
+//			debugPrint(code);
+//			debugPrint(Arrays.toString(network.getSourceIds()));
+//			debugPrint(Arrays.toString(network.getWeights()));
+		}
+		
+		final int layer2NeuronCount = result.getLayerNeuronCount(2);
+		
+		debugPrint(layer2NeuronCount);
+		
+		result.newLayer();
+		
+		result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+		
+		result.newNeuronSource(0, -0.5);
+		
+		for (int i = 0; i < layer2NeuronCount; ++i) {
+			result.newNeuronSource(1 + inputDimension + layer1NeuronCount + i, 1.0);
+		}
+		
+		return result;
 	}
 	
 	/**
@@ -608,12 +617,18 @@ public final class FeedforwardNeuralNetworkTest {
 			return this.step;
 		}
 		
+		public final int getItemCount() {
+			return this.getData().length / this.getStep();
+		}
+		
 		/**
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 5770717293628383428L;
 		
 	}
+	
+	public static final Random RANDOM = new Random(0L);
 	
 	static {
 		loadDLL("aparapi");
