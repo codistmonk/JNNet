@@ -316,11 +316,11 @@ public final class FeedforwardNeuralNetworkTest {
 			final double[] neuronLocation = scaled(add(cluster1, cluster0), 0.5);
 			final double neuronBias = -dot(neuronWeights, neuronLocation);
 			
-			debugPrint(Arrays.toString(cluster0));
-			debugPrint(Arrays.toString(cluster1));
-			debugPrint(Arrays.toString(neuronWeights));
-			debugPrint(Arrays.toString(neuronLocation));
-			debugPrint(dot(neuronWeights, cluster0) + neuronBias, dot(neuronWeights, cluster1) + neuronBias, dot(neuronWeights, neuronLocation) + neuronBias);
+//			debugPrint(Arrays.toString(cluster0));
+//			debugPrint(Arrays.toString(cluster1));
+//			debugPrint(Arrays.toString(neuronWeights));
+//			debugPrint(Arrays.toString(neuronLocation));
+//			debugPrint(dot(neuronWeights, cluster0) + neuronBias, dot(neuronWeights, cluster1) + neuronBias, dot(neuronWeights, neuronLocation) + neuronBias);
 			
 			network.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
 			
@@ -383,7 +383,58 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		network.newLayer();
 		
-		// TODO
+		for (final BitSet code : codes[1]) {
+			network.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+			
+			network.newNeuronSource(0, -code.cardinality());
+			
+			for (int i = 0; i < layer1NeuronCount; ++i) {
+				if (code.get(i)) {
+					network.newNeuronSource(1 + i, 1.0);
+				}
+			}
+		}
+		
+		final int layer2NeuronCount = network.getLayerNeuronCount(2);
+		
+		network.newLayer();
+		
+		network.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+		
+		for (int i = 0; i < layer2NeuronCount; ++i) {
+			network.newNeuronSource(1 + i, 1.0);
+		}
+		
+		final int outputId = network.getNeuronCount() - 1;
+		int falsePositiveCount = 0;
+		int falseNegativeCount = 0;
+		int errorCount = 0;
+		
+		for (int i = 0; i < data.length; i += step) {
+			for (int j = 0; j < inputDimension; ++j) {
+				network.getNeuronValues()[1 + j] = data[i + j];
+			}
+			
+			network.update(0);
+			
+			final double expected = data[i + step - 1];
+			final double actual = network.getNeuronValues()[outputId];
+			
+			if (expected != actual) {
+				++errorCount;
+				
+				if (expected == 1.0) {
+					++falseNegativeCount;
+				} else {
+					++falsePositiveCount;
+				}
+			}
+//			assertEquals("" + expected, "" + actual);
+		}
+		
+		debugPrint(errorCount, falseNegativeCount, falsePositiveCount);
+		
+		assertEquals(0, errorCount);
 	}
 	
 	/**
