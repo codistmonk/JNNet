@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.lang.Double.parseDouble;
+import static java.lang.Math.random;
 import static java.util.Arrays.copyOf;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.swap;
@@ -26,6 +27,7 @@ import static org.junit.Assert.*;
 import com.amd.aparapi.Kernel;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -128,7 +131,7 @@ public final class FeedforwardNeuralNetworkTest {
 			assertEquals("[1.0, 1.0, 1.0, 0.0, 0.0, 0.0]", Arrays.toString(network.getNeuronValues()));
 			
 			if (showNetwork) {
-				show(network, 256, 100.0);
+				show(network, 256, 100.0, null);
 			}
 		} finally {
 			network.dispose();
@@ -204,7 +207,7 @@ public final class FeedforwardNeuralNetworkTest {
 					);
 			
 			if (showNetwork) {
-				show(network, 256, 40.0);
+				show(network, 256, 40.0, null);
 			}
 			
 			try {
@@ -276,7 +279,8 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	@Test
 	public final void test5() {
-		final boolean showNetwork = false;
+		final Random random = new Random(2L);
+		final boolean showNetwork = true;
 		final FeedforwardNeuralNetwork network = new FeedforwardNeuralNetwork();
 		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
 		final double[] data = trainingData.getData();
@@ -311,11 +315,18 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			final double[] cluster0 = statistics[0].getMeans();
 			final double[] cluster1 = statistics[1].getMeans();
-			//XXX handle case cluster0 == cluster1
 			final double[] neuronWeights = subtract(cluster1, cluster0);
+			
+			if (Arrays.equals(cluster0, cluster1)) {
+				for (int i = 0; i < inputDimension; ++i) {
+					neuronWeights[i] = random.nextDouble();
+				}
+			}
+			
 			final double[] neuronLocation = scaled(add(cluster1, cluster0), 0.5);
 			final double neuronBias = -dot(neuronWeights, neuronLocation);
 			
+//			debugPrint(indices);
 //			debugPrint(Arrays.toString(cluster0));
 //			debugPrint(Arrays.toString(cluster1));
 //			debugPrint(Arrays.toString(neuronWeights));
@@ -363,15 +374,20 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			final BitSet code = new BitSet(layer1NeuronCount);
 			
-			for (int j = inputDimension; j < inputDimension + layer1NeuronCount; ++j) {
+			for (int j = 1 + inputDimension; j < 1 + inputDimension + layer1NeuronCount; ++j) {
 				if (0.0 < network.getNeuronValues()[j]) {
-					code.set(j - inputDimension);
+					code.set(j - (1 + inputDimension));
 				}
 			}
+			
+//			debugPrint(Arrays.toString(network.getNeuronValues()), (int) data[i + step - 1]);
+//			debugPrint(code);
 			
 			codes[(int) data[i + step - 1]].add(code);
 		}
 		
+//		debugPrint(codes[0]);
+//		debugPrint(codes[1]);
 		debugPrint(codes[0].size());
 		debugPrint(codes[1].size());
 		
@@ -389,18 +405,26 @@ public final class FeedforwardNeuralNetworkTest {
 			network.newNeuronSource(0, -code.cardinality());
 			
 			for (int i = 0; i < layer1NeuronCount; ++i) {
-				network.newNeuronSource(1 + i, code.get(i) ? 1.0 : -1.0);
+				network.newNeuronSource(1 + inputDimension + i, code.get(i) ? 1.0 : -1.0);
 			}
+			
+//			debugPrint(code);
+//			debugPrint(Arrays.toString(network.getSourceIds()));
+//			debugPrint(Arrays.toString(network.getWeights()));
 		}
 		
 		final int layer2NeuronCount = network.getLayerNeuronCount(2);
+		
+		debugPrint(layer2NeuronCount);
 		
 		network.newLayer();
 		
 		network.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
 		
+		network.newNeuronSource(0, -0.5);
+		
 		for (int i = 0; i < layer2NeuronCount; ++i) {
-			network.newNeuronSource(1 + i, 1.0);
+			network.newNeuronSource(1 + inputDimension + layer1NeuronCount + i, 1.0);
 		}
 		
 		final int outputId = network.getNeuronCount() - 1;
@@ -419,6 +443,9 @@ public final class FeedforwardNeuralNetworkTest {
 			final double actual = network.getNeuronValues()[outputId];
 			
 			if (expected != actual) {
+				debugPrint(Arrays.toString(network.getSourceIds()));
+				debugPrint(Arrays.toString(network.getWeights()));
+				debugPrint(Arrays.toString(network.getNeuronValues()));
 				++errorCount;
 				
 				if (expected == 1.0) {
@@ -431,6 +458,10 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 		
 		debugPrint(n, errorCount, falseNegativeCount, falsePositiveCount);
+		
+		if (showNetwork) {
+			show(network, 512, 20.0, data);
+		}
 		
 		assertEquals(0, errorCount);
 	}
@@ -663,10 +694,32 @@ public final class FeedforwardNeuralNetworkTest {
 		return result;
 	}
 	
-	public static final void show(final FeedforwardNeuralNetwork network, final int imageSize, final double scale) {
+	public static final void show(final FeedforwardNeuralNetwork network, final int imageSize, final double scale, final double[] trainingData) {
 		final BufferedImage image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_3BYTE_BGR);
 		
 		draw(network, image, scale);
+		
+		if (trainingData != null) {
+			final Graphics2D g = image.createGraphics();
+			final int inputDimension = network.getLayerNeuronCount(0) - 1;
+			
+			for (int i = 0; i < trainingData.length; i += inputDimension + 1) {
+				final double label = trainingData[i + inputDimension];
+				
+				if (label < 0.5) {
+					g.setColor(Color.RED);
+				} else {
+					g.setColor(Color.GREEN);
+				}
+				
+				g.drawOval(
+						imageSize / 2 + (int) (trainingData[i + 0] * scale) - 2,
+						imageSize / 2 - (int) (trainingData[i + 1] * scale) - 2,
+						4, 4);
+			}
+			
+			g.dispose();
+		}
 		
 		SwingTools.show(image, getCallerClass().getName(), true);
 	}
