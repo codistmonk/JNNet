@@ -1,23 +1,43 @@
 package jnnet4;
 
+import static java.lang.Double.parseDouble;
 import static java.util.Arrays.copyOf;
+import static java.util.Arrays.copyOfRange;
+import static java.util.Collections.swap;
 import static jnnet.DLLTools.loadDLL;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_ID;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_LINEAR;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_SIGMOID;
 import static jnnet4.FeedforwardNeuralNetworkTest.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_THRESHOLD;
+import static jnnet4.FeedforwardNeuralNetworkTest.VectorStatistics.add;
+import static jnnet4.FeedforwardNeuralNetworkTest.VectorStatistics.dot;
+import static jnnet4.FeedforwardNeuralNetworkTest.VectorStatistics.scaled;
+import static jnnet4.FeedforwardNeuralNetworkTest.VectorStatistics.subtract;
 import static jnnet4.JNNetTools.sigmoid;
 import static jnnet4.JNNetTools.uint8;
+import static net.sourceforge.aprog.tools.Factory.DefaultFactory.ARRAY_LIST_FACTORY;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
+import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
+import static net.sourceforge.aprog.tools.Tools.instances;
 import static org.junit.Assert.*;
 
 import com.amd.aparapi.Kernel;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Scanner;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.Factory;
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -207,7 +227,6 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	@Test
 	public final void test4() {
-		final boolean showNetwork = false;
 		final double[] trainingData = {
 				-4.0, 0.0, 0.0,
 				-2.0, 1.0, -1.0,
@@ -221,10 +240,6 @@ public final class FeedforwardNeuralNetworkTest {
 					hiddenNeuronType, 2,
 					trainingData
 					);
-			
-			if (showNetwork) {
-				show(network, 256, 40.0);
-			}
 			
 			assertEquals(3, network.getLayerCount());
 			assertEquals(2, network.getLayerNeuronCount(0));
@@ -253,6 +268,230 @@ public final class FeedforwardNeuralNetworkTest {
 				network.dispose();
 			}
 		}
+	}
+	
+	@Test
+	public final void test5() {
+		final boolean showNetwork = false;
+		final FeedforwardNeuralNetwork network = new FeedforwardNeuralNetwork();
+		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
+		final double[] data = trainingData.getData();
+		final int step = trainingData.getStep();
+		final int inputDimension = step - 1;
+		
+		for (int i = 0; i < inputDimension; ++i) {
+			network.newNeuron();
+		}
+		
+		network.newLayer();
+		
+		final List<List<Integer>> todo = new ArrayList<List<Integer>>();
+		final int n = data.length / step;
+		final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
+		
+		todo.add(range(0, n - 1));
+		
+		while (!todo.isEmpty()) {
+			final List<Integer> indices = todo.remove(0);
+			final VectorStatistics[] statistics = instances(2, vectorStatisticsFactory);
+			
+			for (final int i : indices) {
+				final int sampleOffset = i * step;
+				final int labelOffset = sampleOffset + step - 1;
+				statistics[(int) data[labelOffset]].addValues(copyOfRange(data, sampleOffset, labelOffset));
+			}
+			
+			if (statistics[0].getCount() == 0 || statistics[1].getCount() == 0) {
+				continue;
+			}
+			
+			final double[] cluster0 = statistics[0].getMeans();
+			final double[] cluster1 = statistics[1].getMeans();
+			//XXX handle case cluster0 == cluster1
+			final double[] neuronWeights = subtract(cluster1, cluster0);
+			final double[] neuronLocation = scaled(add(cluster1, cluster0), 0.5);
+			final double neuronBias = -dot(neuronWeights, neuronLocation);
+			
+			debugPrint(Arrays.toString(cluster0));
+			debugPrint(Arrays.toString(cluster1));
+			debugPrint(Arrays.toString(neuronWeights));
+			debugPrint(Arrays.toString(neuronLocation));
+			debugPrint(dot(neuronWeights, cluster0) + neuronBias, dot(neuronWeights, cluster1) + neuronBias, dot(neuronWeights, neuronLocation) + neuronBias);
+			
+			network.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+			
+			network.newNeuronSource(0, neuronBias);
+			
+			for (int i = 0; i < inputDimension; ++i) {
+				network.newNeuronSource(i + 1, neuronWeights[i]);
+			}
+			
+			{
+				final int m = indices.size();
+				int j = 0;
+				
+				for (int i = 0; i < m; ++i) {
+					final int sampleOffset = indices.get(i) * step;
+					final double d = dot(neuronWeights, copyOfRange(data, sampleOffset, sampleOffset + inputDimension)) + neuronBias;
+					
+					if (0 <= d) {
+						swap(indices, i, j++);
+					}
+				}
+				
+				todo.add(indices.subList(0, j));
+				todo.add(indices.subList(j, m));
+			}
+		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-07)
+	 */
+	public static final class VectorStatistics implements Serializable {
+		
+		private final Statistics[] statistics;
+		
+		public VectorStatistics(final int dimension) {
+			this.statistics = instances(dimension, STATISTICS_FACTORY);
+		}
+		
+		public final Statistics[] getStatistics() {
+			return this.statistics;
+		}
+		
+		public final void addValues(final double... values) {
+			final int n = this.getStatistics().length;
+			
+			for (int i = 0; i < n; ++i) {
+				this.getStatistics()[i].addValue(values[i]);
+			}
+		}
+		
+		public final double getCount() {
+			return this.getStatistics()[0].getCount();
+		}
+		
+		public final double[] getMeans() {
+			final int n = this.getStatistics().length;
+			final double[] result = new double[n];
+			
+			for (int i = 0; i < n; ++i) {
+				result[i] = this.getStatistics()[i].getMean();
+			}
+			
+			return result;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 8371199963847573845L;
+		
+		public static final DefaultFactory<Statistics> STATISTICS_FACTORY = DefaultFactory.forClass(Statistics.class);
+		
+		public static final double[] subtract(final double[] v1, final double[] v2) {
+			final int n = v1.length;
+			final double[] result = new double[n];
+			
+			for (int i = 0; i < n; ++i) {
+				result[i] = v1[i] - v2[i];
+			}
+			
+			return result;
+		}
+		
+		public static final double[] add(final double[] v1, final double[] v2) {
+			final int n = v1.length;
+			final double[] result = new double[n];
+			
+			for (int i = 0; i < n; ++i) {
+				result[i] = v1[i] + v2[i];
+			}
+			
+			return result;
+		}
+		
+		public static final double dot(final double[] v1, final double[] v2) {
+			final int n = v1.length;
+			double result = 0.0;
+			
+			for (int i = 0; i < n; ++i) {
+				result += v1[i] * v2[i];
+			}
+			
+			return result;
+		}
+		
+		public static final double[] scaled(final double[] v, final double scale) {
+			final int n = v.length;
+			final double[] result = new double[n];
+			
+			for (int i = 0; i < n; ++i) {
+				result[i] = v[i] * scale;
+			}
+			
+			return result;
+		}
+		
+	}
+	
+	public static final List<Integer> range(final int first, final int last) {
+		final List<Integer> result = new ArrayList<Integer>(last - first + 1);
+		
+		for (int i = first; i <= last; ++i) {
+			result.add(i);
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-07)
+	 */
+	public static final class TrainingData implements Serializable {
+		
+		private double[] data;
+		
+		private int step;
+		
+		public TrainingData(final String resourcePath) {
+			this.data = new double[0];
+			
+			final Scanner scanner = new Scanner(getResourceAsStream(resourcePath));
+			
+			while (scanner.hasNext()) {
+				final String[] line = scanner.nextLine().trim().split("\\s+");
+				final int n = line.length;
+				
+				if (2 <= n) {
+					this.step = n;
+					final double[] values = new double[n];
+					
+					for (int i = 0; i < n; ++i) {
+						values[i] = parseDouble(line[i]);
+					}
+					
+					final int m = this.data.length;
+					this.data = copyOf(this.data, m + n);
+					System.arraycopy(values, 0, this.data, m, n);
+				}
+			}
+		}
+		
+		public final double[] getData() {
+			return this.data;
+		}
+		
+		public final int getStep() {
+			return this.step;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 5770717293628383428L;
+		
 	}
 	
 	static {
