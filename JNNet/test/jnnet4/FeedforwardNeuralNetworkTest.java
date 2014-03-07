@@ -389,9 +389,7 @@ public final class FeedforwardNeuralNetworkTest {
 			network.newNeuronSource(0, -code.cardinality());
 			
 			for (int i = 0; i < layer1NeuronCount; ++i) {
-				if (code.get(i)) {
-					network.newNeuronSource(1 + i, 1.0);
-				}
+				network.newNeuronSource(1 + i, code.get(i) ? 1.0 : -1.0);
 			}
 		}
 		
@@ -432,7 +430,7 @@ public final class FeedforwardNeuralNetworkTest {
 //			assertEquals("" + expected, "" + actual);
 		}
 		
-		debugPrint(errorCount, falseNegativeCount, falsePositiveCount);
+		debugPrint(n, errorCount, falseNegativeCount, falsePositiveCount);
 		
 		assertEquals(0, errorCount);
 	}
