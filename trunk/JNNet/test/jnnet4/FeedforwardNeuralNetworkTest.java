@@ -175,7 +175,7 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		for (final byte hiddenNeuronType : new byte[] { NEURON_TYPE_SUM_THRESHOLD, NEURON_TYPE_SUM_LINEAR }) {
 			final FeedforwardNeuralNetwork network = newFunctionApproximation1D(
-					hiddenNeuronType,
+					hiddenNeuronType, 1,
 					trainingData
 					);
 			
@@ -205,11 +205,62 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 	}
 	
+	@Test
+	public final void test4() {
+		final boolean showNetwork = false;
+		final double[] trainingData = {
+				-4.0, 0.0, 0.0,
+				-2.0, 1.0, -1.0,
+				0.0, 3.0, 2.0,
+				1.5, -1.0, 3.0,
+				4.0, 0.0, 0.0
+		};
+		
+		for (final byte hiddenNeuronType : new byte[] { NEURON_TYPE_SUM_THRESHOLD, NEURON_TYPE_SUM_LINEAR }) {
+			final FeedforwardNeuralNetwork network = newFunctionApproximation1D(
+					hiddenNeuronType, 2,
+					trainingData
+					);
+			
+			if (showNetwork) {
+				show(network, 256, 40.0);
+			}
+			
+			assertEquals(3, network.getLayerCount());
+			assertEquals(2, network.getLayerNeuronCount(0));
+			assertEquals(2, network.getLayerNeuronCount(network.getLayerCount() - 1));
+			
+			try {
+				final int outputId = network.getNeuronCount() - 2;
+				
+				network.getNeuronValues()[1] = trainingData[0] - 1.0;
+				network.execute(1);
+				assertEquals("0.0", "" + network.getNeuronValues()[outputId + 0]);
+				assertEquals("0.0", "" + network.getNeuronValues()[outputId + 1]);
+				
+				for (int i = 0; i < trainingData.length; i += 3) {
+					network.getNeuronValues()[1] = trainingData[i];
+					network.execute(1);
+					assertEquals("" + trainingData[i + 1], "" + network.getNeuronValues()[outputId + 0]);
+					assertEquals("" + trainingData[i + 2], "" + network.getNeuronValues()[outputId + 1]);
+				}
+				
+				network.getNeuronValues()[1] = trainingData[trainingData.length - 3] + 1.0;
+				network.execute(1);
+				assertEquals("0.0", "" + network.getNeuronValues()[outputId + 0]);
+				assertEquals("0.0", "" + network.getNeuronValues()[outputId + 1]);
+			} finally {
+				network.dispose();
+			}
+		}
+	}
+	
 	static {
 		loadDLL("aparapi");
 	}
 	
-	public static final FeedforwardNeuralNetwork newFunctionApproximation1D(final byte hiddenNeuronType, final double... inputOutputs) {
+	public static final FeedforwardNeuralNetwork newFunctionApproximation1D(final byte hiddenNeuronType,
+			final int outputDimension, final double... inputOutputs) {
 		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
 		
 		result.newNeuron();
@@ -217,11 +268,12 @@ public final class FeedforwardNeuralNetworkTest {
 		result.newLayer();
 		
 		final int n = inputOutputs.length;
+		final int step = 1 + outputDimension;
 		
-		for (int i = 0; i < n; i += 2) {
+		for (int i = 0; i < n; i += step) {
 			final double input = inputOutputs[i];
-			final double previous = 2 <= i ? inputOutputs[i - 2] : input;
-			final double next = i + 2 < n ? inputOutputs[i + 2] : input;
+			final double previous = step <= i ? inputOutputs[i - step] : input;
+			final double next = i + step < n ? inputOutputs[i + step] : input;
 			
 			result.newNeuron(hiddenNeuronType);
 			
@@ -267,13 +319,16 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 		
 		result.newLayer();
-		result.newNeuron(NEURON_TYPE_SUM_ID);
 		
-		for (int i = 0; i < n; i += 2) {
-			final double output = inputOutputs[i + 1];
+		for (int d = 1; d <= outputDimension; ++d) {
+			result.newNeuron(NEURON_TYPE_SUM_ID);
 			
-			result.newNeuronSource(2 + i, output);
-			result.newNeuronSource(2 + i + 1, -output);
+			for (int i = 0; i < n; i += step) {
+				final double output = inputOutputs[i + d];
+				
+				result.newNeuronSource(2 * (1 + i / step), output);
+				result.newNeuronSource(2 * (1 + i / step) + 1, -output);
+			}
 		}
 		
 		return result;
