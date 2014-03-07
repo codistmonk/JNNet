@@ -16,6 +16,7 @@ import static jnnet4.FeedforwardNeuralNetworkTest.VectorStatistics.subtract;
 import static jnnet4.JNNetTools.sigmoid;
 import static jnnet4.JNNetTools.uint8;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.ARRAY_LIST_FACTORY;
+import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
@@ -29,9 +30,12 @@ import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
@@ -343,6 +347,43 @@ public final class FeedforwardNeuralNetworkTest {
 				todo.add(indices.subList(j, m));
 			}
 		}
+		
+		final int layer1NeuronCount = network.getLayerNeuronCount(1);
+		@SuppressWarnings("unchecked")
+		final Set<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
+		
+		debugPrint(layer1NeuronCount);
+		
+		for (int i = 0; i < data.length; i += step) {
+			for (int j = 0; j < inputDimension; ++j) {
+				network.getNeuronValues()[1 + j] = data[i + j];
+			}
+			
+			network.update(0);
+			
+			final BitSet code = new BitSet(layer1NeuronCount);
+			
+			for (int j = inputDimension; j < inputDimension + layer1NeuronCount; ++j) {
+				if (0.0 < network.getNeuronValues()[j]) {
+					code.set(j - inputDimension);
+				}
+			}
+			
+			codes[(int) data[i + step - 1]].add(code);
+		}
+		
+		debugPrint(codes[0].size());
+		debugPrint(codes[1].size());
+		
+		final Set<BitSet> ambiguous = new HashSet<BitSet>(codes[0]);
+		
+		ambiguous.retainAll(codes[1]);
+		
+		assertEquals(0, ambiguous.size());
+		
+		network.newLayer();
+		
+		// TODO
 	}
 	
 	/**
