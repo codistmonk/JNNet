@@ -271,8 +271,8 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	@Test
 	public final void test5() {
-		final boolean showNetwork = false;
-		final TrainingData trainingData = new TrainingData("jnnet/xor.txt");
+		final boolean showNetwork = true;
+		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
 		final double[] data = trainingData.getData();
@@ -308,7 +308,7 @@ public final class FeedforwardNeuralNetworkTest {
 				}
 			}
 			
-//			assertEquals("" + expected, "" + actual);
+			assertEquals("" + expected, "" + actual);
 		}
 		
 		debugPrint(confusionMatrix);
@@ -433,6 +433,7 @@ public final class FeedforwardNeuralNetworkTest {
 				codes[(int) data[i + step - 1]].add(code);
 			}
 			
+			// Check ambiguities
 			if (debug) {
 				final Set<BitSet> ambiguities = intersection(codes[0], codes[1]);
 				
@@ -442,10 +443,13 @@ public final class FeedforwardNeuralNetworkTest {
 				}
 			}
 			
+			// Remove redundant neurons
 			{
 				final int oldNeuronCount = result.getNeuronCount();
 				final BitSet markedNeurons = new BitSet(oldNeuronCount);
 				final Set<BitSet>[] newCodes = codes.clone();
+				
+				debugPrint("0-codes:", newCodes[0].size(), "1-codes:", newCodes[1].size());
 				
 				for (int bit = 0; bit < layer1NeuronCount; ++bit) {
 					@SuppressWarnings("unchecked")
@@ -463,7 +467,6 @@ public final class FeedforwardNeuralNetworkTest {
 					final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
 					
 					if (ambiguities.isEmpty()) {
-						debugPrint("uselessNeuron:", 1 + inputDimension + bit);
 						markedNeurons.set(1 + inputDimension + bit);
 						System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
 					}
@@ -472,13 +475,7 @@ public final class FeedforwardNeuralNetworkTest {
 				debugPrint("uselessNeurons:", markedNeurons.cardinality());
 				debugPrint("0-codes:", newCodes[0].size(), "1-codes:", newCodes[1].size());
 				
-//				debugPrint(Arrays.toString(result.getSourceIds()));
-//				debugPrint(Arrays.toString(result.getWeights()));
-//				debugPrint(Arrays.toString(result.neuronFirstWeightIds));
 				result.remove(markedNeurons);
-//				debugPrint(Arrays.toString(result.getSourceIds()));
-//				debugPrint(Arrays.toString(result.getWeights()));
-//				debugPrint(Arrays.toString(result.neuronFirstWeightIds));
 				
 				final int oldLayer1NeuronCount = layer1NeuronCount;
 				layer1NeuronCount = result.getLayerNeuronCount(1);
@@ -486,10 +483,6 @@ public final class FeedforwardNeuralNetworkTest {
 				if (debug) {
 					debugPrint("layer1NeuronCount:", layer1NeuronCount);
 				}
-				
-//				debugPrint(markedNeurons);
-//				debugPrint(codes[0]);
-//				debugPrint(codes[1]);
 				
 				for (int i = 0; i < 2; ++i) {
 					codes[i].clear();
@@ -499,7 +492,6 @@ public final class FeedforwardNeuralNetworkTest {
 						
 						for (int oldBit = 0, newBit = 0; oldBit < oldLayer1NeuronCount; ++oldBit) {
 							if (!markedNeurons.get(1 + inputDimension + oldBit)) {
-//								debugPrint(oldBit, newBit);
 								code.set(newBit++, newCode.get(oldBit));
 							}
 						}
@@ -508,8 +500,15 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 				}
 				
-//				debugPrint(codes[0]);
-//				debugPrint(codes[1]);
+				// Check ambiguities
+				if (debug) {
+					final Set<BitSet> ambiguities = intersection(codes[0], codes[1]);
+					
+					if (0 != ambiguities.size()) {
+						debugPrint("ambiguityCount:", ambiguities.size());
+						throw new IllegalStateException();
+					}
+				}
 			}
 			
 			result.newLayer();
