@@ -25,16 +25,15 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 import org.junit.Test;
@@ -51,6 +50,7 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		try {
 			assertEquals(1, network.getNeuronCount());
+			assertEquals(0, network.getNeuronWeightCount(0));
 			assertEquals(0, network.getWeightCount());
 			assertEquals(1, network.getLayerCount());
 			
@@ -62,6 +62,10 @@ public final class FeedforwardNeuralNetworkTest {
 			network.newNeuron();
 			network.newLayer();
 			network.newNeuron();
+			
+			assertEquals(0, network.getNeuronWeightCount(1));
+			assertEquals(0, network.getNeuronWeightCount(2));
+			assertEquals(0, network.getNeuronWeightCount(3));
 			
 			network.getNeuronValues()[1] = 2.0;
 			network.getNeuronValues()[2] = 3.0;
@@ -78,6 +82,8 @@ public final class FeedforwardNeuralNetworkTest {
 			network.newNeuronSource(1, 0.4);
 			network.newNeuronSource(2, 0.6);
 			
+			assertEquals(2, network.getNeuronWeightCount(3));
+			
 			network.execute(1);
 			
 			assertEquals("[1.0, 2.0, 3.0, " + sigmoid(0.4 * 2.0 + 0.6 * 3.0) + "]",
@@ -87,6 +93,8 @@ public final class FeedforwardNeuralNetworkTest {
 			network.getWeights()[network.getNeuronFirstWeightId(3) + 1] = +1.0;
 			network.newNeuronSource(0, -0.5);
 			network.getNeuronTypes()[3] = NEURON_TYPE_SUM_THRESHOLD;
+
+			assertEquals(3, network.getNeuronWeightCount(3));
 			
 			network.newNeuron();
 			network.newNeuronSource(1, +1.0);
@@ -94,13 +102,19 @@ public final class FeedforwardNeuralNetworkTest {
 			network.newNeuronSource(0, -0.5);
 			network.getNeuronTypes()[4] = NEURON_TYPE_SUM_THRESHOLD;
 			
+			assertEquals(3, network.getNeuronWeightCount(4));
+			
 			network.newLayer();
+			
+			assertEquals(3, network.getLayerCount());
 			
 			network.newNeuron();
 			network.newNeuronSource(3, +1.0);
 			network.newNeuronSource(4, +1.0);
 			network.newNeuronSource(0, -1.0);
 			network.getNeuronTypes()[5] = NEURON_TYPE_SUM_THRESHOLD;
+			
+			assertEquals(3, network.getNeuronWeightCount(5));
 			
 			network.getNeuronValues()[1] = 0.0;
 			network.getNeuronValues()[2] = 1.0;
@@ -271,12 +285,17 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	@Test
 	public final void test5() {
+		final TicToc timer = new TicToc();
 		final boolean showNetwork = true;
+		debugPrint("Loading data started", new Date(timer.tic()));
 		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
+		debugPrint("Loading data done in", timer.toc(), "ms");
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
 		final double[] data = trainingData.getData();
+		debugPrint("Building network started", new Date(timer.tic()));
 		final FeedforwardNeuralNetwork network = newClassifier(trainingData);
+		debugPrint("Building network done in", timer.toc(), "ms");
 		final int outputId = network.getNeuronCount() - 1;
 		final SimpleConfusionMatrix confusionMatrix = new SimpleConfusionMatrix();
 		
@@ -328,6 +347,7 @@ public final class FeedforwardNeuralNetworkTest {
 	
 	public static final FeedforwardNeuralNetwork newClassifier(final TrainingData trainingData) {
 		final boolean debug = true;
+		final boolean removeRedundantNeurons = true;
 		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
@@ -443,8 +463,7 @@ public final class FeedforwardNeuralNetworkTest {
 				}
 			}
 			
-			// Remove redundant neurons
-			{
+			if (removeRedundantNeurons) {
 				final int oldNeuronCount = result.getNeuronCount();
 				final BitSet markedNeurons = new BitSet(oldNeuronCount);
 				final Set<BitSet>[] newCodes = codes.clone();
@@ -648,7 +667,12 @@ public final class FeedforwardNeuralNetworkTest {
 	}
 	
 	public static final void show(final FeedforwardNeuralNetwork network, final int imageSize, final double scale, final double[] trainingData) {
+		final TicToc timer = new TicToc();
+		debugPrint("Allocating rendering buffer started", new Date(timer.tic()));
 		final BufferedImage image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_3BYTE_BGR);
+		debugPrint("Allocating rendering buffer done in", timer.toc(), "ms");
+		
+		debugPrint("Rendering started", new Date(timer.tic()));
 		
 		draw(network, image, scale);
 		
@@ -673,6 +697,8 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			g.dispose();
 		}
+		
+		debugPrint("Rendering done in", timer.toc(), "ms");
 		
 		SwingTools.show(image, getCallerClass().getName(), true);
 	}
