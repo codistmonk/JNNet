@@ -219,7 +219,6 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	
 	public final void remove(final BitSet markedNeurons) {
 		final int oldNeuronCount = this.getNeuronCount();
-		final int newNeuronCount = oldNeuronCount - markedNeurons.cardinality();
 		final int[] newNeuronIds = new int[oldNeuronCount];
 		
 		for (int oldNeuronId = 0, newNeuronId = 0; oldNeuronId < oldNeuronCount; ++oldNeuronId) {
@@ -232,19 +231,48 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 		
 		Tools.debugPrint(Arrays.toString(newNeuronIds));
 		
+		// TODO update neuronCount
+		final int newNeuronCount = oldNeuronCount - markedNeurons.cardinality();
 		// TODO update neuronValues
-		final int[] newNeuronValues = new int[newNeuronCount];
 		// TODO update neuronTypes
+		final double[] newNeuronValues = new double[newNeuronCount];
 		final byte[] newNeuronTypes = new byte[newNeuronCount];
+		
+		for (int oldNeuronId = 0; oldNeuronId < oldNeuronCount; ++oldNeuronId) {
+			final int newNeuronId = newNeuronIds[oldNeuronId];
+			newNeuronValues[newNeuronId] = this.getNeuronValues()[oldNeuronId];
+			newNeuronTypes[newNeuronId] = this.getNeuronTypes()[oldNeuronId];
+		}
+		
 		// TODO update neuronFirstWeightIds
 		final int[] newNeuronFirstWeightIds = new int[newNeuronCount + 1];
-		// TODO update neuronCount
+		
 		// TODO update weightCount
-		final int newWeightCount = 0;
+		final int oldWeightCount = this.getWeightCount();
+		int newWeightCount = 0;
+		
+		for (int oldWeightId = 0; oldWeightId < oldWeightCount; ++oldWeightId) {
+			if (!markedNeurons.get(this.getSourceIds()[oldWeightId])) {
+				++newWeightCount;
+			}
+		}
 		// TODO update weights
-		final double[] newWeights = new double[newWeightCount + 1];
 		// TODO update sourceIds
+		final double[] newWeights = new double[newWeightCount + 1];
 		final int[] newSourceIds = new int[newWeightCount];
+		final int[] newWeightIds = new int[oldWeightCount];
+		
+		for (int oldWeightId = 0, newWeightId = 0; oldWeightId < oldWeightCount; ++oldWeightId) {
+			final int oldSourceId = this.getSourceIds()[oldWeightId];
+			
+			if (!markedNeurons.get(oldSourceId)) {
+				newSourceIds[newWeightId] = newNeuronIds[oldSourceId];
+				newWeights[newWeightId] = this.getWeights()[oldWeightId];
+				newWeightIds[oldWeightId] = newWeightId;
+				++newWeightId;
+			}
+		}
+		
 		// TODO update layerCount
 		final int newLayerCount = 0;
 		// TODO update layerFirstNeuronIds
