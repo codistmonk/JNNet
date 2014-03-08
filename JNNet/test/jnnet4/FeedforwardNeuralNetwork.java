@@ -3,13 +3,12 @@ package jnnet4;
 import static java.util.Arrays.copyOf;
 import static jnnet4.JNNetTools.sigmoid;
 
+import com.amd.aparapi.Kernel;
+
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Map;
 
 import net.sourceforge.aprog.tools.Tools;
-
-import com.amd.aparapi.Kernel;
 
 /**
  * @author codistmonk (creation 2014-03-02)
@@ -20,7 +19,7 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	
 	private byte[] neuronTypes = { 0 };
 	
-	private int[] neuronFirstWeightIds = { 1, 1 };
+	int[] neuronFirstWeightIds = { 0, 0 };
 	
 	private int neuronCount = 1;
 	
@@ -229,40 +228,47 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 			}
 		}
 		
-		Tools.debugPrint(Arrays.toString(newNeuronIds));
+//		Tools.debugPrint(Arrays.toString(newNeuronIds));
 		
-		// TODO update neuronCount
 		final int newNeuronCount = oldNeuronCount - markedNeurons.cardinality();
-		// TODO update neuronValues
-		// TODO update neuronTypes
 		final double[] newNeuronValues = new double[newNeuronCount];
 		final byte[] newNeuronTypes = new byte[newNeuronCount];
+		final int oldWeightCount = this.getWeightCount();
+		final BitSet markedWeights = new BitSet(oldWeightCount);
 		
 		for (int oldNeuronId = 0; oldNeuronId < oldNeuronCount; ++oldNeuronId) {
 			final int newNeuronId = newNeuronIds[oldNeuronId];
 			newNeuronValues[newNeuronId] = this.getNeuronValues()[oldNeuronId];
 			newNeuronTypes[newNeuronId] = this.getNeuronTypes()[oldNeuronId];
+			
+			if (markedNeurons.get(oldNeuronId)) {
+				final int oldNeuronFirstWeightId = this.getNeuronFirstWeightId(oldNeuronId);
+				final int oldNeuronNextWeightId = this.getNeuronFirstWeightId(oldNeuronId + 1);
+				
+				markedWeights.set(oldNeuronFirstWeightId, oldNeuronNextWeightId);
+			}
 		}
 		
-		// TODO update weightCount
-		final int oldWeightCount = this.getWeightCount();
 		int newWeightCount = 0;
 		
 		for (int oldWeightId = 0; oldWeightId < oldWeightCount; ++oldWeightId) {
-			if (!markedNeurons.get(this.getSourceIds()[oldWeightId])) {
-				++newWeightCount;
+			if (!markedWeights.get(oldWeightId)) {
+				if (!markedNeurons.get(this.getSourceIds()[oldWeightId])) {
+					++newWeightCount;
+				} else {
+					markedWeights.set(oldWeightId);
+				}
 			}
 		}
-		// TODO update weights
-		// TODO update sourceIds
-		final double[] newWeights = new double[newWeightCount + 1];
+		
+		final double[] newWeights = new double[newWeightCount];
 		final int[] newSourceIds = new int[newWeightCount];
 		final int[] newWeightIds = new int[oldWeightCount];
 		
 		for (int oldWeightId = 0, newWeightId = 0; oldWeightId < oldWeightCount; ++oldWeightId) {
-			final int oldSourceId = this.getSourceIds()[oldWeightId];
-			
-			if (!markedNeurons.get(oldSourceId)) {
+			if (!markedWeights.get(oldWeightId)) {
+				final int oldSourceId = this.getSourceIds()[oldWeightId];
+//				Tools.debugPrint(oldSourceId);
 				newSourceIds[newWeightId] = newNeuronIds[oldSourceId];
 				newWeights[newWeightId] = this.getWeights()[oldWeightId];
 				newWeightIds[oldWeightId] = newWeightId;
@@ -270,41 +276,54 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 			}
 		}
 		
-		// TODO update neuronFirstWeightIds
 		final int[] newNeuronFirstWeightIds = new int[newNeuronCount + 1];
+		newNeuronFirstWeightIds[newNeuronCount] = newWeightCount;
 		
-		for (int oldNeuronId = 0; oldNeuronId < oldNeuronCount; ++oldNeuronId) {
+		for (int oldNeuronId = oldNeuronCount - 1; 0 <= oldNeuronId; --oldNeuronId) {
 			if (!markedNeurons.get(oldNeuronId)) {
 				final int oldNeuronFirstWeightId = this.getNeuronFirstWeightId(oldNeuronId);
 				final int oldNeuronNextWeightId = this.getNeuronFirstWeightId(oldNeuronId + 1);
+				final int newNeuronId = newNeuronIds[oldNeuronId];
+				newNeuronFirstWeightIds[newNeuronId] = newNeuronFirstWeightIds[newNeuronId + 1];
 				
 				for (int oldWeightId = oldNeuronFirstWeightId; oldWeightId < oldNeuronNextWeightId; ++oldWeightId) {
 					if (!markedNeurons.get(this.getSourceIds()[oldWeightId])) {
-						final int newNeuronId = newNeuronIds[oldNeuronId];
 						newNeuronFirstWeightIds[newNeuronId] = newWeightIds[oldWeightId];
 						break;
 					}
 				}
 			}
-			
-			newNeuronFirstWeightIds[newNeuronCount] = newWeightCount;
 		}
 		
-		// TODO update layerCount
-		final int newLayerCount = 0;
-		// TODO update layerFirstNeuronIds
+		final int oldLayerCount = this.getLayerCount();
+		final int newLayerCount = oldLayerCount;
 		final int[] newLayerFirstNeuronIds = new int[newLayerCount + 1];
+		newLayerFirstNeuronIds[newLayerCount] = newNeuronCount;
+		
+		for (int oldLayerId = oldLayerCount - 1; 0 <= oldLayerId; --oldLayerId) {
+			final int newLayerId = oldLayerId;
+			newLayerFirstNeuronIds[newLayerId] = newLayerFirstNeuronIds[newLayerId + 1];
+			final int oldLayerFirstNeuronId = this.layerFirstNeuronIds[oldLayerId];
+			final int oldLayerNextNeuronId = this.layerFirstNeuronIds[oldLayerId + 1];
+			
+			for (int oldNeuronId = oldLayerFirstNeuronId; oldNeuronId < oldLayerNextNeuronId; ++oldNeuronId) {
+				if (!markedNeurons.get(oldNeuronId)) {
+					newLayerFirstNeuronIds[newLayerId] = newNeuronIds[oldNeuronId];
+					break;
+				}
+			}
+		}
+		
+		this.neuronCount = newNeuronCount;
+		this.neuronValues = newNeuronValues;
+		this.neuronTypes = newNeuronTypes;
+		this.neuronFirstWeightIds = newNeuronFirstWeightIds;
+		this.weightCount = newWeightCount;
+		this.weights = newWeights;
+		this.sourceIds = newSourceIds;
+		this.layerCount = newLayerCount;
+		this.layerFirstNeuronIds = newLayerFirstNeuronIds;
 	}
-	
-//	private double[] neuronValues = { 1.0 };
-//	private byte[] neuronTypes = { 0 };
-//	private int[] neuronFirstWeightIds = { 1, 1 };
-//	private int neuronCount = 1;
-//	private double[] weights = { Double.NaN };
-//	private int weightCount = 0;
-//	private int[] sourceIds = { -1 };
-//	private int[] layerFirstNeuronIds = { 0, 1 };
-//	private int layerCount = 1;
 	
 	/**
 	 * {@value}.

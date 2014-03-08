@@ -45,7 +45,9 @@ public final class SimpleConfusionMatrix implements Serializable {
 	public final String toString() {
 		return "totalSamples: " + this.getTotalSampleCount() +
 				" totalErrors: " + this.getTotalErrorCount() +
+				" truePositives: " + this.getTruePositiveCount() +
 				" falsePositives: " + this.getFalsePositiveCount() +
+				" trueNegatives: " + this.getTrueNegativeCount() +
 				" falseNegatives: " + this.getFalseNegativeCount();
 	}
 	
