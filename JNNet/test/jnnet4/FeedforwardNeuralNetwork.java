@@ -244,9 +244,6 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 			newNeuronTypes[newNeuronId] = this.getNeuronTypes()[oldNeuronId];
 		}
 		
-		// TODO update neuronFirstWeightIds
-		final int[] newNeuronFirstWeightIds = new int[newNeuronCount + 1];
-		
 		// TODO update weightCount
 		final int oldWeightCount = this.getWeightCount();
 		int newWeightCount = 0;
@@ -271,6 +268,26 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 				newWeightIds[oldWeightId] = newWeightId;
 				++newWeightId;
 			}
+		}
+		
+		// TODO update neuronFirstWeightIds
+		final int[] newNeuronFirstWeightIds = new int[newNeuronCount + 1];
+		
+		for (int oldNeuronId = 0; oldNeuronId < oldNeuronCount; ++oldNeuronId) {
+			if (!markedNeurons.get(oldNeuronId)) {
+				final int oldNeuronFirstWeightId = this.getNeuronFirstWeightId(oldNeuronId);
+				final int oldNeuronNextWeightId = this.getNeuronFirstWeightId(oldNeuronId + 1);
+				
+				for (int oldWeightId = oldNeuronFirstWeightId; oldWeightId < oldNeuronNextWeightId; ++oldWeightId) {
+					if (!markedNeurons.get(this.getSourceIds()[oldWeightId])) {
+						final int newNeuronId = newNeuronIds[oldNeuronId];
+						newNeuronFirstWeightIds[newNeuronId] = newWeightIds[oldWeightId];
+						break;
+					}
+				}
+			}
+			
+			newNeuronFirstWeightIds[newNeuronCount] = newWeightCount;
 		}
 		
 		// TODO update layerCount
