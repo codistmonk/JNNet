@@ -5,10 +5,7 @@ import static jnnet4.JNNetTools.sigmoid;
 
 import com.amd.aparapi.Kernel;
 
-import java.util.Arrays;
 import java.util.BitSet;
-
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-03-02)
@@ -19,7 +16,7 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	
 	private byte[] neuronTypes = { 0 };
 	
-	int[] neuronFirstWeightIds = { 0, 0 };
+	private int[] neuronFirstWeightIds = { 0, 0 };
 	
 	private int neuronCount = 1;
 	
@@ -212,7 +209,7 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 		return this.neuronFirstWeightIds[neuronId];
 	}
 	
-	public final int getNeuronLastWeightId(final int neuronId) {
+	public final int getNeuronWeightCount(final int neuronId) {
 		return this.getNeuronFirstWeightId(neuronId + 1) - this.getNeuronFirstWeightId(neuronId);
 	}
 	
@@ -227,8 +224,6 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 				++newNeuronId;
 			}
 		}
-		
-//		Tools.debugPrint(Arrays.toString(newNeuronIds));
 		
 		final int newNeuronCount = oldNeuronCount - markedNeurons.cardinality();
 		final double[] newNeuronValues = new double[newNeuronCount];
@@ -268,7 +263,6 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 		for (int oldWeightId = 0, newWeightId = 0; oldWeightId < oldWeightCount; ++oldWeightId) {
 			if (!markedWeights.get(oldWeightId)) {
 				final int oldSourceId = this.getSourceIds()[oldWeightId];
-//				Tools.debugPrint(oldSourceId);
 				newSourceIds[newWeightId] = newNeuronIds[oldSourceId];
 				newWeights[newWeightId] = this.getWeights()[oldWeightId];
 				newWeightIds[oldWeightId] = newWeightId;
