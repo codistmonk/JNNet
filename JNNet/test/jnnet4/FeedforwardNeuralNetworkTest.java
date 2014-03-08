@@ -471,7 +471,7 @@ public final class FeedforwardNeuralNetworkTest {
 				debugPrint("uselessNeurons:", markedNeurons.cardinality());
 				debugPrint("0-codes:", newCodes[0].size(), "1-codes:", newCodes[1].size());
 				
-				// TODO remove useless neurons
+				result.remove(markedNeurons);
 			}
 			
 			result.newLayer();

@@ -3,6 +3,12 @@ package jnnet4;
 import static java.util.Arrays.copyOf;
 import static jnnet4.JNNetTools.sigmoid;
 
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Map;
+
+import net.sourceforge.aprog.tools.Tools;
+
 import com.amd.aparapi.Kernel;
 
 /**
@@ -210,6 +216,50 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	public final int getNeuronLastWeightId(final int neuronId) {
 		return this.getNeuronFirstWeightId(neuronId + 1) - this.getNeuronFirstWeightId(neuronId);
 	}
+	
+	public final void remove(final BitSet markedNeurons) {
+		final int oldNeuronCount = this.getNeuronCount();
+		final int newNeuronCount = oldNeuronCount - markedNeurons.cardinality();
+		final int[] newNeuronIds = new int[oldNeuronCount];
+		
+		for (int oldNeuronId = 0, newNeuronId = 0; oldNeuronId < oldNeuronCount; ++oldNeuronId) {
+			newNeuronIds[oldNeuronId] = newNeuronId;
+			
+			if (!markedNeurons.get(oldNeuronId)) {
+				++newNeuronId;
+			}
+		}
+		
+		Tools.debugPrint(Arrays.toString(newNeuronIds));
+		
+		// TODO update neuronValues
+		final int[] newNeuronValues = new int[newNeuronCount];
+		// TODO update neuronTypes
+		final byte[] newNeuronTypes = new byte[newNeuronCount];
+		// TODO update neuronFirstWeightIds
+		final int[] newNeuronFirstWeightIds = new int[newNeuronCount + 1];
+		// TODO update neuronCount
+		// TODO update weightCount
+		final int newWeightCount = 0;
+		// TODO update weights
+		final double[] newWeights = new double[newWeightCount + 1];
+		// TODO update sourceIds
+		final int[] newSourceIds = new int[newWeightCount];
+		// TODO update layerCount
+		final int newLayerCount = 0;
+		// TODO update layerFirstNeuronIds
+		final int[] newLayerFirstNeuronIds = new int[newLayerCount + 1];
+	}
+	
+//	private double[] neuronValues = { 1.0 };
+//	private byte[] neuronTypes = { 0 };
+//	private int[] neuronFirstWeightIds = { 1, 1 };
+//	private int neuronCount = 1;
+//	private double[] weights = { Double.NaN };
+//	private int weightCount = 0;
+//	private int[] sourceIds = { -1 };
+//	private int[] layerFirstNeuronIds = { 0, 1 };
+//	private int layerCount = 1;
 	
 	/**
 	 * {@value}.
