@@ -25,10 +25,13 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
@@ -431,14 +434,44 @@ public final class FeedforwardNeuralNetworkTest {
 			}
 			
 			if (debug) {
-				final Set<BitSet> ambiguities = new HashSet<BitSet>(codes[0]);
-				
-				ambiguities.retainAll(codes[1]);
+				final Set<BitSet> ambiguities = intersection(codes[0], codes[1]);
 				
 				if (0 != ambiguities.size()) {
 					debugPrint("ambiguityCount:", ambiguities.size());
 					throw new IllegalStateException();
 				}
+			}
+			
+			{
+				final BitSet markedNeurons = new BitSet(result.getNeuronCount());
+				final Set<BitSet>[] newCodes = codes.clone();
+				
+				for (int bit = 0; bit < layer1NeuronCount; ++bit) {
+					@SuppressWarnings("unchecked")
+					final Set<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
+					
+					for (int i = 0; i < 2; ++i) {
+						for (final BitSet code : newCodes[i]) {
+							final BitSet simplifiedCode = (BitSet) code.clone();
+							
+							simplifiedCode.clear(bit);
+							simplifiedCodes[i].add(simplifiedCode);
+						}
+					}
+					
+					final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
+					
+					if (ambiguities.isEmpty()) {
+						debugPrint("uselessNeuron:", 1 + inputDimension + bit);
+						markedNeurons.set(1 + inputDimension + bit);
+						System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
+					}
+				}
+				
+				debugPrint("uselessNeurons:", markedNeurons.cardinality());
+				debugPrint("0-codes:", newCodes[0].size(), "1-codes:", newCodes[1].size());
+				
+				// TODO remove useless neurons
 			}
 			
 			result.newLayer();
@@ -472,6 +505,14 @@ public final class FeedforwardNeuralNetworkTest {
 				result.newNeuronSource(1 + inputDimension + layer1NeuronCount + i, 1.0);
 			}
 		}
+		
+		return result;
+	}
+	
+	public static final <T> Set<T> intersection(final Set<T> s1, final Set<T> s2) {
+		final Set<T> result = new HashSet<T>(s1);
+		
+		result.retainAll(s2);
 		
 		return result;
 	}
