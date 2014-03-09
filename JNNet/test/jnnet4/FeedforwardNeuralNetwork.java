@@ -215,6 +215,7 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	
 	public final void remove(final BitSet markedNeurons) {
 		final int oldNeuronCount = this.getNeuronCount();
+		final int newNeuronCount = oldNeuronCount - markedNeurons.cardinality();
 		final int[] newNeuronIds = new int[oldNeuronCount];
 		
 		for (int oldNeuronId = 0, newNeuronId = 0; oldNeuronId < oldNeuronCount; ++oldNeuronId) {
@@ -225,7 +226,6 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 			}
 		}
 		
-		final int newNeuronCount = oldNeuronCount - markedNeurons.cardinality();
 		final double[] newNeuronValues = new double[newNeuronCount];
 		final byte[] newNeuronTypes = new byte[newNeuronCount];
 		final int oldWeightCount = this.getWeightCount();
@@ -233,10 +233,11 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 		
 		for (int oldNeuronId = 0; oldNeuronId < oldNeuronCount; ++oldNeuronId) {
 			final int newNeuronId = newNeuronIds[oldNeuronId];
-			newNeuronValues[newNeuronId] = this.getNeuronValues()[oldNeuronId];
-			newNeuronTypes[newNeuronId] = this.getNeuronTypes()[oldNeuronId];
 			
-			if (markedNeurons.get(oldNeuronId)) {
+			if (!markedNeurons.get(oldNeuronId)) {
+				newNeuronValues[newNeuronId] = this.getNeuronValues()[oldNeuronId];
+				newNeuronTypes[newNeuronId] = this.getNeuronTypes()[oldNeuronId];
+			} else {
 				final int oldNeuronFirstWeightId = this.getNeuronFirstWeightId(oldNeuronId);
 				final int oldNeuronNextWeightId = this.getNeuronFirstWeightId(oldNeuronId + 1);
 				
