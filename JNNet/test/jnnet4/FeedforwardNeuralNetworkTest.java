@@ -289,22 +289,61 @@ public final class FeedforwardNeuralNetworkTest {
 	public final void test5() {
 		final TicToc timer = new TicToc();
 		debugPrint("Loading data started", new Date(timer.tic()));
-		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
+//		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
 //		final TrainingData trainingData = new TrainingData("jnnet/iris_virginica.txt");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/p53_2012/K9.data");
+		final TrainingData trainingData = new TrainingData("../Libraries/datasets/gisette/gisette_train.data");
+		final TrainingData validationData = new TrainingData("../Libraries/datasets/gisette/gisette_valid.data");
+		final TrainingData testData = null;//new TrainingData("../Libraries/datasets/gisette/gisette_test.data");
 		debugPrint("Loading data done in", timer.toc(), "ms");
-		final int step = trainingData.getStep();
-		final int inputDimension = step - 1;
+		final int inputDimension = trainingData.getStep() - 1;
 		final boolean showNetwork = inputDimension < 3 && true;
-		final double[] data = trainingData.getData();
 		debugPrint("Building network started", new Date(timer.tic()));
-		final FeedforwardNeuralNetwork network = newClassifier(trainingData).pack(1);
+		final FeedforwardNeuralNetwork network = newClassifier(trainingData, true, true).pack(1);
 		debugPrint("Building network done in", timer.toc(), "ms");
 		
-		debugPrint("Network evaluation started", new Date(timer.tic()));
+		long totalTrainingErrorCount = 0L;
+		
+		{
+			debugPrint("Evaluating on training data...");
+			debugPrint("Network evaluation started", new Date(timer.tic()));
+			final SimpleConfusionMatrix confusionMatrix = evaluate(network, trainingData);
+			debugPrint("Network evaluation done in", timer.toc(), "ms");
+			debugPrint(confusionMatrix);
+			
+			totalTrainingErrorCount = confusionMatrix.getTotalErrorCount();
+		}
+		
+		if (validationData != null) {
+			debugPrint("Evaluating on validation data...");
+			debugPrint("Network evaluation started", new Date(timer.tic()));
+			final SimpleConfusionMatrix confusionMatrix = evaluate(network, validationData);
+			debugPrint("Network evaluation done in", timer.toc(), "ms");
+			debugPrint(confusionMatrix);
+		}
+		
+		if (testData != null) {
+			debugPrint("Evaluating on test data...");
+			debugPrint("Network evaluation started", new Date(timer.tic()));
+			final SimpleConfusionMatrix confusionMatrix = evaluate(network, testData);
+			debugPrint("Network evaluation done in", timer.toc(), "ms");
+			debugPrint(confusionMatrix);
+		}
+		
+		if (showNetwork) {
+			show(network, 512, 20.0, trainingData.getData());
+		}
+		
+		assertEquals(0L, totalTrainingErrorCount);
+	}
+
+	public SimpleConfusionMatrix evaluate(final FeedforwardNeuralNetwork network, final TrainingData trainingData) {
+		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
+		final int step = trainingData.getStep();
+		final int inputDimension = step - 1;
 		final int outputId = network.getNeuronCount() - 1;
-		final SimpleConfusionMatrix confusionMatrix = new SimpleConfusionMatrix();
+		final double[] data = trainingData.getData();
 		
 		for (int i = 0; i < data.length; i += step) {
 			for (int j = 0; j < inputDimension; ++j) {
@@ -322,29 +361,20 @@ public final class FeedforwardNeuralNetworkTest {
 //				debugPrint(Arrays.toString(network.getNeuronValues()));
 				
 				if (expected == 1.0) {
-					confusionMatrix.getFalseNegativeCount().incrementAndGet();
+					result.getFalseNegativeCount().incrementAndGet();
 				} else {
-					confusionMatrix.getFalsePositiveCount().incrementAndGet();
+					result.getFalsePositiveCount().incrementAndGet();
 				}
 			} else {
 				if (expected == 1.0) {
-					confusionMatrix.getTruePositiveCount().incrementAndGet();
+					result.getTruePositiveCount().incrementAndGet();
 				} else {
-					confusionMatrix.getTrueNegativeCount().incrementAndGet();
+					result.getTrueNegativeCount().incrementAndGet();
 				}
 			}
-			
-//			assertEquals("" + expected, "" + actual);
 		}
 		
-		debugPrint("Network evaluation done in", timer.toc(), "ms");
-		debugPrint(confusionMatrix);
-		
-		if (showNetwork) {
-			show(network, 512, 20.0, data);
-		}
-		
-		assertEquals(0L, confusionMatrix.getTotalErrorCount());
+		return result;
 	}
 	
 	public static final Random RANDOM = new Random(0L);
