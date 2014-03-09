@@ -5,6 +5,8 @@ import static java.util.Arrays.copyOf;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -12,12 +14,12 @@ import java.util.Scanner;
  */
 public final class TrainingData implements Serializable {
 	
-	private double[] data;
+	private final double[] data;
 	
 	private int step;
 	
 	public TrainingData(final String resourcePath) {
-		this.data = new double[0];
+		final List<Double> data = new ArrayList<Double>();
 		
 		final Scanner scanner = new Scanner(getResourceAsStream(resourcePath));
 		
@@ -28,16 +30,18 @@ public final class TrainingData implements Serializable {
 				
 				if (2 <= n) {
 					this.step = n;
-					final double[] values = new double[n];
 					
 					for (int i = 0; i < n; ++i) {
-						values[i] = parseDouble(line[i]);
+						data.add(parseDouble(line[i]));
 					}
-					
-					final int m = this.data.length;
-					this.data = copyOf(this.data, m + n);
-					System.arraycopy(values, 0, this.data, m, n);
 				}
+			}
+			
+			final int n = data.size();
+			this.data = new double[n];
+			
+			for (int i = 0; i < n; ++i) {
+				this.data[i] = data.get(i);
 			}
 		} finally {
 			scanner.close();
