@@ -7,6 +7,7 @@ import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.DoubleList;
-
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -40,20 +41,29 @@ public final class TrainingData implements Serializable {
 		this.labelCounts = new LinkedHashMap<String, AtomicInteger>();
 		this.labels = new ArrayList<String>();
 		this.data = new DoubleList();
-		
-		final Scanner scanner = new Scanner(getResourceAsStream(resourcePath));
-		double[] buffer = {};
-		int invalidItemCount = 0;
-		int lineId = 0;
+		Scanner labelScanner = null;
+		Scanner scanner = null;
 		
 		try {
+			try {
+				labelScanner = new Scanner(getResourceAsStream(resourcePath.replaceFirst("\\.data", "\\.labels")));
+				debugPrint("Using label scanner");
+			} catch (final Exception exception) {
+				ignore(exception);
+			}
+			
+			scanner = new Scanner(getResourceAsStream(resourcePath));
+			double[] buffer = {};
+			int invalidItemCount = 0;
+			int lineId = 0;
+			
 			while (scanner.hasNext()) {
 				if (lineId  % 1000 == 0) {
 					debugPrint("lineId:", lineId);
 				}
 				
 				final String[] line = scanner.nextLine().trim().split("(\\s|,)+");
-				final int n = line.length;
+				final int n = line.length + (labelScanner != null ? 1 : 0);
 				
 				if (2 <= n) {
 					buffer = reserve(buffer, n);
@@ -76,7 +86,7 @@ public final class TrainingData implements Serializable {
 							this.data.add(buffer[i]);
 						}
 						
-						final String label = line[labelOffset];
+						final String label = labelScanner != null ? labelScanner.next() : line[labelOffset];
 						Integer labelId = this.getLabelIds().get(label);
 						
 						if (labelId == null) {
@@ -99,7 +109,13 @@ public final class TrainingData implements Serializable {
 				System.err.println(debug(DEBUG_STACK_OFFSET, "invalidItemCount:", invalidItemCount));
 			}
 		} finally {
-			scanner.close();
+			if (scanner != null) {
+				scanner.close();
+			}
+			
+			if (labelScanner != null) {
+				labelScanner.close();
+			}
 		}
 	}
 	
