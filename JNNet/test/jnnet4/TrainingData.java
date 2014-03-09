@@ -2,6 +2,8 @@ package jnnet4;
 
 import static java.lang.Double.parseDouble;
 import static jnnet4.FeedforwardNeuralNetwork.reserve;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
@@ -14,8 +16,9 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import jnnet.DoubleList;
+
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
  * @author codistmonk (creation 2014-03-07)
@@ -40,6 +43,7 @@ public final class TrainingData implements Serializable {
 		
 		final Scanner scanner = new Scanner(getResourceAsStream(resourcePath));
 		double[] buffer = {};
+		int invalidItemCount = 0;
 		int lineId = 0;
 		
 		try {
@@ -61,6 +65,7 @@ public final class TrainingData implements Serializable {
 							buffer[i] = parseDouble(line[i]);
 						} catch (final NumberFormatException exception) {
 							itemIsValid = false;
+							++invalidItemCount;
 						}
 					}
 					
@@ -89,6 +94,10 @@ public final class TrainingData implements Serializable {
 			}
 			
 			debugPrint("labelCounts:", this.getLabelCounts());
+			
+			if (0 < invalidItemCount) {
+				System.err.println(debug(DEBUG_STACK_OFFSET, "invalidItemCount:", invalidItemCount));
+			}
 		} finally {
 			scanner.close();
 		}

@@ -288,14 +288,15 @@ public final class FeedforwardNeuralNetworkTest {
 	@Test
 	public final void test5() {
 		final TicToc timer = new TicToc();
-		final boolean showNetwork = false;
 		debugPrint("Loading data started", new Date(timer.tic()));
+		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
 //		final TrainingData trainingData = new TrainingData("jnnet/iris_virginica.txt");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
-		final TrainingData trainingData = new TrainingData("../Libraries/datasets/p53_2012/K9.data");
+//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/p53_2012/K9.data");
 		debugPrint("Loading data done in", timer.toc(), "ms");
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
+		final boolean showNetwork = inputDimension < 3 && true;
 		final double[] data = trainingData.getData();
 		debugPrint("Building network started", new Date(timer.tic()));
 		final FeedforwardNeuralNetwork network = newClassifier(trainingData).pack(1);
@@ -353,8 +354,12 @@ public final class FeedforwardNeuralNetworkTest {
 	}
 	
 	public static final FeedforwardNeuralNetwork newClassifier(final TrainingData trainingData) {
+		return newClassifier(trainingData, true, true);
+	}
+	
+	public static final FeedforwardNeuralNetwork newClassifier(final TrainingData trainingData,
+			final boolean removeRedundantNeurons, final boolean allowOutputInversion) {
 		final boolean debug = true;
-		final boolean removeRedundantNeurons = true;
 		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
@@ -436,6 +441,7 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 		
 		int layer1NeuronCount = result.getLayerNeuronCount(1);
+		boolean invertOutput = false;
 		
 		if (debug) {
 			debugPrint("layer1NeuronCount:", layer1NeuronCount);
@@ -551,9 +557,11 @@ public final class FeedforwardNeuralNetworkTest {
 				}
 			}
 			
+			invertOutput = allowOutputInversion && codes[0].size() < codes[1].size();
+			
 			result.newLayer();
 			
-			for (final BitSet code : codes[1]) {
+			for (final BitSet code : codes[invertOutput ? 0 : 1]) {
 				result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
 				
 				result.newNeuronSource(0, -code.cardinality());
@@ -576,10 +584,16 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
 			
-			result.newNeuronSource(0, -0.5);
-			
-			for (int i = 0; i < layer2NeuronCount; ++i) {
-				result.newNeuronSource(1 + inputDimension + layer1NeuronCount + i, 1.0);
+			if (invertOutput) {
+				for (int i = 0; i < layer2NeuronCount; ++i) {
+					result.newNeuronSource(1 + inputDimension + layer1NeuronCount + i, -1.0);
+				}
+			} else {
+				result.newNeuronSource(0, -0.5);
+				
+				for (int i = 0; i < layer2NeuronCount; ++i) {
+					result.newNeuronSource(1 + inputDimension + layer1NeuronCount + i, 1.0);
+				}
 			}
 		}
 		
