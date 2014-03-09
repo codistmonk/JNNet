@@ -149,15 +149,10 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	
 	public final int newNeuron() {
 		final int result = this.getNeuronCount();
-		
-		if (this.getNeuronValues().length != result) {
-			throw new IllegalStateException();
-		}
-		
 		final int weightCount = this.getWeightCount();
 		
-		this.neuronValues = copyOf(this.getNeuronValues(), result + 1);
-		this.neuronTypes = copyOf(this.getNeuronTypes(), result + 1);
+		this.neuronValues = reserve(this.getNeuronValues(), result + 1);
+		this.neuronTypes = reserve(this.getNeuronTypes(), result + 1);
 		this.neuronFirstWeightIds = copyOf(this.neuronFirstWeightIds, result + 2);
 		
 		this.neuronFirstWeightIds[result] = weightCount;
@@ -179,8 +174,8 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	public final int newNeuronSource(final int sourceNeuronId, final double weight) {
 		final int result = this.getWeightCount();
 		
-		this.weights = copyOf(this.weights, result + 1);
-		this.sourceIds = copyOf(this.sourceIds, result + 1);
+		this.weights = reserve(this.weights, result + 1);
+		this.sourceIds = reserve(this.sourceIds, result + 1);
 		
 		this.getWeights()[result] = weight;
 		this.getSourceIds()[result] = sourceNeuronId;
@@ -320,6 +315,20 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 		this.layerFirstNeuronIds = newLayerFirstNeuronIds;
 	}
 	
+	public final FeedforwardNeuralNetwork pack(final int itemCount) {
+		final int neuronCount = this.getNeuronCount();
+		final int valueCount = max(1, neuronCount * itemCount);
+		final int weightCount = this.getWeightCount();
+		
+		this.neuronTypes = pack(reserve(this.getNeuronTypes(), 1), neuronCount);
+		this.neuronValues = pack(reserve(this.getNeuronValues(), valueCount), valueCount);
+		this.neuronFirstWeightIds = pack(reserve(this.neuronFirstWeightIds, 1), neuronCount + 1);
+		this.sourceIds = pack(reserve(this.getSourceIds(), 1), weightCount);
+		this.weights = pack(reserve(this.getWeights(), 1), weightCount);
+		
+		return this;
+	}
+	
 	/**
 	 * {@value}.
 	 */
@@ -359,5 +368,53 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	 * {@value}.
 	 */
 	public static final byte NEURON_TYPE_MAX_THRESHOLD = 7;
+	
+	public static final byte[] pack(final byte[] array, final int maximumLength) {
+		if (maximumLength < array.length) {
+			return copyOf(array, maximumLength);
+		}
+		
+		return array;
+	}
+	
+	public static final int[] pack(final int[] array, final int maximumLength) {
+		if (maximumLength < array.length) {
+			return copyOf(array, maximumLength);
+		}
+		
+		return array;
+	}
+	
+	public static final double[] pack(final double[] array, final int maximumLength) {
+		if (maximumLength < array.length) {
+			return copyOf(array, maximumLength);
+		}
+		
+		return array;
+	}
+	
+	public static final byte[] reserve(final byte[] array, final int minimumLength) {
+		if (array.length < minimumLength) {
+			return copyOf(array, Math.max(array.length * 2, minimumLength));
+		}
+		
+		return array;
+	}
+	
+	public static final int[] reserve(final int[] array, final int minimumLength) {
+		if (array.length < minimumLength) {
+			return copyOf(array, Math.max(array.length * 2, minimumLength));
+		}
+		
+		return array;
+	}
+	
+	public static final double[] reserve(final double[] array, final int minimumLength) {
+		if (array.length < minimumLength) {
+			return copyOf(array, Math.max(array.length * 2, minimumLength));
+		}
+		
+		return array;
+	}
 	
 }

@@ -14,6 +14,7 @@ import static jnnet4.VectorStatistics.subtract;
 import static jnnet4.JNNetTools.sigmoid;
 import static jnnet4.JNNetTools.uint8;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.instances;
@@ -35,6 +36,7 @@ import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -118,7 +120,7 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			network.getNeuronValues()[1] = 0.0;
 			network.getNeuronValues()[2] = 1.0;
-			network.execute(1);
+			network.pack(1).execute(1);
 			assertEquals("[1.0, 0.0, 1.0, 1.0, 0.0, 1.0]", Arrays.toString(network.getNeuronValues()));
 			
 			network.getNeuronValues()[1] = 1.0;
@@ -288,15 +290,18 @@ public final class FeedforwardNeuralNetworkTest {
 		final TicToc timer = new TicToc();
 		final boolean showNetwork = false;
 		debugPrint("Loading data started", new Date(timer.tic()));
-		final TrainingData trainingData = new TrainingData("jnnet/iris_virginica.txt");
+//		final TrainingData trainingData = new TrainingData("jnnet/iris_virginica.txt");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
+		final TrainingData trainingData = new TrainingData("../Libraries/datasets/p53_2012/K9.data");
 		debugPrint("Loading data done in", timer.toc(), "ms");
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
 		final double[] data = trainingData.getData();
 		debugPrint("Building network started", new Date(timer.tic()));
-		final FeedforwardNeuralNetwork network = newClassifier(trainingData);
+		final FeedforwardNeuralNetwork network = newClassifier(trainingData).pack(1);
 		debugPrint("Building network done in", timer.toc(), "ms");
+		
+		debugPrint("Network evaluation started", new Date(timer.tic()));
 		final int outputId = network.getNeuronCount() - 1;
 		final SimpleConfusionMatrix confusionMatrix = new SimpleConfusionMatrix();
 		
@@ -331,6 +336,7 @@ public final class FeedforwardNeuralNetworkTest {
 //			assertEquals("" + expected, "" + actual);
 		}
 		
+		debugPrint("Network evaluation done in", timer.toc(), "ms");
 		debugPrint(confusionMatrix);
 		
 		if (showNetwork) {
@@ -355,7 +361,7 @@ public final class FeedforwardNeuralNetworkTest {
 		final int itemCount = trainingData.getItemCount();
 		final double[] data = trainingData.getData();
 		
-		debugPrint(itemCount);
+		debugPrint("trainingItemCount:", itemCount, "inputDimension:", inputDimension);
 		
 		// Finish input layer
 		{
@@ -463,7 +469,7 @@ public final class FeedforwardNeuralNetworkTest {
 				final Set<BitSet> ambiguities = intersection(codes[0], codes[1]);
 				
 				if (0 != ambiguities.size()) {
-					debugPrint("ambiguityCount:", ambiguities.size());
+					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguityCount:", ambiguities.size()));
 					
 					final Set<Object>[] items = instances(2, HASH_SET_FACTORY);
 					
@@ -472,9 +478,8 @@ public final class FeedforwardNeuralNetworkTest {
 						items[label].add(Arrays.toString(copyOfRange(data, i, i + step - 1)));
 					}
 					
-					debugPrint(intersection(items[0], items[1]));
+					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguousItems:", intersection(items[0], items[1])));
 					
-//					throw new IllegalStateException();
 					codes[0].removeAll(codes[1]);
 				}
 			}
