@@ -65,7 +65,7 @@ public final class TrainingData implements Serializable {
 			int lineId = 0;
 			
 			while (scanner.hasNext()) {
-				if (lineId  % 1000 == 0) {
+				if (lineId  % 10000 == 0) {
 					debugPrint("lineId:", lineId);
 				}
 				
@@ -96,8 +96,6 @@ public final class TrainingData implements Serializable {
 								this.data.add(buffer[i]);
 							}
 						}
-						
-						debugPrint(line.length, n, labelOffset, Arrays.toString(line));
 						
 						final String label = labelScanner != null ? labelScanner.next() : line[labelOffset];
 						Integer labelId = this.getLabelIds().get(label);

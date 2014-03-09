@@ -289,14 +289,15 @@ public final class FeedforwardNeuralNetworkTest {
 	public final void test5() {
 		final TicToc timer = new TicToc();
 		debugPrint("Loading data started", new Date(timer.tic()));
-		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
+//		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
 //		final TrainingData trainingData = new TrainingData("jnnet/iris_virginica.txt");
-//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
+		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/p53_2012/K9.data");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/gisette/gisette_train.data");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/mammographic_masses.data");
 		final TrainingData validationData = null;//new TrainingData("../Libraries/datasets/gisette/gisette_valid.data");
 		final TrainingData testData = null;//new TrainingData("../Libraries/datasets/gisette/gisette_test.data");
+//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/HIGGS.csv", 0);
 		debugPrint("Loading data done in", timer.toc(), "ms");
 		final int inputDimension = trainingData.getStep() - 1;
 		final boolean showNetwork = inputDimension < 3 && true;
@@ -391,6 +392,9 @@ public final class FeedforwardNeuralNetworkTest {
 	public static final FeedforwardNeuralNetwork newClassifier(final TrainingData trainingData,
 			final boolean removeRedundantNeurons, final boolean allowOutputInversion) {
 		final boolean debug = true;
+		
+		debugPrint("Building neural network...");
+		
 		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
@@ -408,15 +412,25 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		// Build layer 1 (space partitioning)
 		{
+			debugPrint("Building partitioning layer...");
+			
 			result.newLayer();
 			
 			final List<List<Integer>> todo = new ArrayList<List<Integer>>();
 			final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
 			
 			todo.add(range(0, itemCount - 1));
+			int iterationId = 0;
 			
 			while (!todo.isEmpty()) {
 				final List<Integer> indices = todo.remove(0);
+				
+				if (iterationId % 1000 == 0) {
+					debugPrint("iterationId:", iterationId, "currentClusterSize:", indices.size(), "remainingClusters:", todo.size());
+				}
+				
+				++iterationId;
+				
 				final VectorStatistics[] statistics = instances(2, vectorStatisticsFactory);
 				
 				for (final int i : indices) {
@@ -480,6 +494,8 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		// Build layer 2 (convex regions definition)
 		{
+			debugPrint("Building clustering layer: collecting codes...");
+			
 			@SuppressWarnings("unchecked")
 			final Set<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
 			
@@ -503,6 +519,8 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			// Check ambiguities
 			if (debug) {
+				debugPrint("Checking for ambiguities...");
+				
 				final Set<BitSet> ambiguities = intersection(codes[0], codes[1]);
 				
 				if (0 != ambiguities.size()) {
@@ -522,6 +540,8 @@ public final class FeedforwardNeuralNetworkTest {
 			}
 			
 			if (removeRedundantNeurons) {
+				debugPrint("Pruning partitioning neurons...");
+				
 				final int oldNeuronCount = result.getNeuronCount();
 				final BitSet markedNeurons = new BitSet(oldNeuronCount);
 				final Set<BitSet>[] newCodes = codes.clone();
@@ -579,6 +599,8 @@ public final class FeedforwardNeuralNetworkTest {
 				
 				// Check ambiguities
 				if (debug) {
+					debugPrint("Checking for ambiguities...");
+					
 					final Set<BitSet> ambiguities = intersection(codes[0], codes[1]);
 					
 					if (0 != ambiguities.size()) {
@@ -588,17 +610,21 @@ public final class FeedforwardNeuralNetworkTest {
 				}
 			}
 			
-			invertOutput = allowOutputInversion && codes[0].size() < codes[1].size();
-			
-			result.newLayer();
-			
-			for (final BitSet code : codes[invertOutput ? 0 : 1]) {
-				result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+			{
+				debugPrint("Building clustering layer: generating neurons...");
 				
-				result.newNeuronSource(0, -code.cardinality());
+				invertOutput = allowOutputInversion && codes[0].size() < codes[1].size();
 				
-				for (int i = 0; i < layer1NeuronCount; ++i) {
-					result.newNeuronSource(1 + inputDimension + i, code.get(i) ? 1.0 : -1.0);
+				result.newLayer();
+				
+				for (final BitSet code : codes[invertOutput ? 0 : 1]) {
+					result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+					
+					result.newNeuronSource(0, -code.cardinality());
+					
+					for (int i = 0; i < layer1NeuronCount; ++i) {
+						result.newNeuronSource(1 + inputDimension + i, code.get(i) ? 1.0 : -1.0);
+					}
 				}
 			}
 		}
@@ -611,6 +637,8 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		// Build output layer (union of convexes)
 		{
+			debugPrint("Building output layer...");
+			
 			result.newLayer();
 			
 			result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
@@ -627,6 +655,8 @@ public final class FeedforwardNeuralNetworkTest {
 				}
 			}
 		}
+		
+		debugPrint("Neural network built");
 		
 		return result;
 	}
