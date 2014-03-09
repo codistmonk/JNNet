@@ -11,6 +11,7 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +19,7 @@ import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.DoubleList;
-import net.sourceforge.aprog.tools.Tools;
+
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -37,6 +38,10 @@ public final class TrainingData implements Serializable {
 	private int step;
 	
 	public TrainingData(final String resourcePath) {
+		this(resourcePath, -1);
+	}
+	
+	public TrainingData(final String resourcePath, final int labelIndex) {
 		this.labelIds = new LinkedHashMap<String, Integer>();
 		this.labelCounts = new LinkedHashMap<String, AtomicInteger>();
 		this.labels = new ArrayList<String>();
@@ -45,11 +50,13 @@ public final class TrainingData implements Serializable {
 		Scanner scanner = null;
 		
 		try {
-			try {
-				labelScanner = new Scanner(getResourceAsStream(resourcePath.replaceFirst("\\.data", "\\.labels")));
-				debugPrint("Using label scanner");
-			} catch (final Exception exception) {
-				ignore(exception);
+			if (resourcePath.endsWith(".data")) {
+				try {
+					labelScanner = new Scanner(getResourceAsStream(resourcePath.replaceFirst("\\.data", "\\.labels")));
+					debugPrint("Using label scanner");
+				} catch (final Exception exception) {
+					ignore(exception);
+				}
 			}
 			
 			scanner = new Scanner(getResourceAsStream(resourcePath));
@@ -67,12 +74,14 @@ public final class TrainingData implements Serializable {
 				
 				if (2 <= n) {
 					buffer = reserve(buffer, n);
-					final int labelOffset = n - 1;
+					final int labelOffset = 0 <= labelIndex ? labelIndex : n - 1;
 					boolean itemIsValid = true;
 					
-					for (int i = 0; i < labelOffset && itemIsValid; ++i) {
+					for (int i = 0, j = 0; i < line.length && itemIsValid; ++i) {
 						try {
-							buffer[i] = parseDouble(line[i]);
+							if (i != labelOffset) {
+								buffer[j++] = parseDouble(line[i]);
+							}
 						} catch (final NumberFormatException exception) {
 							itemIsValid = false;
 							++invalidItemCount;
@@ -82,9 +91,13 @@ public final class TrainingData implements Serializable {
 					if (itemIsValid) {
 						this.step = n;
 						
-						for (int i = 0; i < labelOffset; ++i) {
-							this.data.add(buffer[i]);
+						for (int i = 0; i < line.length; ++i) {
+							if (i != labelOffset) {
+								this.data.add(buffer[i]);
+							}
 						}
+						
+						debugPrint(line.length, n, labelOffset, Arrays.toString(line));
 						
 						final String label = labelScanner != null ? labelScanner.next() : line[labelOffset];
 						Integer labelId = this.getLabelIds().get(label);

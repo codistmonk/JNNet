@@ -289,12 +289,13 @@ public final class FeedforwardNeuralNetworkTest {
 	public final void test5() {
 		final TicToc timer = new TicToc();
 		debugPrint("Loading data started", new Date(timer.tic()));
-//		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
+		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
 //		final TrainingData trainingData = new TrainingData("jnnet/iris_virginica.txt");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/p53_2012/K9.data");
-		final TrainingData trainingData = new TrainingData("../Libraries/datasets/gisette/gisette_train.data");
-		final TrainingData validationData = new TrainingData("../Libraries/datasets/gisette/gisette_valid.data");
+//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/gisette/gisette_train.data");
+//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/mammographic_masses.data");
+		final TrainingData validationData = null;//new TrainingData("../Libraries/datasets/gisette/gisette_valid.data");
 		final TrainingData testData = null;//new TrainingData("../Libraries/datasets/gisette/gisette_test.data");
 		debugPrint("Loading data done in", timer.toc(), "ms");
 		final int inputDimension = trainingData.getStep() - 1;
