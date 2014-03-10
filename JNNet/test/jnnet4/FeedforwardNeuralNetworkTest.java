@@ -291,18 +291,28 @@ public final class FeedforwardNeuralNetworkTest {
 		debugPrint("Loading data started", new Date(timer.tic()));
 //		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
 //		final TrainingData trainingData = new TrainingData("jnnet/iris_virginica.txt");
-		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
+//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/p53_2012/K9.data");
-//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/gisette/gisette_train.data");
+		final TrainingData trainingData = new TrainingData("../Libraries/datasets/gisette/gisette_train.data");
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/mammographic_masses.data");
-		final TrainingData validationData = null;//new TrainingData("../Libraries/datasets/gisette/gisette_valid.data");
+		final TrainingData validationData = new TrainingData("../Libraries/datasets/gisette/gisette_valid.data");
 		final TrainingData testData = null;//new TrainingData("../Libraries/datasets/gisette/gisette_test.data");
+		
+		/*
+		 * Considerations on this dataset:
+		 *  * 11000000 samples, 28 dimensions
+		 *  * unrestrained algorithm generates 2500000+ partitioning neurons but 200 are enough for unambiguous partitioning
+		 *  * restraining partitioning neurons to 200 or 2000 doesn't really change the number of clustering neuron (~5000000)
+		 *  * it would be more interesting to perform binary search in list of 5000000 cluster codes
+		 *    rather than evaluating 5000000 clustering neurons (and building that would require too much memory)
+		 */
 //		final TrainingData trainingData = new TrainingData("../Libraries/datasets/HIGGS.csv", 0);
+		
 		debugPrint("Loading data done in", timer.toc(), "ms");
 		final int inputDimension = trainingData.getStep() - 1;
 		final boolean showNetwork = inputDimension < 3 && true;
 		debugPrint("Building network started", new Date(timer.tic()));
-		final FeedforwardNeuralNetwork network = newClassifier(trainingData, true, true).pack(1);
+		final FeedforwardNeuralNetwork network = newClassifier(trainingData, true, true, 100).pack(1);
 		debugPrint("Building network done in", timer.toc(), "ms");
 		
 		long totalTrainingErrorCount = 0L;
@@ -386,11 +396,11 @@ public final class FeedforwardNeuralNetworkTest {
 	}
 	
 	public static final FeedforwardNeuralNetwork newClassifier(final TrainingData trainingData) {
-		return newClassifier(trainingData, true, true);
+		return newClassifier(trainingData, true, true, Integer.MAX_VALUE);
 	}
 	
 	public static final FeedforwardNeuralNetwork newClassifier(final TrainingData trainingData,
-			final boolean removeRedundantNeurons, final boolean allowOutputInversion) {
+			final boolean removeRedundantNeurons, final boolean allowOutputInversion, final int maximumPartitioningNeuronCount) {
 		final boolean debug = true;
 		
 		debugPrint("Building neural network...");
@@ -422,7 +432,7 @@ public final class FeedforwardNeuralNetworkTest {
 			todo.add(range(0, itemCount - 1));
 			int iterationId = 0;
 			
-			while (!todo.isEmpty()) {
+			while (!todo.isEmpty() && result.getLayerNeuronCount(1) < maximumPartitioningNeuronCount) {
 				final List<Integer> indices = todo.remove(0);
 				
 				if (iterationId % 1000 == 0) {
@@ -500,6 +510,10 @@ public final class FeedforwardNeuralNetworkTest {
 			final Set<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
 			
 			for (int i = 0; i < data.length; i += step) {
+				if ((i / step) % 10000 == 0) {
+					debugPrint(i, "/", data.length);
+				}
+				
 				for (int j = 0; j < inputDimension; ++j) {
 					result.getNeuronValues()[1 + j] = data[i + j];
 				}
@@ -526,29 +540,28 @@ public final class FeedforwardNeuralNetworkTest {
 				if (0 != ambiguities.size()) {
 					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguityCount:", ambiguities.size()));
 					
-					final Set<Object>[] items = instances(2, HASH_SET_FACTORY);
-					
-					for (int i = 0; i < itemCount; i += step) {
-						final int label = (int) data[i + step - 1];
-						items[label].add(Arrays.toString(copyOfRange(data, i, i + step - 1)));
-					}
-					
-					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguousItems:", intersection(items[0], items[1])));
-					
 					codes[0].removeAll(codes[1]);
 				}
 			}
 			
 			if (removeRedundantNeurons) {
-				debugPrint("Pruning partitioning neurons...");
+				if (debug) {
+					debugPrint("Pruning partitioning neurons...");
+				}
 				
 				final int oldNeuronCount = result.getNeuronCount();
 				final BitSet markedNeurons = new BitSet(oldNeuronCount);
 				final Set<BitSet>[] newCodes = codes.clone();
 				
-				debugPrint("0-codes:", newCodes[0].size(), "1-codes:", newCodes[1].size());
+				if (debug) {
+					debugPrint("0-codes:", newCodes[0].size(), "1-codes:", newCodes[1].size());
+				}
 				
 				for (int bit = 0; bit < layer1NeuronCount; ++bit) {
+					if (debug) {
+						debugPrint("Computing code", bit, "/", layer1NeuronCount);
+					}
+					
 					@SuppressWarnings("unchecked")
 					final Set<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
 					
@@ -569,8 +582,10 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 				}
 				
-				debugPrint("uselessNeurons:", markedNeurons.cardinality());
-				debugPrint("0-codes:", newCodes[0].size(), "1-codes:", newCodes[1].size());
+				if (debug) {
+					debugPrint("uselessNeurons:", markedNeurons.cardinality());
+					debugPrint("0-codes:", newCodes[0].size(), "1-codes:", newCodes[1].size());
+				}
 				
 				result.remove(markedNeurons);
 				
