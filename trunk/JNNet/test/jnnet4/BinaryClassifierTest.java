@@ -2,34 +2,47 @@ package jnnet4;
 
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.swap;
+import static jnnet4.BinaryClassifier.Functional.CLONE;
+import static jnnet4.BinaryClassifier.Functional.map;
+import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.RANDOM;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
 import static jnnet4.VectorStatistics.scaled;
 import static jnnet4.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.*;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import jnnet.DoubleList;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -44,9 +57,14 @@ public final class BinaryClassifierTest {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
+//		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
+		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 1000000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
+		
+		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
 //		debugPrint("Loading test dataset started", new Date(timer.tic()));
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
@@ -61,6 +79,10 @@ public final class BinaryClassifierTest {
 		final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData);
 		debugPrint("training:", confusionMatrix);
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
+		
+		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+		debugPrint("test:", classifier.evaluate(validationData));
+		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		
 //		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
 //		debugPrint("test:", classifier.evaluate(testData));
@@ -192,9 +214,8 @@ final class BinaryClassifier implements Serializable {
 		@SuppressWarnings("unchecked")
 		final Collection<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
 		this.step = step;
-		this.hyperplanes = hyperplanes.toArray();
 		
-		debugPrint("hyperplaneCount:", this.hyperplanes.length / step);
+		debugPrint("hyperplaneCount:", hyperplanes.size() / step);
 		debugPrint("Clustering...");
 		
 		timer.tic();
@@ -207,17 +228,143 @@ final class BinaryClassifier implements Serializable {
 			
 			final double[] item = copyOfRange(data, i, i + step - 1);
 			final int label = (int) data[i + step - 1];
-			final BitSet code = this.encode(item);
+			final BitSet code = encode(item, hyperplanes.toArray());
 			
 			codes[label].add(code);
 		}
 		
 		debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
 		
-		// TODO prune hyperplanes
+		{
+			final int ambiguities = intersection(codes[0], codes[1]).size();
+			
+			if (0 < ambiguities) {
+				System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguities:", ambiguities));
+				
+				codes[1].removeAll(codes[0]);
+			}
+		}
 		
+		// TODO prune hyperplanes
+		if (true) {
+			int hyperplaneCount = hyperplanes.size() / this.getStep();
+			final BitSet markedNeurons = new BitSet(hyperplaneCount);
+			final Collection<BitSet>[] newCodes = codes.clone();
+			
+			for (int bit = 0; bit < hyperplaneCount; ++bit) {
+				@SuppressWarnings("unchecked")
+				final Set<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
+				
+				for (int i = 0; i < 2; ++i) {
+					for (final BitSet code : newCodes[i]) {
+						final BitSet simplifiedCode = (BitSet) code.clone();
+						
+						simplifiedCode.clear(bit);
+						simplifiedCodes[i].add(simplifiedCode);
+					}
+				}
+				
+				final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
+				
+				if (ambiguities.isEmpty()) {
+					markedNeurons.set(bit);
+					System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
+				}
+			}
+			
+			final int oldLayer1NeuronCount = hyperplaneCount;
+			hyperplaneCount -= markedNeurons.cardinality();
+			
+			for (int i = 0; i < 2; ++i) {
+				codes[i].clear();
+				
+				for (final BitSet newCode : newCodes[i]) {
+					final BitSet code = new BitSet(hyperplaneCount);
+					
+					for (int oldBit = 0, newBit = 0; oldBit < oldLayer1NeuronCount; ++oldBit) {
+						if (!markedNeurons.get(oldBit)) {
+							code.set(newBit++, newCode.get(oldBit));
+						}
+					}
+					
+					codes[i].add(code);
+				}
+			}
+			
+			removeHyperplanes(markedNeurons, hyperplanes, step);
+			
+			debugPrint("hyperplaneCount:", hyperplanes.size() / step);
+			debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
+		} else {
+			final BitSet markedHyperplanes = new BitSet();
+			final int hyperplaneCount = hyperplanes.size() / this.getStep();
+			Collection<BitSet>[] newCodes = map(codes, CLONE);
+			Collection<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
+			int removedHyperplanes = 0;
+			
+			for (int bit = 0; bit < hyperplaneCount; ++bit) {
+				for (int i = 0; i < 2; ++i) {
+					simplifiedCodes[i].clear();
+					
+					for (final BitSet code : newCodes[i]) {
+						final BitSet simplifiedCode = (BitSet) code.clone();
+						
+						simplifiedCode.clear(bit);
+						
+						simplifiedCodes[i].add(simplifiedCode);
+					}
+				}
+				
+				if (intersection(simplifiedCodes[0], simplifiedCodes[1]).isEmpty()) {
+					markedHyperplanes.set(bit);
+					++removedHyperplanes;
+					final Collection<BitSet>[] tmp = newCodes;
+					newCodes = simplifiedCodes;
+					simplifiedCodes = tmp;
+				}
+			}
+			
+			if (0 < removedHyperplanes) {
+				for (int i = 0; i < 2; ++i) {
+					codes[i].clear();
+					
+					for (final BitSet code : newCodes[i]) {
+						for (int bit = 0, newBit = 0; bit < hyperplaneCount; ++bit) {
+							if (!markedHyperplanes.get(bit)) {
+								code.set(newBit++, code.get(bit));
+							}
+						}
+						
+						code.clear(hyperplaneCount - removedHyperplanes, hyperplaneCount);
+						
+						codes[i].add(code);
+					}
+				}
+				
+				removeHyperplanes(markedHyperplanes, hyperplanes, step);
+				
+				debugPrint("hyperplaneCount:", hyperplanes.size() / step);
+				debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
+			}
+		}
+		
+		this.hyperplanes = hyperplanes.toArray();
 		this.invertOutput = codes[0].size() < codes[1].size();
 		this.clusters = this.invertOutput ? codes[0] : codes[1];
+	}
+	
+	private static final void removeHyperplanes(final BitSet markedHyperplanes, final DoubleList hyperplanes, final int step) {
+		final double[] data = hyperplanes.toArray();
+		final int n = hyperplanes.size();
+		
+		for (int i = 0, j = 0, bit = 0; i < n; i += step, ++bit) {
+			if (!markedHyperplanes.get(bit)) {
+				System.arraycopy(data, i, data, j, step);
+				j += step;
+			}
+		}
+		
+		hyperplanes.resize(n - markedHyperplanes.cardinality() * step);
 	}
 	
 	public final int getStep() {
@@ -233,12 +380,17 @@ final class BinaryClassifier implements Serializable {
 	}
 	
 	public final BitSet encode(final double[] item) {
-		final int weightCount = this.getHyperplanes().length;
-		final int hyperplaneCount = weightCount / this.step;
+		return encode(item, this.getHyperplanes());
+	}
+	
+	public static final BitSet encode(final double[] item, final double[] hyperplanes) {
+		final int weightCount = hyperplanes.length;
+		final int step = item.length + 1;
+		final int hyperplaneCount = weightCount / step;
 		final BitSet code = new BitSet(hyperplaneCount);
 		
-		for (int j = 0, bit = 0; j < weightCount; j += this.getStep(), ++bit) {
-			final double d = this.getHyperplanes()[j] + dot(item, copyOfRange(this.getHyperplanes(), j + 1, j + this.getStep()));
+		for (int j = 0, bit = 0; j < weightCount; j += step, ++bit) {
+			final double d = hyperplanes[j] + dot(item, copyOfRange(hyperplanes, j + 1, j + step));
 			
 			code.set(bit, 0.0 <= d);
 		}
@@ -294,6 +446,23 @@ final class BinaryClassifier implements Serializable {
 	 * {@value}.
 	 */
 	public static final long LOGGING_MILLISECONDS = 5000L;
+	
+	public static final Method CLONE_ELEMENTS = Functional.method(BinaryClassifier.class, "cloneElements", Collection.class);
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> Collection<T> cloneElements(final Collection<T> elements) {
+		try {
+			final Collection<T> result = elements.getClass().newInstance();
+			
+			for (final T element : elements) {
+				result.add((T) Functional.CLONE.invoke(element));
+			}
+			
+			return result;
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
 	
 	public final static void generateHyperplanes(final Dataset trainingData, final HyperplaneHandler hyperplaneHandler) {
 		final int step = trainingData.getStep();
@@ -380,6 +549,107 @@ final class BinaryClassifier implements Serializable {
 	public static abstract interface HyperplaneHandler extends Serializable {
 		
 		public abstract boolean hyperplane(double bias, double[] weights);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-10)
+	 */
+	public static final class Functional {
+		
+		private Functional() {
+			throw new IllegalInstantiationException();
+		}
+		
+		public static final Method CLONE = method(Object.class, "clone");
+		
+		@SuppressWarnings("unchecked")
+		public static final <In, T> Collection<T>[] map(final In[] methodObjects, final Method method) {
+			return map(Collection.class, methodObjects, method);
+		}
+		
+		@SuppressWarnings("unchecked")
+		public static final <In, T> Collection<T>[] map(final Object methodObject, final Method method, final In[] singleArguments) {
+			return map(Collection.class, methodObject, method, singleArguments);
+		}
+		
+		@SuppressWarnings("unchecked")
+		public static final <T> Collection<T>[] map(final Object methodObject, final Method method, final Object[][] multipleArguments) {
+			return map(Collection.class, methodObject, method, multipleArguments);
+		}
+		
+		@SuppressWarnings("unchecked")
+		public static final <In, Out> Out[] map(final Class<Out> resultComponentType,
+				final In[] methodObjects, final Method method) {
+			try {
+				final int n = methodObjects.length;
+				final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
+				
+				for (int i = 0; i < n; ++i) {
+					result[i] = (Out) method.invoke(methodObjects[i]);
+				}
+				
+				return result;
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+		@SuppressWarnings("unchecked")
+		public static final <In, Out> Out[] map(final Class<Out> resultComponentType,
+				final Object methodObject, final Method method, final In[] singleArguments) {
+			try {
+				final int n = singleArguments.length;
+				final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
+				
+				for (int i = 0; i < n; ++i) {
+					result[i] = (Out) method.invoke(methodObject, singleArguments[i]);
+				}
+				
+				return result;
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+		@SuppressWarnings("unchecked")
+		public static final <Out> Out[] map(final Class<Out> resultComponentType,
+				final Object methodObject, final Method method, final Object[][] multipleArguments) {
+			try {
+				final int n = multipleArguments.length;
+				final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
+				
+				for (int i = 0; i < n; ++i) {
+					result[i] = (Out) method.invoke(methodObject, multipleArguments[i]);
+				}
+				
+				return result;
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+		public static final Method method(final Class<?> cls, final String methodName, final Class<?>... parameterTypes) {
+			Method result = null;
+			
+			try {
+				result = cls.getMethod(methodName, parameterTypes);
+			} catch (final Exception exception) {
+				ignore(exception);
+			}
+			
+			if (result == null) {
+				try {
+					result = cls.getDeclaredMethod(methodName, parameterTypes);
+				} catch (final Exception exception) {
+					throw unchecked(exception);
+				}
+			}
+			
+			result.setAccessible(true);
+			
+			return result;
+		}
 		
 	}
 	
