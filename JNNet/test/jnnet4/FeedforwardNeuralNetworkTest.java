@@ -12,6 +12,7 @@ import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.instances;
+import static net.sourceforge.aprog.tools.Tools.invoke;
 import static org.junit.Assert.*;
 
 import java.awt.Color;
@@ -19,6 +20,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -619,8 +621,8 @@ public final class FeedforwardNeuralNetworkTest {
 		return result;
 	}
 	
-	public static final <T> Set<T> intersection(final Set<T> s1, final Set<T> s2) {
-		final Set<T> result = new HashSet<T>(s1);
+	public static final <T, C extends Collection<T>> C intersection(final Collection<T> s1, final Collection<T> s2) {
+		final C result = invoke(s1, "clone");
 		
 		result.retainAll(s2);
 		
