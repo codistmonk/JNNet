@@ -25,7 +25,7 @@ import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 /**
  * @author codistmonk (creation 2014-03-07)
  */
-public final class TrainingData implements Serializable {
+public final class Dataset implements Serializable {
 	
 	private final Map<String, Integer> labelIds;
 	
@@ -37,11 +37,11 @@ public final class TrainingData implements Serializable {
 	
 	private int step;
 	
-	public TrainingData(final String resourcePath) {
+	public Dataset(final String resourcePath) {
 		this(resourcePath, -1);
 	}
 	
-	public TrainingData(final String resourcePath, final int labelIndex) {
+	public Dataset(final String resourcePath, final int labelIndex) {
 		this.labelIds = new LinkedHashMap<String, Integer>();
 		this.labelCounts = new LinkedHashMap<String, AtomicInteger>();
 		this.labels = new ArrayList<String>();
