@@ -472,20 +472,22 @@ public final class FeedforwardNeuralNetworkTest {
 				codes[(int) data[i + step - 1]].add(code);
 			}
 			
-			// Check ambiguities
-			if (debug) {
-				debugPrint("Checking for ambiguities...");
-				
-				final Set<BitSet> ambiguities = intersection(codes[0], codes[1]);
-				
-				if (0 != ambiguities.size()) {
-					System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguityCount:", ambiguities.size()));
-					
-					codes[0].removeAll(codes[1]);
-				}
-			}
-			
 			if (removeRedundantNeurons) {
+				// Check ambiguities
+				{
+					if (debug) {
+						debugPrint("Checking for ambiguities...");
+					}
+					
+					final Set<BitSet> ambiguities = intersection(codes[0], codes[1]);
+					
+					if (0 != ambiguities.size()) {
+						System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguityCount:", ambiguities.size()));
+						
+						codes[0].removeAll(codes[1]);
+					}
+				}
+				
 				if (debug) {
 					debugPrint("Pruning partitioning neurons...");
 				}
