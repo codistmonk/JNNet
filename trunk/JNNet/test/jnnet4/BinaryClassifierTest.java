@@ -9,9 +9,13 @@ import static jnnet4.VectorStatistics.scaled;
 import static jnnet4.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static org.junit.Assert.*;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,6 +25,8 @@ import java.util.Date;
 import java.util.List;
 
 import jnnet.DoubleList;
+
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
@@ -34,6 +40,7 @@ public final class BinaryClassifierTest {
 	
 	@Test
 	public final void test() {
+		final boolean showClassifier = true;
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
@@ -59,7 +66,82 @@ public final class BinaryClassifierTest {
 //		debugPrint("test:", classifier.evaluate(testData));
 //		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
+		if (showClassifier && classifier.getStep() == 3) {
+			show(classifier, 256, 16.0, trainingData.getData());
+		}
+		
 		assertEquals(0, confusionMatrix.getTotalErrorCount());
+	}
+	
+	public static final void show(final BinaryClassifier classifier, final int imageSize, final double scale, final double[] trainingData) {
+		final TicToc timer = new TicToc();
+		debugPrint("Allocating rendering buffer started", new Date(timer.tic()));
+		final BufferedImage image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_3BYTE_BGR);
+		debugPrint("Allocating rendering buffer done in", timer.toc(), "ms");
+		
+		debugPrint("Rendering started", new Date(timer.tic()));
+		
+		draw(classifier, image, scale);
+		
+		if (trainingData != null) {
+			final Graphics2D g = image.createGraphics();
+			final int inputDimension = classifier.getStep() - 1;
+			
+			for (int i = 0; i < trainingData.length; i += inputDimension + 1) {
+				final double label = trainingData[i + inputDimension];
+				
+				if (label < 0.5) {
+					g.setColor(Color.RED);
+				} else {
+					g.setColor(Color.GREEN);
+				}
+				
+				g.drawOval(
+						imageSize / 2 + (int) (trainingData[i + 0] * scale) - 2,
+						imageSize / 2 - (int) (trainingData[i + 1] * scale) - 2,
+						4, 4);
+			}
+			
+			g.dispose();
+		}
+		
+		debugPrint("Rendering done in", timer.toc(), "ms");
+		
+		SwingTools.show(image, getCallerClass().getName(), true);
+	}
+	
+	public static final void draw(final BinaryClassifier classifier, final BufferedImage image, final double scale) {
+		final int inputDimension = classifier.getStep() - 1;
+		
+		if (inputDimension != 1 && inputDimension != 2) {
+			throw new IllegalArgumentException();
+		}
+		
+		final int w = image.getWidth();
+		final int h = image.getHeight();
+		final double[] input = new double[inputDimension];
+		
+		for (int y = 0; y < h; ++y) {
+			if (1 < inputDimension) {
+				input[1] = (h / 2.0 - y) / scale;
+			}
+			
+			for (int x = 0; x < w; ++x) {
+				input[0] = (x - w / 2.0) / scale;
+				final double output = classifier.accept(input) ? 1.0 : 0.0;
+				
+				if (inputDimension == 1) {
+					final int yy = (int) (h / 2 - scale * output);
+					image.setRGB(x, yy, Color.WHITE.getRGB());
+				} else if (inputDimension == 2) {
+					image.setRGB(x, y, 0xFF000000 | (JNNetTools.uint8(output) * 0x00010101));
+				}
+			}
+			
+			if (inputDimension == 1) {
+				break;
+			}
+		}
 	}
 	
 }
@@ -138,22 +220,30 @@ final class BinaryClassifier implements Serializable {
 		this.clusters = this.invertOutput ? codes[0] : codes[1];
 	}
 	
+	public final int getStep() {
+		return this.step;
+	}
+	
+	public final double[] getHyperplanes() {
+		return this.hyperplanes;
+	}
+	
+	public final Collection<BitSet> getClusters() {
+		return this.clusters;
+	}
+	
 	public final BitSet encode(final double[] item) {
-		final int weightCount = this.hyperplanes.length;
+		final int weightCount = this.getHyperplanes().length;
 		final int hyperplaneCount = weightCount / this.step;
 		final BitSet code = new BitSet(hyperplaneCount);
 		
-		for (int j = 0, bit = 0; j < weightCount; j += this.step, ++bit) {
-			final double d = this.hyperplanes[j] + dot(item, copyOfRange(this.hyperplanes, j + 1, j + this.step));
+		for (int j = 0, bit = 0; j < weightCount; j += this.getStep(), ++bit) {
+			final double d = this.getHyperplanes()[j] + dot(item, copyOfRange(this.getHyperplanes(), j + 1, j + this.getStep()));
 			
 			code.set(bit, 0.0 <= d);
 		}
 		
 		return code;
-	}
-	
-	public final Collection<BitSet> getClusters() {
-		return this.clusters;
 	}
 	
 	public final boolean accept(final double... item) {

@@ -781,8 +781,8 @@ public final class FeedforwardNeuralNetworkTest {
 			}
 		}
 	}
-
-	public static int getOutputAsRGB(final FeedforwardNeuralNetwork network) {
+	
+	public static final int getOutputAsRGB(final FeedforwardNeuralNetwork network) {
 		final int outputDimension = network.getLayerNeuronCount(network.getLayerCount() - 1);
 		int result = 0xFF000000;
 		
