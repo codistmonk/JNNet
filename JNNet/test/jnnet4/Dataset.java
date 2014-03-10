@@ -84,7 +84,7 @@ public final class Dataset implements Serializable {
 				if (2 <= n) {
 					buffer = reserve(buffer, n);
 					final int labelOffset = 0 <= labelIndex ? labelIndex : n - 1;
-					boolean itemIsValid = true;
+					boolean itemIsValid = this.step == 0 || this.step == n;
 					
 					for (int i = 0, j = 0; i < line.length && itemIsValid; ++i) {
 						try {
