@@ -20,6 +20,8 @@ public final class JNNetTools {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final Random RANDOM = new Random(0L);
+	
 	public static final double[] doubles(final double... values) {
 		return values;
 	}
