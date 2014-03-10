@@ -63,7 +63,7 @@ final class BinaryClassifier implements Serializable {
 		final DoubleList hyperplanes = new DoubleList();
 		
 		generateHyperplanes(dataset, new HyperplaneHandler() {
-			
+
 			@Override
 			public final boolean hyperplane(final double bias, final double[] weights) {
 				hyperplanes.add(bias);
@@ -72,11 +72,17 @@ final class BinaryClassifier implements Serializable {
 				return true;
 			}
 			
+			/**
+			 * {@values}.
+			 */
+			private static final long serialVersionUID = 664820514870575702L;
+			
 		});
 		
 		final int step = dataset.getStep();
 		final double[] data = dataset.getData();
 		final int dataLength = data.length;
+		@SuppressWarnings("unchecked")
 		final Collection<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
 		this.step = step;
 		this.hyperplanes = hyperplanes.toArray();
@@ -89,7 +95,7 @@ final class BinaryClassifier implements Serializable {
 			codes[label].add(code);
 		}
 		
-		// TODO prune hyperplane
+		// TODO prune hyperplanes
 		
 		this.invertOutput = codes[0].size() < codes[1].size();
 		this.clusters = this.invertOutput ? codes[0] : codes[1];
