@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import jnnet.DoubleList;
-
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -38,10 +38,10 @@ public final class Dataset implements Serializable {
 	private int step;
 	
 	public Dataset(final String resourcePath) {
-		this(resourcePath, -1);
+		this(resourcePath, -1, 0, Integer.MAX_VALUE);
 	}
 	
-	public Dataset(final String resourcePath, final int labelIndex) {
+	public Dataset(final String resourcePath, final int labelIndex, final int offset, final int count) {
 		this.labelIds = new LinkedHashMap<String, Integer>();
 		this.labelCounts = new LinkedHashMap<String, AtomicInteger>();
 		this.labels = new ArrayList<String>();
@@ -62,12 +62,20 @@ public final class Dataset implements Serializable {
 			scanner = new Scanner(getResourceAsStream(resourcePath));
 			double[] buffer = {};
 			int invalidItemCount = 0;
-			int lineId = 0;
+			int lineId = -1;
 			final Pattern separator = Pattern.compile("(\\s|,)+");
+			final TicToc timer = new TicToc();
 			
-			while (scanner.hasNext()) {
-				if (lineId  % 100000 == 0) {
+			timer.tic();
+			
+			while (scanner.hasNext() && ++lineId < offset + count) {
+				if (LOGGING_MILLISECONDS < timer.toc()) {
 					debugPrint("lineId:", lineId);
+					timer.tic();
+				}
+				
+				if (lineId < offset) {
+					continue;
 				}
 				
 				final String[] line = separator.split(scanner.nextLine().trim());
@@ -111,8 +119,6 @@ public final class Dataset implements Serializable {
 						getOrCreate(this.getLabelCounts(), label, ATOMIC_INTEGER_FACTORY).incrementAndGet();
 					}
 				}
-				
-				++lineId;
 			}
 			
 			debugPrint("labelCounts:", this.getLabelCounts());
@@ -159,6 +165,11 @@ public final class Dataset implements Serializable {
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = 5770717293628383428L;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final long LOGGING_MILLISECONDS = 5000L;
 	
 	public static final DefaultFactory<AtomicInteger> ATOMIC_INTEGER_FACTORY = DefaultFactory.forClass(AtomicInteger.class);
 	

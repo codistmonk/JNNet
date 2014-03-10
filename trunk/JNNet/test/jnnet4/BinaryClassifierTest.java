@@ -17,10 +17,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 import jnnet.DoubleList;
 import net.sourceforge.aprog.tools.Factory;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 import org.junit.Test;
@@ -32,14 +34,30 @@ public final class BinaryClassifierTest {
 	
 	@Test
 	public final void test() {
+		final TicToc timer = new TicToc();
+		
+		debugPrint("Loading training dataset started", new Date(timer.tic()));
 		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
-		final BinaryClassifier classifier = new BinaryClassifier(trainingData);
+//		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 1000000);
+		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
-		debugPrint(classifier.getClusters().size());
+//		debugPrint("Loading test dataset started", new Date(timer.tic()));
+//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+//		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
+		debugPrint("Building classifier started", new Date(timer.tic()));
+		final BinaryClassifier classifier = new BinaryClassifier(trainingData, 2000);
+		debugPrint("clusterCount:", classifier.getClusters().size());
+		debugPrint("Building classifier done in", timer.toc(), "ms");
+		
+		debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
 		final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData);
+		debugPrint("training:", confusionMatrix);
+		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
-		debugPrint(confusionMatrix);
+//		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
+//		debugPrint("test:", classifier.evaluate(testData));
+//		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
 		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
@@ -59,17 +77,24 @@ final class BinaryClassifier implements Serializable {
 	
 	private final boolean invertOutput;
 	
-	public BinaryClassifier(final Dataset dataset) {
-		final DoubleList hyperplanes = new DoubleList();
+	public BinaryClassifier(final Dataset trainingDataset) {
+		this(trainingDataset, Integer.MAX_VALUE);
+	}
+	
+	public BinaryClassifier(final Dataset trainingDataset, final int maximumHyperplaneCount) {
+		debugPrint("Partitioning...");
 		
-		generateHyperplanes(dataset, new HyperplaneHandler() {
+		final DoubleList hyperplanes = new DoubleList();
+		final int step = trainingDataset.getStep();
+		
+		generateHyperplanes(trainingDataset, new HyperplaneHandler() {
 
 			@Override
 			public final boolean hyperplane(final double bias, final double[] weights) {
 				hyperplanes.add(bias);
 				hyperplanes.addAll(weights);
 				
-				return true;
+				return hyperplanes.size() / step < maximumHyperplaneCount;
 			}
 			
 			/**
@@ -79,21 +104,33 @@ final class BinaryClassifier implements Serializable {
 			
 		});
 		
-		final int step = dataset.getStep();
-		final double[] data = dataset.getData();
+		final TicToc timer = new TicToc();
+		final double[] data = trainingDataset.getData();
 		final int dataLength = data.length;
 		@SuppressWarnings("unchecked")
 		final Collection<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
 		this.step = step;
 		this.hyperplanes = hyperplanes.toArray();
 		
+		debugPrint("hyperplaneCount:", this.hyperplanes.length / step);
+		debugPrint("Clustering...");
+		
+		timer.tic();
+		
 		for (int i = 0; i < dataLength; i += step) {
+			if (LOGGING_MILLISECONDS <= timer.toc()) {
+				debugPrint(i, "/", dataLength);
+				timer.tic();
+			}
+			
 			final double[] item = copyOfRange(data, i, i + step - 1);
 			final int label = (int) data[i + step - 1];
 			final BitSet code = this.encode(item);
 			
 			codes[label].add(code);
 		}
+		
+		debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
 		
 		// TODO prune hyperplanes
 		
@@ -124,11 +161,19 @@ final class BinaryClassifier implements Serializable {
 	}
 	
 	public final SimpleConfusionMatrix evaluate(final Dataset trainingData) {
+		final TicToc timer = new TicToc();
 		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
 		final int step = trainingData.getStep();
 		final double[] data = trainingData.getData();
 		
+		timer.tic();
+		
 		for (int i = 0; i < data.length; i += step) {
+			if (LOGGING_MILLISECONDS <= timer.toc()) {
+				debugPrint(i, "/", data.length);
+				timer.tic();
+			}
+			
 			final double expected = data[i + step - 1];
 			final double actual = this.accept(copyOfRange(data, i, i + step - 1)) ? 1.0 : 0.0;
 			
@@ -155,6 +200,11 @@ final class BinaryClassifier implements Serializable {
 	 */
 	private static final long serialVersionUID = -6740686339638862795L;
 	
+	/**
+	 * {@value}.
+	 */
+	public static final long LOGGING_MILLISECONDS = 5000L;
+	
 	public final static void generateHyperplanes(final Dataset trainingData, final HyperplaneHandler hyperplaneHandler) {
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
@@ -162,19 +212,19 @@ final class BinaryClassifier implements Serializable {
 		final double[] data = trainingData.getData();
 		final List<List<Integer>> todo = new ArrayList<List<Integer>>();
 		final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
-		int iterationId = 0;
 		boolean continueProcessing = true;
+		final TicToc timer = new TicToc();
 		
+		timer.tic();
 		todo.add(range(0, itemCount - 1));
 		
 		while (!todo.isEmpty() && continueProcessing) {
-			final List<Integer> indices = todo.remove(0);
-			
-			if (iterationId % 1000 == 0) {
-				debugPrint("iterationId:", iterationId, "currentClusterSize:", indices.size(), "remainingClusters:", todo.size());
+			if (LOGGING_MILLISECONDS < timer.toc()) {
+				debugPrint("remainingClusters:", todo.size());
+				timer.tic();
 			}
 			
-			++iterationId;
+			final List<Integer> indices = todo.remove(0);
 			
 			final VectorStatistics[] statistics = instances(2, vectorStatisticsFactory);
 			
