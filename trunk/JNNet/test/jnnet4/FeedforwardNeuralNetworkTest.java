@@ -338,8 +338,8 @@ public final class FeedforwardNeuralNetworkTest {
 		
 		assertEquals(0L, totalTrainingErrorCount);
 	}
-
-	public SimpleConfusionMatrix evaluate(final FeedforwardNeuralNetwork network, final Dataset trainingData) {
+	
+	public static final SimpleConfusionMatrix evaluate(final FeedforwardNeuralNetwork network, final Dataset trainingData) {
 		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
 		final int step = trainingData.getStep();
 		final int inputDimension = step - 1;
