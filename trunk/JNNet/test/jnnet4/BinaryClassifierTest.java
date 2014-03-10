@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.util.Arrays.copyOfRange;
+import static java.util.Collections.sort;
 import static java.util.Collections.swap;
 import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.RANDOM;
@@ -27,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -58,9 +61,9 @@ public final class BinaryClassifierTest {
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 1000000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
-		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+//		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
 //		debugPrint("Loading test dataset started", new Date(timer.tic()));
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
@@ -76,9 +79,9 @@ public final class BinaryClassifierTest {
 		debugPrint("training:", confusionMatrix);
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
-		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-		debugPrint("test:", classifier.evaluate(validationData));
-		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+//		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+//		debugPrint("test:", classifier.evaluate(validationData));
+//		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		
 //		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
 //		debugPrint("test:", classifier.evaluate(testData));
@@ -247,45 +250,141 @@ final class BinaryClassifier implements Serializable {
 			debugPrint("Pruning...");
 			
 			final BitSet markedHyperplanes = new BitSet(hyperplaneCount);
-			final Collection<BitSet>[] newCodes = codes.clone();
+			final int algo = 1;
 			
-			for (int bit = 0; bit < hyperplaneCount; ++bit) {
-				@SuppressWarnings("unchecked")
-				final Set<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
+			if (algo == 0) {
+				final Collection<BitSet>[] newCodes = codes.clone();
 				
-				for (int i = 0; i < 2; ++i) {
-					for (final BitSet code : newCodes[i]) {
-						final BitSet simplifiedCode = (BitSet) code.clone();
-						
-						simplifiedCode.clear(bit);
-						simplifiedCodes[i].add(simplifiedCode);
-					}
-				}
-				
-				final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
-				
-				if (ambiguities.isEmpty()) {
-					markedHyperplanes.set(bit);
-					System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
-				}
-			}
-			
-			final int oldHyperplaneCount = hyperplaneCount;
-			hyperplaneCount -= markedHyperplanes.cardinality();
-			
-			for (int i = 0; i < 2; ++i) {
-				codes[i].clear();
-				
-				for (final BitSet newCode : newCodes[i]) {
-					final BitSet code = new BitSet(hyperplaneCount);
+				for (int bit = 0; bit < hyperplaneCount; ++bit) {
+					@SuppressWarnings("unchecked")
+					final Set<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
 					
-					for (int oldBit = 0, newBit = 0; oldBit < oldHyperplaneCount; ++oldBit) {
-						if (!markedHyperplanes.get(oldBit)) {
-							code.set(newBit++, newCode.get(oldBit));
+					for (int i = 0; i < 2; ++i) {
+						for (final BitSet code : newCodes[i]) {
+							final BitSet simplifiedCode = (BitSet) code.clone();
+							
+							simplifiedCode.clear(bit);
+							simplifiedCodes[i].add(simplifiedCode);
 						}
 					}
 					
-					codes[i].add(code);
+					final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
+					
+					if (ambiguities.isEmpty()) {
+						markedHyperplanes.set(bit);
+						System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
+					}
+				}
+				
+				final int oldHyperplaneCount = hyperplaneCount;
+				hyperplaneCount -= markedHyperplanes.cardinality();
+				
+				for (int i = 0; i < 2; ++i) {
+					codes[i].clear();
+					
+					for (final BitSet newCode : newCodes[i]) {
+						final BitSet code = new BitSet(hyperplaneCount);
+						
+						for (int oldBit = 0, newBit = 0; oldBit < oldHyperplaneCount; ++oldBit) {
+							if (!markedHyperplanes.get(oldBit)) {
+								code.set(newBit++, newCode.get(oldBit));
+							}
+						}
+						
+						codes[i].add(code);
+					}
+				}
+			} else {
+				final int codeSize = hyperplaneCount;
+				final int codeCount = codes[0].size() + codes[1].size();
+				final BitSet[] allCodes = new BitSet[codes[0].size() + codes[1].size()];
+				final BitSet allLabels = new BitSet(codeCount);
+				final BitSet bitVault = new BitSet(codeSize);
+				final List<Integer> indices = range(0, codeCount - 1);
+				
+				{
+					int j = 0;
+					
+					for (int i = 0; i < 2; ++i) {
+						for (final BitSet code : codes[i]) {
+							allCodes[j++] = code;
+						}
+					}
+					
+					allLabels.set(codes[0].size(), codeCount);
+				}
+				
+				for (int bit = 0; bit < hyperplaneCount; ++bit) {
+					for (int i = 0; i < codeCount; ++i) {
+						final BitSet code = allCodes[i];
+						bitVault.set(i, code.get(bit));
+						code.clear(bit);
+					}
+					
+					sort(indices, new Comparator<Integer>() {
+						
+						@Override
+						public final int compare(final Integer i1, final Integer i2) {
+							final BitSet code1 = allCodes[i1];
+							final BitSet code2 = allCodes[i2];
+							
+							for (int i = 0; i < codeSize; ++i) {
+								final boolean b1 = code1.get(i);
+								final boolean b2 = code2.get(i);
+								
+								if (b1 && !b2) {
+									return 1;
+								}
+								
+								if (!b1 && b2) {
+									return -1;
+								}
+							}
+							
+							return 0;
+						}
+						
+					});
+					
+					boolean removeHyperplane = true;
+					
+					for (int i = 1; i < allCodes.length && removeHyperplane; ++i) {
+						final int previous = indices.get(i - 1);
+						final int current = indices.get(i);
+						
+						if (allCodes[previous].equals(allCodes[current]) && allLabels.get(previous) != allLabels.get(current)) {
+							removeHyperplane = false;
+						}
+					}
+					
+					if (removeHyperplane) {
+						markedHyperplanes.set(bit);
+					} else {
+						for (int i = 0; i < codeCount; ++i) {
+							allCodes[i].set(bit, bitVault.get(i));
+						}
+					}
+				}
+				
+				final int oldHyperplaneCount = hyperplaneCount;
+				hyperplaneCount -= markedHyperplanes.cardinality();
+				
+				for (int i = 0; i < 2; ++i) {
+					codes[i].clear();
+				}
+				
+				for (int i = 0; i < codeCount; ++i) {
+					final BitSet code = allCodes[i];
+					final BitSet newCode = new BitSet(hyperplaneCount);
+					
+					for (int oldBit = 0, newBit = 0; oldBit < oldHyperplaneCount; ++oldBit) {
+						if (!markedHyperplanes.get(oldBit)) {
+							newCode.set(newBit++, code.get(oldBit));
+						}
+					}
+					
+					final int label = allLabels.get(i) ? 1 : 0;
+					codes[label].add(newCode);
 				}
 			}
 			
