@@ -2,8 +2,6 @@ package jnnet4;
 
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.swap;
-import static jnnet4.BinaryClassifier.Functional.CLONE;
-import static jnnet4.BinaryClassifier.Functional.map;
 import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.RANDOM;
 import static jnnet4.VectorStatistics.add;
@@ -24,19 +22,17 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import jnnet.DoubleList;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -71,7 +67,7 @@ public final class BinaryClassifierTest {
 //		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
-		final BinaryClassifier classifier = new BinaryClassifier(trainingData, 2000);
+		final BinaryClassifier classifier = new BinaryClassifier(trainingData, 2000, true, true);
 		debugPrint("clusterCount:", classifier.getClusters().size());
 		debugPrint("Building classifier done in", timer.toc(), "ms");
 		
@@ -182,10 +178,11 @@ final class BinaryClassifier implements Serializable {
 	private final boolean invertOutput;
 	
 	public BinaryClassifier(final Dataset trainingDataset) {
-		this(trainingDataset, Integer.MAX_VALUE);
+		this(trainingDataset, Integer.MAX_VALUE, true, true);
 	}
 	
-	public BinaryClassifier(final Dataset trainingDataset, final int maximumHyperplaneCount) {
+	public BinaryClassifier(final Dataset trainingDataset, final int maximumHyperplaneCount,
+			final boolean allowHyperplanePruning, final boolean allowOutputInversion) {
 		debugPrint("Partitioning...");
 		
 		final DoubleList hyperplanes = new DoubleList();
@@ -214,8 +211,9 @@ final class BinaryClassifier implements Serializable {
 		@SuppressWarnings("unchecked")
 		final Collection<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
 		this.step = step;
+		int hyperplaneCount = hyperplanes.size() / this.getStep();
 		
-		debugPrint("hyperplaneCount:", hyperplanes.size() / step);
+		debugPrint("hyperplaneCount:", hyperplaneCount);
 		debugPrint("Clustering...");
 		
 		timer.tic();
@@ -245,10 +243,10 @@ final class BinaryClassifier implements Serializable {
 			}
 		}
 		
-		// TODO prune hyperplanes
-		if (true) {
-			int hyperplaneCount = hyperplanes.size() / this.getStep();
-			final BitSet markedNeurons = new BitSet(hyperplaneCount);
+		if (allowHyperplanePruning) {
+			debugPrint("Pruning...");
+			
+			final BitSet markedHyperplanes = new BitSet(hyperplaneCount);
 			final Collection<BitSet>[] newCodes = codes.clone();
 			
 			for (int bit = 0; bit < hyperplaneCount; ++bit) {
@@ -267,13 +265,13 @@ final class BinaryClassifier implements Serializable {
 				final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
 				
 				if (ambiguities.isEmpty()) {
-					markedNeurons.set(bit);
+					markedHyperplanes.set(bit);
 					System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
 				}
 			}
 			
-			final int oldLayer1NeuronCount = hyperplaneCount;
-			hyperplaneCount -= markedNeurons.cardinality();
+			final int oldHyperplaneCount = hyperplaneCount;
+			hyperplaneCount -= markedHyperplanes.cardinality();
 			
 			for (int i = 0; i < 2; ++i) {
 				codes[i].clear();
@@ -281,8 +279,8 @@ final class BinaryClassifier implements Serializable {
 				for (final BitSet newCode : newCodes[i]) {
 					final BitSet code = new BitSet(hyperplaneCount);
 					
-					for (int oldBit = 0, newBit = 0; oldBit < oldLayer1NeuronCount; ++oldBit) {
-						if (!markedNeurons.get(oldBit)) {
+					for (int oldBit = 0, newBit = 0; oldBit < oldHyperplaneCount; ++oldBit) {
+						if (!markedHyperplanes.get(oldBit)) {
 							code.set(newBit++, newCode.get(oldBit));
 						}
 					}
@@ -291,65 +289,14 @@ final class BinaryClassifier implements Serializable {
 				}
 			}
 			
-			removeHyperplanes(markedNeurons, hyperplanes, step);
+			removeHyperplanes(markedHyperplanes, hyperplanes, step);
 			
 			debugPrint("hyperplaneCount:", hyperplanes.size() / step);
 			debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
-		} else {
-			final BitSet markedHyperplanes = new BitSet();
-			final int hyperplaneCount = hyperplanes.size() / this.getStep();
-			Collection<BitSet>[] newCodes = map(codes, CLONE);
-			Collection<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
-			int removedHyperplanes = 0;
-			
-			for (int bit = 0; bit < hyperplaneCount; ++bit) {
-				for (int i = 0; i < 2; ++i) {
-					simplifiedCodes[i].clear();
-					
-					for (final BitSet code : newCodes[i]) {
-						final BitSet simplifiedCode = (BitSet) code.clone();
-						
-						simplifiedCode.clear(bit);
-						
-						simplifiedCodes[i].add(simplifiedCode);
-					}
-				}
-				
-				if (intersection(simplifiedCodes[0], simplifiedCodes[1]).isEmpty()) {
-					markedHyperplanes.set(bit);
-					++removedHyperplanes;
-					final Collection<BitSet>[] tmp = newCodes;
-					newCodes = simplifiedCodes;
-					simplifiedCodes = tmp;
-				}
-			}
-			
-			if (0 < removedHyperplanes) {
-				for (int i = 0; i < 2; ++i) {
-					codes[i].clear();
-					
-					for (final BitSet code : newCodes[i]) {
-						for (int bit = 0, newBit = 0; bit < hyperplaneCount; ++bit) {
-							if (!markedHyperplanes.get(bit)) {
-								code.set(newBit++, code.get(bit));
-							}
-						}
-						
-						code.clear(hyperplaneCount - removedHyperplanes, hyperplaneCount);
-						
-						codes[i].add(code);
-					}
-				}
-				
-				removeHyperplanes(markedHyperplanes, hyperplanes, step);
-				
-				debugPrint("hyperplaneCount:", hyperplanes.size() / step);
-				debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
-			}
 		}
 		
 		this.hyperplanes = hyperplanes.toArray();
-		this.invertOutput = codes[0].size() < codes[1].size();
+		this.invertOutput = allowOutputInversion && codes[0].size() < codes[1].size();
 		this.clusters = this.invertOutput ? codes[0] : codes[1];
 	}
 	
@@ -552,105 +499,105 @@ final class BinaryClassifier implements Serializable {
 		
 	}
 	
-	/**
-	 * @author codistmonk (creation 2014-03-10)
-	 */
-	public static final class Functional {
-		
-		private Functional() {
-			throw new IllegalInstantiationException();
-		}
-		
-		public static final Method CLONE = method(Object.class, "clone");
-		
-		@SuppressWarnings("unchecked")
-		public static final <In, T> Collection<T>[] map(final In[] methodObjects, final Method method) {
-			return map(Collection.class, methodObjects, method);
-		}
-		
-		@SuppressWarnings("unchecked")
-		public static final <In, T> Collection<T>[] map(final Object methodObject, final Method method, final In[] singleArguments) {
-			return map(Collection.class, methodObject, method, singleArguments);
-		}
-		
-		@SuppressWarnings("unchecked")
-		public static final <T> Collection<T>[] map(final Object methodObject, final Method method, final Object[][] multipleArguments) {
-			return map(Collection.class, methodObject, method, multipleArguments);
-		}
-		
-		@SuppressWarnings("unchecked")
-		public static final <In, Out> Out[] map(final Class<Out> resultComponentType,
-				final In[] methodObjects, final Method method) {
-			try {
-				final int n = methodObjects.length;
-				final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
-				
-				for (int i = 0; i < n; ++i) {
-					result[i] = (Out) method.invoke(methodObjects[i]);
-				}
-				
-				return result;
-			} catch (final Exception exception) {
-				throw unchecked(exception);
-			}
-		}
-		
-		@SuppressWarnings("unchecked")
-		public static final <In, Out> Out[] map(final Class<Out> resultComponentType,
-				final Object methodObject, final Method method, final In[] singleArguments) {
-			try {
-				final int n = singleArguments.length;
-				final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
-				
-				for (int i = 0; i < n; ++i) {
-					result[i] = (Out) method.invoke(methodObject, singleArguments[i]);
-				}
-				
-				return result;
-			} catch (final Exception exception) {
-				throw unchecked(exception);
-			}
-		}
-		
-		@SuppressWarnings("unchecked")
-		public static final <Out> Out[] map(final Class<Out> resultComponentType,
-				final Object methodObject, final Method method, final Object[][] multipleArguments) {
-			try {
-				final int n = multipleArguments.length;
-				final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
-				
-				for (int i = 0; i < n; ++i) {
-					result[i] = (Out) method.invoke(methodObject, multipleArguments[i]);
-				}
-				
-				return result;
-			} catch (final Exception exception) {
-				throw unchecked(exception);
-			}
-		}
-		
-		public static final Method method(final Class<?> cls, final String methodName, final Class<?>... parameterTypes) {
-			Method result = null;
+}
+
+/**
+ * @author codistmonk (creation 2014-03-10)
+ */
+final class Functional {
+	
+	private Functional() {
+		throw new IllegalInstantiationException();
+	}
+	
+	public static final Method CLONE = method(Object.class, "clone");
+	
+	@SuppressWarnings("unchecked")
+	public static final <In, T> Collection<T>[] map(final In[] methodObjects, final Method method) {
+		return map(Collection.class, methodObjects, method);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <In, T> Collection<T>[] map(final Object methodObject, final Method method, final In[] singleArguments) {
+		return map(Collection.class, methodObject, method, singleArguments);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <T> Collection<T>[] map(final Object methodObject, final Method method, final Object[][] multipleArguments) {
+		return map(Collection.class, methodObject, method, multipleArguments);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <In, Out> Out[] map(final Class<Out> resultComponentType,
+			final In[] methodObjects, final Method method) {
+		try {
+			final int n = methodObjects.length;
+			final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
 			
-			try {
-				result = cls.getMethod(methodName, parameterTypes);
-			} catch (final Exception exception) {
-				ignore(exception);
+			for (int i = 0; i < n; ++i) {
+				result[i] = (Out) method.invoke(methodObjects[i]);
 			}
-			
-			if (result == null) {
-				try {
-					result = cls.getDeclaredMethod(methodName, parameterTypes);
-				} catch (final Exception exception) {
-					throw unchecked(exception);
-				}
-			}
-			
-			result.setAccessible(true);
 			
 			return result;
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <In, Out> Out[] map(final Class<Out> resultComponentType,
+			final Object methodObject, final Method method, final In[] singleArguments) {
+		try {
+			final int n = singleArguments.length;
+			final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
+			
+			for (int i = 0; i < n; ++i) {
+				result[i] = (Out) method.invoke(methodObject, singleArguments[i]);
+			}
+			
+			return result;
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final <Out> Out[] map(final Class<Out> resultComponentType,
+			final Object methodObject, final Method method, final Object[][] multipleArguments) {
+		try {
+			final int n = multipleArguments.length;
+			final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
+			
+			for (int i = 0; i < n; ++i) {
+				result[i] = (Out) method.invoke(methodObject, multipleArguments[i]);
+			}
+			
+			return result;
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+	}
+	
+	public static final Method method(final Class<?> cls, final String methodName, final Class<?>... parameterTypes) {
+		Method result = null;
+		
+		try {
+			result = cls.getMethod(methodName, parameterTypes);
+		} catch (final Exception exception) {
+			ignore(exception);
 		}
 		
+		if (result == null) {
+			try {
+				result = cls.getDeclaredMethod(methodName, parameterTypes);
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+		result.setAccessible(true);
+		
+		return result;
 	}
 	
 }
