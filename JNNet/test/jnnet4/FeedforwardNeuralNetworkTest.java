@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -289,14 +290,14 @@ public final class FeedforwardNeuralNetworkTest {
 	public final void test5() {
 		final TicToc timer = new TicToc();
 		debugPrint("Loading data started", new Date(timer.tic()));
-//		final TrainingData trainingData = new TrainingData("jnnet/2spirals.txt");
-//		final TrainingData trainingData = new TrainingData("jnnet/iris_virginica.txt");
-//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/skin_nonskin.txt");
-//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/p53_2012/K9.data");
+//		final TrainingData trainingData = new Dataset("jnnet/2spirals.txt");
+//		final TrainingData trainingData = new Dataset("jnnet/iris_virginica.txt");
+//		final TrainingData trainingData = new Dataset("../Libraries/datasets/skin_nonskin.txt");
+//		final TrainingData trainingData = new Dataset("../Libraries/datasets/p53_2012/K9.data");
 		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
-//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/mammographic_masses.data");
+//		final TrainingData trainingData = new Dataset("../Libraries/datasets/mammographic_masses.data");
 		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-		final Dataset testData = null;//new TrainingData("../Libraries/datasets/gisette/gisette_test.data");
+		final Dataset testData = null;//new Dataset("../Libraries/datasets/gisette/gisette_test.data");
 		
 		/*
 		 * Considerations on this dataset:
@@ -306,7 +307,7 @@ public final class FeedforwardNeuralNetworkTest {
 		 *  * it would be more interesting to perform binary search in list of 5000000 cluster codes
 		 *    rather than evaluating 5000000 clustering neurons (and building that would require too much memory)
 		 */
-//		final TrainingData trainingData = new TrainingData("../Libraries/datasets/HIGGS.csv", 0);
+//		final TrainingData trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0);
 		
 		debugPrint("Loading data done in", timer.toc(), "ms");
 		final int inputDimension = trainingData.getStep() - 1;
@@ -399,6 +400,15 @@ public final class FeedforwardNeuralNetworkTest {
 		return newClassifier(trainingData, true, true, Integer.MAX_VALUE);
 	}
 	
+	/**
+	 * @author codistmonk (creation 2014-03-10)
+	 */
+	public static abstract interface HyperplaneHandler extends Serializable {
+		
+		public abstract boolean hyperplane(double bias, double[] weights);
+		
+	}
+	
 	public static final FeedforwardNeuralNetwork newClassifier(final Dataset trainingData,
 			final boolean removeRedundantNeurons, final boolean allowOutputInversion, final int maximumPartitioningNeuronCount) {
 		final boolean debug = true;
@@ -426,73 +436,27 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			result.newLayer();
 			
-			final List<List<Integer>> todo = new ArrayList<List<Integer>>();
-			final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
-			
-			todo.add(range(0, itemCount - 1));
-			int iterationId = 0;
-			
-			while (!todo.isEmpty() && result.getLayerNeuronCount(1) < maximumPartitioningNeuronCount) {
-				final List<Integer> indices = todo.remove(0);
+			generateHyperplanes(trainingData, new HyperplaneHandler() {
 				
-				if (iterationId % 1000 == 0) {
-					debugPrint("iterationId:", iterationId, "currentClusterSize:", indices.size(), "remainingClusters:", todo.size());
-				}
-				
-				++iterationId;
-				
-				final VectorStatistics[] statistics = instances(2, vectorStatisticsFactory);
-				
-				for (final int i : indices) {
-					final int sampleOffset = i * step;
-					final int labelOffset = sampleOffset + step - 1;
-					statistics[(int) data[labelOffset]].addValues(copyOfRange(data, sampleOffset, labelOffset));
-				}
-				
-				if (statistics[0].getCount() == 0 || statistics[1].getCount() == 0) {
-					continue;
-				}
-				
-				final double[] cluster0 = statistics[0].getMeans();
-				final double[] cluster1 = statistics[1].getMeans();
-				final double[] neuronWeights = subtract(cluster1, cluster0);
-				
-				if (Arrays.equals(cluster0, cluster1)) {
+				@Override
+				public boolean hyperplane(final double bias, final double[] weights) {
+					result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
+					
+					result.newNeuronSource(0, bias);
+					
 					for (int i = 0; i < inputDimension; ++i) {
-						neuronWeights[i] = RANDOM.nextDouble();
-					}
-				}
-				
-				final double[] neuronLocation = scaled(add(cluster1, cluster0), 0.5);
-				final double neuronBias = -dot(neuronWeights, neuronLocation);
-				
-				result.newNeuron(NEURON_TYPE_SUM_THRESHOLD);
-				
-				result.newNeuronSource(0, neuronBias);
-				
-				for (int i = 0; i < inputDimension; ++i) {
-					result.newNeuronSource(i + 1, neuronWeights[i]);
-				}
-				
-				{
-					final int m = indices.size();
-					int j = 0;
-					
-					for (int i = 0; i < m; ++i) {
-						final int sampleOffset = indices.get(i) * step;
-						final double d = dot(neuronWeights, copyOfRange(data, sampleOffset, sampleOffset + inputDimension)) + neuronBias;
-						
-						if (0 <= d) {
-							swap(indices, i, j++);
-						}
+						result.newNeuronSource(i + 1, weights[i]);
 					}
 					
-					if (0 < j && j < m) {
-						todo.add(indices.subList(0, j));
-						todo.add(indices.subList(j, m));
-					}
+					return result.getLayerNeuronCount(1) < maximumPartitioningNeuronCount;
 				}
-			}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = -602750399729292059L;
+				
+			});
 		}
 		
 		int layer1NeuronCount = result.getLayerNeuronCount(1);
@@ -674,6 +638,75 @@ public final class FeedforwardNeuralNetworkTest {
 		debugPrint("Neural network built");
 		
 		return result;
+	}
+	
+	public final static void generateHyperplanes(final Dataset trainingData, final HyperplaneHandler hyperplaneHandler) {
+		final int step = trainingData.getStep();
+		final int inputDimension = step - 1;
+		final int itemCount = trainingData.getItemCount();
+		final double[] data = trainingData.getData();
+		final List<List<Integer>> todo = new ArrayList<List<Integer>>();
+		final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
+		int iterationId = 0;
+		boolean continueProcessing = true;
+		
+		todo.add(range(0, itemCount - 1));
+		
+		while (!todo.isEmpty() && continueProcessing) {
+			final List<Integer> indices = todo.remove(0);
+			
+			if (iterationId % 1000 == 0) {
+				debugPrint("iterationId:", iterationId, "currentClusterSize:", indices.size(), "remainingClusters:", todo.size());
+			}
+			
+			++iterationId;
+			
+			final VectorStatistics[] statistics = instances(2, vectorStatisticsFactory);
+			
+			for (final int i : indices) {
+				final int sampleOffset = i * step;
+				final int labelOffset = sampleOffset + step - 1;
+				statistics[(int) data[labelOffset]].addValues(copyOfRange(data, sampleOffset, labelOffset));
+			}
+			
+			if (statistics[0].getCount() == 0 || statistics[1].getCount() == 0) {
+				continue;
+			}
+			
+			final double[] cluster0 = statistics[0].getMeans();
+			final double[] cluster1 = statistics[1].getMeans();
+			final double[] neuronWeights = subtract(cluster1, cluster0);
+			
+			if (Arrays.equals(cluster0, cluster1)) {
+				for (int i = 0; i < inputDimension; ++i) {
+					neuronWeights[i] = RANDOM.nextDouble();
+				}
+			}
+			
+			final double[] neuronLocation = scaled(add(cluster1, cluster0), 0.5);
+			final double neuronBias = -dot(neuronWeights, neuronLocation);
+			
+			continueProcessing = hyperplaneHandler.hyperplane(neuronBias, neuronWeights);
+			
+			{
+				final int m = indices.size();
+				int j = 0;
+				
+				for (int i = 0; i < m; ++i) {
+					final int sampleOffset = indices.get(i) * step;
+					final double d = dot(neuronWeights, copyOfRange(data, sampleOffset, sampleOffset + inputDimension)) + neuronBias;
+					
+					if (0 <= d) {
+						swap(indices, i, j++);
+					}
+				}
+				
+				if (0 < j && j < m) {
+					todo.add(indices.subList(0, j));
+					todo.add(indices.subList(j, m));
+				}
+			}
+		}
 	}
 	
 	public static final <T> Set<T> intersection(final Set<T> s1, final Set<T> s2) {
