@@ -11,12 +11,12 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 import jnnet.DoubleList;
 
@@ -63,13 +63,14 @@ public final class TrainingData implements Serializable {
 			double[] buffer = {};
 			int invalidItemCount = 0;
 			int lineId = 0;
+			final Pattern separator = Pattern.compile("(\\s|,)+");
 			
 			while (scanner.hasNext()) {
-				if (lineId  % 10000 == 0) {
+				if (lineId  % 100000 == 0) {
 					debugPrint("lineId:", lineId);
 				}
 				
-				final String[] line = scanner.nextLine().trim().split("(\\s|,)+");
+				final String[] line = separator.split(scanner.nextLine().trim());
 				final int n = line.length + (labelScanner != null ? 1 : 0);
 				
 				if (2 <= n) {
