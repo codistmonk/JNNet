@@ -7,7 +7,7 @@ import java.io.Serializable;
  */
 public abstract interface BinaryClassifier extends Serializable {
 	
-	public abstract int getStep();
+	public abstract int getInputDimension();
 	
 	public abstract boolean accept(double... item);
 	
