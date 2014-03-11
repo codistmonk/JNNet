@@ -1,5 +1,7 @@
 package jnnet4;
 
+import static java.awt.Color.GREEN;
+import static java.awt.Color.RED;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.sort;
 import static java.util.Collections.swap;
@@ -21,6 +23,8 @@ import static org.junit.Assert.*;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -33,11 +37,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-import jnnet.DoubleList;
+import javax.imageio.ImageIO;
 
+import jnnet.DoubleList;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.Tools;
@@ -57,15 +63,24 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
+//		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
+		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
+		
+		try {
+			ImageIO.write(preview(trainingData, 64), "png", new File("preview.png"));
+			System.exit(0);
+		} catch (final IOException exception) {
+			exception.printStackTrace();
+		}
 		
 //		debugPrint("Loading validation dataset started", new Date(timer.tic()));
 //		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
 //		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
@@ -90,6 +105,38 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		assertEquals(0, confusionMatrix.getTotalErrorCount());
+	}
+	
+	public static final BufferedImage preview(final Dataset dataset, final int thumbnailSize) {
+		final int step = dataset.getStep();
+		final double[] data = dataset.getData();
+		final int n = data.length;
+		final int inputDimension = dataset.getStep() - 1;
+		final int w = inputDimension * (thumbnailSize + 1) - 1;
+		final int h = w;
+		final BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+		
+		for (int dimensionX = 0; dimensionX < inputDimension; ++dimensionX) {
+			final Statistics xStatistics = dataset.getStatistics()[2].getStatistics()[dimensionX];
+			final int top = dimensionX * (thumbnailSize + 1);
+			
+			for (int dimensionY = dimensionX + 1; dimensionY < inputDimension; ++dimensionY) {
+				final Statistics yStatistics = dataset.getStatistics()[2].getStatistics()[dimensionY];
+				final int left = dimensionY * (thumbnailSize + 1);
+				
+				for (int i = 0; i < n; i += step) {
+					final double normalizedX = xStatistics.getNormalizedValue(data[i + dimensionX]);
+					final double normalizedY = yStatistics.getNormalizedValue(data[i + dimensionY]);
+					final int x = (int) (left + (thumbnailSize - 1) * normalizedX);
+					final int y = (int) (top + thumbnailSize - 1 - (thumbnailSize - 1) * normalizedY);
+					final int label = (int) data[i + step - 1];
+					
+					result.setRGB(x, y, label == 0 ? RED.getRGB() : GREEN.getRGB());
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 	public static final void show(final BinaryClassifier classifier, final int imageSize, final double scale, final double[] trainingData) {

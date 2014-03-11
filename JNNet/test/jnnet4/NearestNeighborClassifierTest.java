@@ -23,9 +23,10 @@ public final class NearestNeighborClassifierTest {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
+//		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
+		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 //		debugPrint("Loading validation dataset started", new Date(timer.tic()));
@@ -34,6 +35,7 @@ public final class NearestNeighborClassifierTest {
 		
 //		debugPrint("Loading test dataset started", new Date(timer.tic()));
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
 //		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
@@ -49,9 +51,9 @@ public final class NearestNeighborClassifierTest {
 //		debugPrint("test:", classifier.evaluate(validationData));
 //		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		
-//		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-//		debugPrint("test:", classifier.evaluate(testData));
-//		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
+		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
+		debugPrint("test:", classifier.evaluate(testData));
+		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
 		if (showClassifier && classifier.getStep() == 3) {
 			show(classifier, 256, 16.0, trainingData.getData());
