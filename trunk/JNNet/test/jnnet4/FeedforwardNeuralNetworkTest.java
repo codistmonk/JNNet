@@ -7,6 +7,7 @@ import static jnnet4.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_SIGMOID;
 import static jnnet4.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_THRESHOLD;
 import static jnnet4.JNNetTools.sigmoid;
 import static jnnet4.JNNetTools.uint8;
+import static jnnet4.SimplifiedNeuralBinaryClassifier.generateHyperplanes;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -415,7 +416,7 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			result.newLayer();
 			
-			BinaryClassifier.generateHyperplanes(trainingData, new BinaryClassifier.HyperplaneHandler() {
+			generateHyperplanes(trainingData, new SimplifiedNeuralBinaryClassifier.HyperplaneHandler() {
 				
 				@Override
 				public boolean hyperplane(final double bias, final double[] weights) {
