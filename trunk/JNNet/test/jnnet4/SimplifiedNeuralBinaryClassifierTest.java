@@ -229,24 +229,6 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 /**
  * @author codistmonk (creation 2014-03-10)
  */
-abstract interface BinaryClassifier extends Serializable {
-	
-	public abstract int getStep();
-	
-	public abstract boolean accept(double... item);
-	
-	public abstract SimpleConfusionMatrix evaluate(Dataset trainingData);
-	
-	/**
-	 * {@value}.
-	 */
-	public static final long LOGGING_MILLISECONDS = 5000L;
-	
-}
-
-/**
- * @author codistmonk (creation 2014-03-10)
- */
 final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	
 	private final int step;
