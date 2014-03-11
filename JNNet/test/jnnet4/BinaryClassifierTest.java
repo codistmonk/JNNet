@@ -57,20 +57,20 @@ public final class BinaryClassifierTest {
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
-//		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 1000000);
+//		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
+		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 1500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 //		debugPrint("Loading validation dataset started", new Date(timer.tic()));
 //		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
 //		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
-//		debugPrint("Loading test dataset started", new Date(timer.tic()));
-//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
-//		debugPrint("Loading test dataset done in", timer.toc(), "ms");
+		debugPrint("Loading test dataset started", new Date(timer.tic()));
+		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
-		final BinaryClassifier classifier = new BinaryClassifier(trainingData, 2000, true, true);
+		final BinaryClassifier classifier = new BinaryClassifier(trainingData, 200, true, true);
 		debugPrint("clusterCount:", classifier.getClusters().size());
 		debugPrint("Building classifier done in", timer.toc(), "ms");
 		
@@ -83,9 +83,9 @@ public final class BinaryClassifierTest {
 //		debugPrint("test:", classifier.evaluate(validationData));
 //		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		
-//		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-//		debugPrint("test:", classifier.evaluate(testData));
-//		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
+		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
+		debugPrint("test:", classifier.evaluate(testData));
+		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
 		if (showClassifier && classifier.getStep() == 3) {
 			show(classifier, 256, 16.0, trainingData.getData());
@@ -250,7 +250,7 @@ final class BinaryClassifier implements Serializable {
 			debugPrint("Pruning...");
 			
 			final BitSet markedHyperplanes = new BitSet(hyperplaneCount);
-			final int algo = 1;
+			final int algo = 0;
 			
 			if (algo == 0) {
 				final Collection<BitSet>[] newCodes = codes.clone();
