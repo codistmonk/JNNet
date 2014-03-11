@@ -33,6 +33,8 @@ public final class Dataset implements Serializable {
 	
 	private final Map<String, AtomicInteger> labelCounts;
 	
+	private final VectorStatistics[] statistics;
+	
 	private final List<String> labels;
 	
 	private final DoubleList data;
@@ -46,9 +48,9 @@ public final class Dataset implements Serializable {
 	public Dataset(final String resourcePath, final int labelIndex, final int offset, final int count) {
 		this.labelIds = new LinkedHashMap<String, Integer>();
 		this.labelCounts = new LinkedHashMap<String, AtomicInteger>();
+		this.statistics = new VectorStatistics[3];
 		this.labels = new ArrayList<String>();
 		this.data = new DoubleList();
-		final VectorStatistics[] statistics = new VectorStatistics[2];
 		Scanner labelScanner = null;
 		Scanner scanner = null;
 		
@@ -87,9 +89,9 @@ public final class Dataset implements Serializable {
 				final int n = values.length + (labelScanner != null ? 1 : 0);
 				
 				if (2 <= n) {
-					if (statistics[0] == null) {
-						for (int i = 0; i < 2; ++i) {
-							statistics[i] = new VectorStatistics(n - 1);
+					if (this.statistics[0] == null) {
+						for (int i = 0; i < 3; ++i) {
+							this.statistics[i] = new VectorStatistics(n - 1);
 						}
 					}
 					
@@ -129,7 +131,8 @@ public final class Dataset implements Serializable {
 						getOrCreate(this.getLabelCounts(), label, ATOMIC_INTEGER_FACTORY).incrementAndGet();
 						
 						for (int i = itemOffset; i < itemOffset + n - 1; ++i) {
-							statistics[labelId].getStatistics()[i - itemOffset].addValue(this.data.get(i));
+							this.statistics[labelId].getStatistics()[i - itemOffset].addValue(this.data.get(i));
+							this.statistics[2].getStatistics()[i - itemOffset].addValue(this.data.get(i));
 						}
 					}
 				}
@@ -139,10 +142,10 @@ public final class Dataset implements Serializable {
 			
 			for (int i = 0; i < 2; ++i) {
 				debugPrint(i + "-statistics");
-				debugPrint("means:", Arrays.toString(statistics[i].getMeans()));
-				debugPrint("minima:", Arrays.toString(statistics[i].getMinima()));
-				debugPrint("maxima:", Arrays.toString(statistics[i].getMaxima()));
-				debugPrint("stddev:", Arrays.toString(statistics[i].getStandardDeviations()));
+				debugPrint("means:", Arrays.toString(this.statistics[i].getMeans()));
+				debugPrint("minima:", Arrays.toString(this.statistics[i].getMinima()));
+				debugPrint("maxima:", Arrays.toString(this.statistics[i].getMaxima()));
+				debugPrint("stddev:", Arrays.toString(this.statistics[i].getStandardDeviations()));
 			}
 			
 			if (0 < invalidItemCount) {
@@ -169,6 +172,10 @@ public final class Dataset implements Serializable {
 	
 	public final Map<String, AtomicInteger> getLabelCounts() {
 		return this.labelCounts;
+	}
+	
+	public final VectorStatistics[] getStatistics() {
+		return this.statistics;
 	}
 	
 	public final double[] getData() {
