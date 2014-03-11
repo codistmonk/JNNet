@@ -74,22 +74,24 @@ public final class Dataset implements Serializable {
 					timer.tic();
 				}
 				
+				final String line = scanner.nextLine();
+				
 				if (lineId < offset) {
 					continue;
 				}
 				
-				final String[] line = separator.split(scanner.nextLine().trim());
-				final int n = line.length + (labelScanner != null ? 1 : 0);
+				final String[] values = separator.split(line.trim());
+				final int n = values.length + (labelScanner != null ? 1 : 0);
 				
 				if (2 <= n) {
 					buffer = reserve(buffer, n);
 					final int labelOffset = 0 <= labelIndex ? labelIndex : n - 1;
 					boolean itemIsValid = this.step == 0 || this.step == n;
 					
-					for (int i = 0, j = 0; i < line.length && itemIsValid; ++i) {
+					for (int i = 0, j = 0; i < values.length && itemIsValid; ++i) {
 						try {
 							if (i != labelOffset) {
-								buffer[j++] = parseDouble(line[i]);
+								buffer[j++] = parseDouble(values[i]);
 							}
 						} catch (final NumberFormatException exception) {
 							itemIsValid = false;
@@ -100,13 +102,13 @@ public final class Dataset implements Serializable {
 					if (itemIsValid) {
 						this.step = n;
 						
-						for (int i = 0; i < line.length; ++i) {
+						for (int i = 0; i < values.length; ++i) {
 							if (i != labelOffset) {
 								this.data.add(buffer[i]);
 							}
 						}
 						
-						final String label = labelScanner != null ? labelScanner.next() : line[labelOffset];
+						final String label = labelScanner != null ? labelScanner.next() : values[labelOffset];
 						Integer labelId = this.getLabelIds().get(label);
 						
 						if (labelId == null) {
