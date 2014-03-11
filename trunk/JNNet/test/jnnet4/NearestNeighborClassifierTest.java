@@ -1,7 +1,7 @@
 package jnnet4;
 
 import static java.util.Arrays.copyOfRange;
-import static jnnet4.BinaryClassifierTest.show;
+import static jnnet4.SimplifiedNeuralBinaryClassifierTest.show;
 import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
