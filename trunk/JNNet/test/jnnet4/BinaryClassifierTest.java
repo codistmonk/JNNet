@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -58,7 +57,7 @@ public final class BinaryClassifierTest {
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 1500000);
+		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 //		debugPrint("Loading validation dataset started", new Date(timer.tic()));
@@ -70,7 +69,7 @@ public final class BinaryClassifierTest {
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
-		final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 200, true, true);
+		final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 2000, true, true);
 		debugPrint("Building classifier done in", timer.toc(), "ms");
 		
 		debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
