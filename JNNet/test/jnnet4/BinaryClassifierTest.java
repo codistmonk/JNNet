@@ -70,8 +70,7 @@ public final class BinaryClassifierTest {
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
-		final BinaryClassifier classifier = new BinaryClassifier(trainingData, 200, true, true);
-		debugPrint("clusterCount:", classifier.getClusters().size());
+		final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 200, true, true);
 		debugPrint("Building classifier done in", timer.toc(), "ms");
 		
 		debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
@@ -170,7 +169,25 @@ public final class BinaryClassifierTest {
 /**
  * @author codistmonk (creation 2014-03-10)
  */
-final class BinaryClassifier implements Serializable {
+abstract interface BinaryClassifier extends Serializable {
+	
+	public abstract int getStep();
+	
+	public abstract boolean accept(double... item);
+	
+	public abstract SimpleConfusionMatrix evaluate(Dataset trainingData);
+	
+	/**
+	 * {@value}.
+	 */
+	public static final long LOGGING_MILLISECONDS = 5000L;
+	
+}
+
+/**
+ * @author codistmonk (creation 2014-03-10)
+ */
+final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	
 	private final int step;
 	
@@ -180,11 +197,11 @@ final class BinaryClassifier implements Serializable {
 	
 	private final boolean invertOutput;
 	
-	public BinaryClassifier(final Dataset trainingDataset) {
+	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset) {
 		this(trainingDataset, Integer.MAX_VALUE, true, true);
 	}
 	
-	public BinaryClassifier(final Dataset trainingDataset, final int maximumHyperplaneCount,
+	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset, final int maximumHyperplaneCount,
 			final boolean allowHyperplanePruning, final boolean allowOutputInversion) {
 		debugPrint("Partitioning...");
 		
@@ -444,10 +461,12 @@ final class BinaryClassifier implements Serializable {
 		return code;
 	}
 	
+	@Override
 	public final boolean accept(final double... item) {
 		return this.getClusters().contains(this.encode(item)) ^ this.invertOutput;
 	}
 	
+	@Override
 	public final SimpleConfusionMatrix evaluate(final Dataset trainingData) {
 		final TicToc timer = new TicToc();
 		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
@@ -487,11 +506,6 @@ final class BinaryClassifier implements Serializable {
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = -6740686339638862795L;
-	
-	/**
-	 * {@value}.
-	 */
-	public static final long LOGGING_MILLISECONDS = 5000L;
 	
 	public static final Method CLONE_ELEMENTS = Functional.method(BinaryClassifier.class, "cloneElements", Collection.class);
 	
