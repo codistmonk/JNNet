@@ -6,12 +6,9 @@ import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
-import java.io.Serializable;
 import java.util.Date;
 
-import jnnet.DoubleList;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 
 import org.junit.Test;
 
@@ -26,14 +23,14 @@ public final class NearestNeighborClassifierTest {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-//		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
-//		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 1500000);
+		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
+//		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
+//		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
-		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+//		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
 //		debugPrint("Loading test dataset started", new Date(timer.tic()));
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
@@ -48,9 +45,9 @@ public final class NearestNeighborClassifierTest {
 		debugPrint("training:", confusionMatrix);
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
-		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-		debugPrint("test:", classifier.evaluate(validationData));
-		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+//		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+//		debugPrint("test:", classifier.evaluate(validationData));
+//		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		
 //		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
 //		debugPrint("test:", classifier.evaluate(testData));

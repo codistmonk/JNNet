@@ -11,6 +11,7 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import jnnet.DoubleList;
+
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
@@ -46,6 +48,7 @@ public final class Dataset implements Serializable {
 		this.labelCounts = new LinkedHashMap<String, AtomicInteger>();
 		this.labels = new ArrayList<String>();
 		this.data = new DoubleList();
+		final VectorStatistics[] statistics = new VectorStatistics[2];
 		Scanner labelScanner = null;
 		Scanner scanner = null;
 		
@@ -84,6 +87,12 @@ public final class Dataset implements Serializable {
 				final int n = values.length + (labelScanner != null ? 1 : 0);
 				
 				if (2 <= n) {
+					if (statistics[0] == null) {
+						for (int i = 0; i < 2; ++i) {
+							statistics[i] = new VectorStatistics(n - 1);
+						}
+					}
+					
 					buffer = reserve(buffer, n);
 					final int labelOffset = 0 <= labelIndex ? labelIndex : n - 1;
 					boolean itemIsValid = this.step == 0 || this.step == n;
@@ -100,12 +109,11 @@ public final class Dataset implements Serializable {
 					}
 					
 					if (itemIsValid) {
+						final int itemOffset = this.data.size();
 						this.step = n;
 						
-						for (int i = 0; i < values.length; ++i) {
-							if (i != labelOffset) {
-								this.data.add(buffer[i]);
-							}
+						for (int i = 0; i < n - 1; ++i) {
+							this.data.add(buffer[i]);
 						}
 						
 						final String label = labelScanner != null ? labelScanner.next() : values[labelOffset];
@@ -119,11 +127,23 @@ public final class Dataset implements Serializable {
 						
 						this.data.add(labelId);
 						getOrCreate(this.getLabelCounts(), label, ATOMIC_INTEGER_FACTORY).incrementAndGet();
+						
+						for (int i = itemOffset; i < itemOffset + n - 1; ++i) {
+							statistics[labelId].getStatistics()[i - itemOffset].addValue(this.data.get(i));
+						}
 					}
 				}
 			}
 			
 			debugPrint("labelCounts:", this.getLabelCounts());
+			
+			for (int i = 0; i < 2; ++i) {
+				debugPrint(i + "-statistics");
+				debugPrint("means:", Arrays.toString(statistics[i].getMeans()));
+				debugPrint("minima:", Arrays.toString(statistics[i].getMinima()));
+				debugPrint("maxima:", Arrays.toString(statistics[i].getMaxima()));
+				debugPrint("stddev:", Arrays.toString(statistics[i].getStandardDeviations()));
+			}
 			
 			if (0 < invalidItemCount) {
 				System.err.println(debug(DEBUG_STACK_OFFSET, "invalidItemCount:", invalidItemCount));

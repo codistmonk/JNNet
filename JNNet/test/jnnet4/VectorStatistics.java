@@ -1,5 +1,6 @@
 package jnnet4;
 
+import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.instances;
 
 import java.io.Serializable;
@@ -40,6 +41,50 @@ public final class VectorStatistics implements Serializable {
 		
 		for (int i = 0; i < n; ++i) {
 			result[i] = this.getStatistics()[i].getMean();
+		}
+		
+		return result;
+	}
+	
+	public final double[] getMinima() {
+		final int n = this.getStatistics().length;
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = this.getStatistics()[i].getMinimum();
+		}
+		
+		return result;
+	}
+	
+	public final double[] getMaxima() {
+		final int n = this.getStatistics().length;
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = this.getStatistics()[i].getMaximum();
+		}
+		
+		return result;
+	}
+	
+	public final double[] getVariances() {
+		final int n = this.getStatistics().length;
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = this.getStatistics()[i].getVariance();
+		}
+		
+		return result;
+	}
+	
+	public final double[] getStandardDeviations() {
+		final int n = this.getStatistics().length;
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = sqrt(this.getStatistics()[i].getVariance());
 		}
 		
 		return result;
