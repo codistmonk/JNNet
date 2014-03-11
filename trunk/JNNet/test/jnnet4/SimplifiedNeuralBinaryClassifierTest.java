@@ -7,6 +7,7 @@ import static java.util.Collections.swap;
 import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.RANDOM;
 import static jnnet4.JNNetTools.uint8;
+import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
 import static jnnet4.VectorStatistics.scaled;
@@ -95,62 +96,11 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("test:", classifier.evaluate(testData));
 		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
-		if (showClassifier && classifier.getStep() == 3) {
+		if (showClassifier && classifier.getInputDimension() == 2) {
 			show(classifier, 256, 16.0, trainingData.getData());
 		}
 		
 		assertEquals(0, confusionMatrix.getTotalErrorCount());
-	}
-	
-	public static final BufferedImage preview(final Dataset dataset, final int thumbnailSize) {
-		final int step = dataset.getStep();
-		final double[] data = dataset.getData();
-		final int n = data.length;
-		final int inputDimension = dataset.getStep() - 1;
-		final int w = inputDimension * (thumbnailSize + 1) - 1;
-		final int h = w;
-		final BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
-		final int[][] counts = new int[2][thumbnailSize * thumbnailSize];
-		
-		for (int dimensionY = 0; dimensionY < inputDimension; ++dimensionY) {
-			final Statistics yStatistics = dataset.getStatistics()[2].getStatistics()[dimensionY];
-			final int top = dimensionY * (thumbnailSize + 1);
-			
-			for (int dimensionX = 0; dimensionX < inputDimension; ++dimensionX) {
-				final Statistics xStatistics = dataset.getStatistics()[2].getStatistics()[dimensionX];
-				final int left = dimensionX * (thumbnailSize + 1);
-				
-				for (final int[] labelCounts : counts) {
-					fill(labelCounts, 0);
-				}
-				
-				for (int i = 0; i < n; i += step) {
-					final double normalizedX = xStatistics.getNormalizedValue(data[i + dimensionX]);
-					final double normalizedY = yStatistics.getNormalizedValue(data[i + dimensionY]);
-					final int x = (int) ((thumbnailSize - 1) * normalizedX);
-					final int y = (int) (thumbnailSize - 1 - (thumbnailSize - 1) * normalizedY);
-					final int label = (int) data[i + step - 1];
-					++counts[label][y * thumbnailSize + x];
-				}
-				
-				for (int y = top, thumbnailPixel = 0; y < top + thumbnailSize; ++y) {
-					for (int x = left; x < left + thumbnailSize; ++x, ++thumbnailPixel) {
-						final int negativeCounts = counts[0][thumbnailPixel];
-						final int positiveCounts = counts[1][thumbnailPixel];
-						final int sum = negativeCounts + positiveCounts;
-						
-						if (0 < sum) {
-							final int red = uint8((double) negativeCounts / sum);
-							final int green = uint8((double) positiveCounts / sum);
-							
-							result.setRGB(x, y, 0xFF000000 | (red << 16) | (green << 8));
-						}
-					}
-				}
-			}
-		}
-		
-		return result;
 	}
 	
 	public static final void show(final BinaryClassifier classifier, final int imageSize, final double scale, final double[] trainingData) {
@@ -165,7 +115,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		if (trainingData != null) {
 			final Graphics2D g = image.createGraphics();
-			final int inputDimension = classifier.getStep() - 1;
+			final int inputDimension = classifier.getInputDimension();
 			
 			for (int i = 0; i < trainingData.length; i += inputDimension + 1) {
 				final double label = trainingData[i + inputDimension];
@@ -191,7 +141,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	}
 	
 	public static final void draw(final BinaryClassifier classifier, final BufferedImage image, final double scale) {
-		final int inputDimension = classifier.getStep() - 1;
+		final int inputDimension = classifier.getInputDimension();
 		
 		if (inputDimension != 1 && inputDimension != 2) {
 			throw new IllegalArgumentException();
@@ -231,7 +181,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
  */
 final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	
-	private final int step;
+	private final int inputDimension;
 	
 	private final double[] hyperplanes;
 	
@@ -272,8 +222,8 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		final int dataLength = data.length;
 		@SuppressWarnings("unchecked")
 		final Collection<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
-		this.step = step;
-		int hyperplaneCount = hyperplanes.size() / this.getStep();
+		this.inputDimension = step - 1;
+		int hyperplaneCount = hyperplanes.size() / step;
 		
 		debugPrint("hyperplaneCount:", hyperplaneCount);
 		debugPrint("Clustering...");
@@ -472,8 +422,9 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		hyperplanes.resize(n - markedHyperplanes.cardinality() * step);
 	}
 	
-	public final int getStep() {
-		return this.step;
+	@Override
+	public final int getInputDimension() {
+		return this.inputDimension;
 	}
 	
 	public final double[] getHyperplanes() {

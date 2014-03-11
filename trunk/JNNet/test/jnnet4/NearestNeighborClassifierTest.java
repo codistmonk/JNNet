@@ -55,7 +55,7 @@ public final class NearestNeighborClassifierTest {
 		debugPrint("test:", classifier.evaluate(testData));
 		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
-		if (showClassifier && classifier.getStep() == 3) {
+		if (showClassifier && classifier.getInputDimension() == 2) {
 			show(classifier, 256, 16.0, trainingData.getData());
 		}
 		
@@ -71,22 +71,22 @@ final class NearestNeighborClassifier implements BinaryClassifier {
 	
 	private final double[] prototypes;
 	
-	private final int step;
+	private final int inputDimension;
 	
 	public NearestNeighborClassifier(final Dataset trainingData) {
 		this.prototypes = trainingData.getData();
-		this.step = trainingData.getStep();
+		this.inputDimension= trainingData.getStep() - 1;
 	}
 	
 	@Override
-	public final int getStep() {
-		return this.step;
+	public final int getInputDimension() {
+		return this.inputDimension;
 	}
 	
 	@Override
 	public final boolean accept(final double... item) {
 		final int n = this.prototypes.length;
-		final int step = this.getStep();
+		final int step = this.getInputDimension() + 1;
 		double nearestDistance = Double.POSITIVE_INFINITY;
 		boolean result = false;
 		
