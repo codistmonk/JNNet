@@ -3,6 +3,7 @@ package jnnet4;
 import static java.awt.Color.GREEN;
 import static java.awt.Color.RED;
 import static java.util.Arrays.copyOfRange;
+import static java.util.Arrays.fill;
 import static java.util.Collections.sort;
 import static java.util.Collections.swap;
 import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
@@ -115,6 +116,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final int w = inputDimension * (thumbnailSize + 1) - 1;
 		final int h = w;
 		final BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+		final int[][] counts = new int[2][thumbnailSize * thumbnailSize];
 		
 		for (int dimensionX = 0; dimensionX < inputDimension; ++dimensionX) {
 			final Statistics xStatistics = dataset.getStatistics()[2].getStatistics()[dimensionX];
@@ -124,14 +126,29 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				final Statistics yStatistics = dataset.getStatistics()[2].getStatistics()[dimensionY];
 				final int left = dimensionY * (thumbnailSize + 1);
 				
+				for (final int[] labelCounts : counts) {
+					fill(labelCounts, 0);
+				}
+				
 				for (int i = 0; i < n; i += step) {
 					final double normalizedX = xStatistics.getNormalizedValue(data[i + dimensionX]);
 					final double normalizedY = yStatistics.getNormalizedValue(data[i + dimensionY]);
-					final int x = (int) (left + (thumbnailSize - 1) * normalizedX);
-					final int y = (int) (top + thumbnailSize - 1 - (thumbnailSize - 1) * normalizedY);
+					final int x = (int) ((thumbnailSize - 1) * normalizedX);
+					final int y = (int) (thumbnailSize - 1 - (thumbnailSize - 1) * normalizedY);
 					final int label = (int) data[i + step - 1];
-					
-					result.setRGB(x, y, label == 0 ? RED.getRGB() : GREEN.getRGB());
+					++counts[label][y * thumbnailSize + x];
+				}
+				
+				for (int y = top, thumbnailPixel = 0; y < top + thumbnailSize; ++y) {
+					for (int x = left; x < left + thumbnailSize; ++x, ++thumbnailPixel) {
+						final int negativeCounts = counts[0][thumbnailPixel];
+						final int positiveCounts = counts[1][thumbnailPixel];
+						final int max = Math.max(negativeCounts, positiveCounts);
+						
+						if (0 < max) {
+							result.setRGB(x, y, positiveCounts == max ? GREEN.getRGB() : RED.getRGB());
+						}
+					}
 				}
 			}
 		}
