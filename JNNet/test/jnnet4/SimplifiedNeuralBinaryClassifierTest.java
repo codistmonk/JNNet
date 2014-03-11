@@ -47,7 +47,7 @@ import org.junit.Test;
 /**
  * @author codistmonk (creation 2014-03-10)
  */
-public final class BinaryClassifierTest {
+public final class SimplifiedNeuralBinaryClassifierTest {
 	
 	@Test
 	public final void test() {
@@ -506,7 +506,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	 */
 	private static final long serialVersionUID = -6740686339638862795L;
 	
-	public static final Method CLONE_ELEMENTS = Functional.method(BinaryClassifier.class, "cloneElements", Collection.class);
+	public static final Method CLONE_ELEMENTS = Functional.method(SimplifiedNeuralBinaryClassifier.class, "cloneElements", Collection.class);
 	
 	@SuppressWarnings("unchecked")
 	public static final <T> Collection<T> cloneElements(final Collection<T> elements) {
