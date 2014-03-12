@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Set;
 
 import jnnet.DoubleList;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -236,7 +235,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		}
 		
 		if (allowHyperplanePruning) {
-			removeHyperplanes(pruneHyperplanes(codes.getCodes(), hyperplaneCount), hyperplanes, step);
+			removeHyperplanes(pruneHyperplanes(codes), hyperplanes, step);
 			
 			debugPrint("hyperplaneCount:", hyperplanes.size() / step);
 		}
@@ -248,129 +247,6 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		{
 			newHigherLayer(codes.getCodes(), hyperplaneCount);
 		}
-	}
-	
-	public static final void newHigherLayer(final Collection<BitSet>[] codes, final int codeSize) {
-		debugPrint("Experimental: generating higher level data...");
-		
-		final double[] higherLevelData = toData(codes, codeSize);
-		final int higherLevelDataStep = codeSize + 1;
-		final DoubleList higherLevelHyperplanes = new DoubleList();
-		
-		debugPrint("Experimental: partitioning higher level data...");
-		
-		generateHyperplanes(higherLevelData, higherLevelDataStep, new HyperplaneHandler() {
-			
-			@Override
-			public final boolean hyperplane(final double bias, final double[] weights) {
-				higherLevelHyperplanes.add(bias);
-				higherLevelHyperplanes.addAll(weights);
-				
-				return true;
-			}
-			
-			/**
-			 * {@value}.
-			 */
-			private static final long serialVersionUID = -4702778886538918117L;
-			
-		});
-		
-		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
-		
-		final Codeset higherLevelCodes = cluster(higherLevelHyperplanes.toArray(), higherLevelData, higherLevelDataStep);
-		
-		removeHyperplanes(pruneHyperplanes(higherLevelCodes.getCodes(), higherLevelHyperplanes.size() / higherLevelDataStep), higherLevelHyperplanes, higherLevelDataStep);
-		
-		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-03-12)
-	 */
-	public static final class Codeset implements Serializable {
-		
-		private final Collection<BitSet>[] codes;
-		
-		private final int codeSize;
-		
-		public Codeset(final int codeSize) {
-			this.codes = instances(2, HASH_SET_FACTORY);
-			this.codeSize = codeSize;
-		}
-		
-		public final Collection<BitSet>[] getCodes() {
-			return this.codes;
-		}
-		
-		public final int getCodeSize() {
-			return this.codeSize;
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -6811555918840188741L;
-		
-	}
-
-	public static final Codeset cluster(final double[] hyperplanes, final double[] data, final int step) {
-		debugPrint("Clustering...");
-		
-		final Codeset result = new Codeset(hyperplanes.length / step);
-		final TicToc timer = new TicToc();
-		final int dataLength = data.length;
-		
-		timer.tic();
-		
-		for (int i = 0; i < dataLength; i += step) {
-			if (LOGGING_MILLISECONDS <= timer.toc()) {
-				debugPrint(i, "/", dataLength);
-				timer.tic();
-			}
-			
-			final double[] item = copyOfRange(data, i, i + step - 1);
-			final int label = (int) data[i + step - 1];
-			final BitSet code = encode(item, hyperplanes);
-			
-			result.getCodes()[label].add(code);
-		}
-		
-		debugPrint("0-codes:", result.getCodes()[0].size(), "1-codes:", result.getCodes()[1].size());
-		
-		return result;
-	}
-	
-	public static final double[] toData(final Collection<BitSet>[] codes, final int codeSize) {
-		final int step = codeSize + 1;
-		final int n = (codes[0].size() + codes[1].size()) * step;
-		final double[] result = new double[n];
-		
-		for (int labelId = 0, i = 0; labelId < 2; ++labelId) {
-			for (final BitSet code : codes[labelId]) {
-				for (int bit = 0; bit < codeSize; ++bit) {
-					result[i++] = code.get(bit) ? 1.0 : 0.0;
-				}
-				
-				result[i++] = labelId;
-			}
-		}
-		
-		return result;
-	}
-	
-	private static final void removeHyperplanes(final BitSet markedHyperplanes, final DoubleList hyperplanes, final int step) {
-		final double[] data = hyperplanes.toArray();
-		final int n = hyperplanes.size();
-		
-		for (int i = 0, j = 0, bit = 0; i < n; i += step, ++bit) {
-			if (!markedHyperplanes.get(bit)) {
-				System.arraycopy(data, i, data, j, step);
-				j += step;
-			}
-		}
-		
-		hyperplanes.resize(n - markedHyperplanes.cardinality() * step);
 	}
 	
 	@Override
@@ -388,21 +264,6 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	
 	public final BitSet encode(final double[] item) {
 		return encode(item, this.getHyperplanes());
-	}
-	
-	public static final BitSet encode(final double[] item, final double[] hyperplanes) {
-		final int weightCount = hyperplanes.length;
-		final int step = item.length + 1;
-		final int hyperplaneCount = weightCount / step;
-		final BitSet code = new BitSet(hyperplaneCount);
-		
-		for (int j = 0, bit = 0; j < weightCount; j += step, ++bit) {
-			final double d = hyperplanes[j] + dot(item, copyOfRange(hyperplanes, j + 1, j + step));
-			
-			code.set(bit, 0.0 <= d);
-		}
-		
-		return code;
 	}
 	
 	@Override
@@ -466,6 +327,115 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
+	}
+	
+	public static final void newHigherLayer(final Collection<BitSet>[] codes, final int codeSize) {
+		debugPrint("Experimental: generating higher level data...");
+		
+		final double[] higherLevelData = toData(codes, codeSize);
+		final int higherLevelDataStep = codeSize + 1;
+		final DoubleList higherLevelHyperplanes = new DoubleList();
+		
+		debugPrint("Experimental: partitioning higher level data...");
+		
+		generateHyperplanes(higherLevelData, higherLevelDataStep, new HyperplaneHandler() {
+			
+			@Override
+			public final boolean hyperplane(final double bias, final double[] weights) {
+				higherLevelHyperplanes.add(bias);
+				higherLevelHyperplanes.addAll(weights);
+				
+				return true;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -4702778886538918117L;
+			
+		});
+		
+		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
+		
+		final Codeset higherLevelCodes = cluster(higherLevelHyperplanes.toArray(), higherLevelData, higherLevelDataStep);
+		
+		removeHyperplanes(pruneHyperplanes(higherLevelCodes), higherLevelHyperplanes, higherLevelDataStep);
+		
+		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
+	}
+	
+	public static final Codeset cluster(final double[] hyperplanes, final double[] data, final int step) {
+		debugPrint("Clustering...");
+		
+		final Codeset result = new Codeset(hyperplanes.length / step);
+		final TicToc timer = new TicToc();
+		final int dataLength = data.length;
+		
+		timer.tic();
+		
+		for (int i = 0; i < dataLength; i += step) {
+			if (LOGGING_MILLISECONDS <= timer.toc()) {
+				debugPrint(i, "/", dataLength);
+				timer.tic();
+			}
+			
+			final double[] item = copyOfRange(data, i, i + step - 1);
+			final int label = (int) data[i + step - 1];
+			final BitSet code = encode(item, hyperplanes);
+			
+			result.getCodes()[label].add(code);
+		}
+		
+		debugPrint(result);
+		
+		return result;
+	}
+	
+	public static final double[] toData(final Collection<BitSet>[] codes, final int codeSize) {
+		final int step = codeSize + 1;
+		final int n = (codes[0].size() + codes[1].size()) * step;
+		final double[] result = new double[n];
+		
+		for (int labelId = 0, i = 0; labelId < 2; ++labelId) {
+			for (final BitSet code : codes[labelId]) {
+				for (int bit = 0; bit < codeSize; ++bit) {
+					result[i++] = code.get(bit) ? 1.0 : 0.0;
+				}
+				
+				result[i++] = labelId;
+			}
+		}
+		
+		return result;
+	}
+	
+	private static final void removeHyperplanes(final BitSet markedHyperplanes, final DoubleList hyperplanes, final int step) {
+		final double[] data = hyperplanes.toArray();
+		final int n = hyperplanes.size();
+		
+		for (int i = 0, j = 0, bit = 0; i < n; i += step, ++bit) {
+			if (!markedHyperplanes.get(bit)) {
+				System.arraycopy(data, i, data, j, step);
+				j += step;
+			}
+		}
+		
+		hyperplanes.resize(n - markedHyperplanes.cardinality() * step);
+	}
+	
+	public static final BitSet encode(final double[] item, final double[] hyperplanes) {
+		final int weightCount = hyperplanes.length;
+		final int step = item.length + 1;
+		final int hyperplaneCount = weightCount / step;
+		final BitSet code = new BitSet(hyperplaneCount);
+		
+		for (int j = 0, bit = 0; j < weightCount; j += step, ++bit) {
+			final double d = hyperplanes[j] + dot(item, copyOfRange(hyperplanes, j + 1, j + step));
+			
+			code.set(bit, 0.0 <= d);
+		}
+		
+		return code;
 	}
 	
 	public final static void generateHyperplanes(final Dataset trainingData, final HyperplaneHandler hyperplaneHandler) {
@@ -539,11 +509,12 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		}
 	}
 	
-	public static final BitSet pruneHyperplanes(final Collection<BitSet>[] codes, final int codeSize) {
+	public static final BitSet pruneHyperplanes(final Codeset codes) {
 		debugPrint("Pruning...");
 		
+		final int codeSize = codes.getCodeSize();
 		final BitSet markedHyperplanes = new BitSet(codeSize);
-		final Collection<BitSet>[] newCodes = codes.clone();
+		final Collection<BitSet>[] newCodes = codes.getCodes().clone();
 		
 		for (int bit = 0; bit < codeSize; ++bit) {
 			@SuppressWarnings("unchecked")
@@ -569,7 +540,9 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		final int newHyperplaneCount = codeSize - markedHyperplanes.cardinality(); 
 		
 		for (int i = 0; i < 2; ++i) {
-			codes[i].clear();
+			final Collection<BitSet> labelCodes = codes.getCodes()[i];
+			
+			labelCodes.clear();
 			
 			for (final BitSet newCode : newCodes[i]) {
 				final BitSet code = new BitSet(newHyperplaneCount);
@@ -580,11 +553,11 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 					}
 				}
 				
-				codes[i].add(code);
+				labelCodes.add(code);
 			}
 		}
 		
-		debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
+		debugPrint(codes);
 		
 		return markedHyperplanes;
 	}
@@ -605,6 +578,41 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	public static abstract interface HyperplaneHandler extends Serializable {
 		
 		public abstract boolean hyperplane(double bias, double[] weights);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-12)
+	 */
+	public static final class Codeset implements Serializable {
+		
+		private final Collection<BitSet>[] codes;
+		
+		private final int codeSize;
+		
+		@SuppressWarnings("unchecked")
+		public Codeset(final int codeSize) {
+			this.codes = instances(2, HASH_SET_FACTORY);
+			this.codeSize = codeSize;
+		}
+		
+		public final Collection<BitSet>[] getCodes() {
+			return this.codes;
+		}
+		
+		public final int getCodeSize() {
+			return this.codeSize;
+		}
+		
+		@Override
+		public final String toString() {
+			return "0-codes: " + this.getCodes()[0].size() + " 1-codes: " + this.getCodes()[1].size();
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -6811555918840188741L;
 		
 	}
 	
