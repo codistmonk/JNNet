@@ -246,45 +246,78 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		this.clusters = this.invertOutput ? codes[0] : codes[1];
 		
 		{
-			debugPrint("Experimental: generating higher level data...");
-			
-			final double[] higherLevelData = toData(codes, hyperplaneCount);
-			final int higherLevelDataStep = hyperplaneCount + 1;
-			final DoubleList higherLevelHyperplanes = new DoubleList();
-			
-			debugPrint("Experimental: partitioning higher level data...");
-			
-			generateHyperplanes(higherLevelData, higherLevelDataStep, new HyperplaneHandler() {
-				
-				@Override
-				public final boolean hyperplane(final double bias, final double[] weights) {
-					higherLevelHyperplanes.add(bias);
-					higherLevelHyperplanes.addAll(weights);
-					
-					return true;
-				}
-				
-				/**
-				 * {@value}.
-				 */
-				private static final long serialVersionUID = -4702778886538918117L;
-				
-			});
-			
-			debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
-			
-			final Collection<BitSet>[] higherLevelCodes = cluster(higherLevelHyperplanes.toArray(), higherLevelData, higherLevelDataStep);
-			
-			removeHyperplanes(pruneHyperplanes(higherLevelCodes, higherLevelHyperplanes.size() / higherLevelDataStep), higherLevelHyperplanes, higherLevelDataStep);
-			
-			debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
+			newHigherLayer(codes, hyperplaneCount);
 		}
+	}
+	
+	public static final void newHigherLayer(final Collection<BitSet>[] codes, final int codeSize) {
+		debugPrint("Experimental: generating higher level data...");
+		
+		final double[] higherLevelData = toData(codes, codeSize);
+		final int higherLevelDataStep = codeSize + 1;
+		final DoubleList higherLevelHyperplanes = new DoubleList();
+		
+		debugPrint("Experimental: partitioning higher level data...");
+		
+		generateHyperplanes(higherLevelData, higherLevelDataStep, new HyperplaneHandler() {
+			
+			@Override
+			public final boolean hyperplane(final double bias, final double[] weights) {
+				higherLevelHyperplanes.add(bias);
+				higherLevelHyperplanes.addAll(weights);
+				
+				return true;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -4702778886538918117L;
+			
+		});
+		
+		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
+		
+		final Collection<BitSet>[] higherLevelCodes = cluster(higherLevelHyperplanes.toArray(), higherLevelData, higherLevelDataStep);
+		
+		removeHyperplanes(pruneHyperplanes(higherLevelCodes, higherLevelHyperplanes.size() / higherLevelDataStep), higherLevelHyperplanes, higherLevelDataStep);
+		
+		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-12)
+	 */
+	public static final class Codeset implements Serializable {
+		
+		private final Collection<BitSet>[] codes;
+		
+		private final int codeSize;
+		
+		public Codeset(final int codeSize) {
+			this.codes = instances(2, HASH_SET_FACTORY);
+			this.codeSize = codeSize;
+		}
+		
+		public final Collection<BitSet>[] getCodes() {
+			return this.codes;
+		}
+		
+		public final int getCodeSize() {
+			return this.codeSize;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -6811555918840188741L;
+		
 	}
 
 	public static final Collection<BitSet>[] cluster(final double[] hyperplanes, final double[] data, final int step) {
 		debugPrint("Clustering...");
 		
-		final Collection<BitSet>[] result = instances(2, HASH_SET_FACTORY);
+		final Codeset result = new Codeset(hyperplanes.length / step);
 		final TicToc timer = new TicToc();
 		final int dataLength = data.length;
 		
@@ -300,12 +333,12 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			final int label = (int) data[i + step - 1];
 			final BitSet code = encode(item, hyperplanes);
 			
-			result[label].add(code);
+			result.getCodes()[label].add(code);
 		}
 		
-		debugPrint("0-codes:", result[0].size(), "1-codes:", result[1].size());
+		debugPrint("0-codes:", result.getCodes()[0].size(), "1-codes:", result.getCodes()[1].size());
 		
-		return result;
+		return result.getCodes();
 	}
 	
 	public static final double[] toData(final Collection<BitSet>[] codes, final int codeSize) {
