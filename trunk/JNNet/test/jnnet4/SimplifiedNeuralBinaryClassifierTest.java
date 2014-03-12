@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.util.Arrays.copyOfRange;
+import static java.util.Collections.disjoint;
 import static java.util.Collections.swap;
 import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.RANDOM;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -74,17 +76,17 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("training:", confusionMatrix);
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
-//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-//		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
-//		
-//		if (previewValidationData) {
-//			SwingTools.show(preview(validationData, 8), "Validation data", false);
-//		}
-//		
-//		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-//		debugPrint("test:", classifier.evaluate(validationData));
-//		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+		
+		if (previewValidationData) {
+			SwingTools.show(preview(validationData, 8), "Validation data", false);
+		}
+		
+		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+		debugPrint("test:", classifier.evaluate(validationData));
+		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		
 //		debugPrint("Loading test dataset started", new Date(timer.tic()));
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
@@ -573,9 +575,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 					}
 				}
 				
-				final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
-				
-				if (ambiguities.isEmpty()) {
+				if (disjoint(simplifiedCodes[0], simplifiedCodes[1])) {
 					result.set(bit);
 					System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
 				}
