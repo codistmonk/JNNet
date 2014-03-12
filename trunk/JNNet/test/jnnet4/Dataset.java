@@ -161,12 +161,16 @@ public final class Dataset implements Serializable {
 			
 			debugPrint("labelCounts:", this.getLabelCounts());
 			
-			for (int i = 0; i < 2; ++i) {
-				debugPrint(i + "-statistics");
-				debugPrint("means:", Arrays.toString(this.statistics[i].getMeans()));
-				debugPrint("minima:", Arrays.toString(this.statistics[i].getMinima()));
-				debugPrint("maxima:", Arrays.toString(this.statistics[i].getMaxima()));
-				debugPrint("stddev:", Arrays.toString(this.statistics[i].getStandardDeviations()));
+			if (this.step < 100) {
+				for (int i = 0; i < 2; ++i) {
+					debugPrint(i + "-statistics");
+					debugPrint("means:", Arrays.toString(this.statistics[i].getMeans()));
+					debugPrint("minima:", Arrays.toString(this.statistics[i].getMinima()));
+					debugPrint("maxima:", Arrays.toString(this.statistics[i].getMaxima()));
+					debugPrint("stddev:", Arrays.toString(this.statistics[i].getStandardDeviations()));
+				}
+			} else {
+				debugPrint("High-dimensional statistics not shown");
 			}
 			
 			if (0 < invalidItemCount) {
