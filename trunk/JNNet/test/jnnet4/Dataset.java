@@ -12,15 +12,14 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import jnnet.DoubleList;
-
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
@@ -46,8 +45,8 @@ public final class Dataset implements Serializable {
 	}
 	
 	public Dataset(final String resourcePath, final int labelIndex, final int offset, final int count) {
-		this.labelIds = new LinkedHashMap<String, Integer>();
-		this.labelCounts = new LinkedHashMap<String, AtomicInteger>();
+		this.labelIds = new TreeMap<String, Integer>();
+		this.labelCounts = new TreeMap<String, AtomicInteger>();
 		this.statistics = new VectorStatistics[3];
 		this.labels = new ArrayList<String>();
 		this.data = new DoubleList();
@@ -136,6 +135,28 @@ public final class Dataset implements Serializable {
 						}
 					}
 				}
+			}
+			
+			// Normalize label ids
+			{
+				{
+					int labelId = 0;
+					
+					for (final Map.Entry<String, Integer> entry : this.getLabelIds().entrySet()) {
+						entry.setValue(labelId++);
+					}
+				}
+				{
+					final double[] data = this.getData();
+					final int n = data.length;
+					
+					for (int i = 0; i < n; i += this.step) {
+						data[i + this.step - 1] = this.getLabelIds().get(this.getLabels().get((int) data[i + this.step - 1]));
+					}
+				}
+				
+				this.getLabels().clear();
+				this.getLabels().addAll(this.getLabelIds().keySet());
 			}
 			
 			debugPrint("labelCounts:", this.getLabelCounts());
