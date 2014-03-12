@@ -273,7 +273,11 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			
 			debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
 			
-			final Collection<BitSet>[] higherLevelCodes = instances(2, HASH_SET_FACTORY);
+			final Collection<BitSet>[] higherLevelCodes = cluster(higherLevelHyperplanes.toArray(), higherLevelData, higherLevelDataStep);
+			
+			removeHyperplanes(pruneHyperplanes(higherLevelCodes, higherLevelHyperplanes.size() / higherLevelDataStep), higherLevelHyperplanes, higherLevelDataStep);
+			
+			debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
 		}
 	}
 
