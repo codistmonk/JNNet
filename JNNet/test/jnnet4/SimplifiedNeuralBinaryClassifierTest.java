@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.DoubleList;
 
@@ -218,36 +217,13 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			
 		});
 		
-		final TicToc timer = new TicToc();
 		final double[] data = trainingDataset.getData();
-		final int dataLength = data.length;
-		@SuppressWarnings("unchecked")
-		final Collection<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
 		this.inputDimension = step - 1;
 		int hyperplaneCount = hyperplanes.size() / step;
 		
 		debugPrint("hyperplaneCount:", hyperplaneCount);
 		
-		{
-			debugPrint("Clustering...");
-			
-			timer.tic();
-			
-			for (int i = 0; i < dataLength; i += step) {
-				if (LOGGING_MILLISECONDS <= timer.toc()) {
-					debugPrint(i, "/", dataLength);
-					timer.tic();
-				}
-				
-				final double[] item = copyOfRange(data, i, i + step - 1);
-				final int label = (int) data[i + step - 1];
-				final BitSet code = encode(item, hyperplanes.toArray());
-				
-				codes[label].add(code);
-			}
-			
-			debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
-		}
+		final Collection<BitSet>[] codes = cluster(hyperplanes.toArray(), data, step);
 		
 		{
 			final int ambiguities = intersection(codes[0], codes[1]).size();
@@ -260,12 +236,9 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		}
 		
 		if (allowHyperplanePruning) {
-			debugPrint("Pruning...");
-			
 			removeHyperplanes(pruneHyperplanes(codes, hyperplaneCount), hyperplanes, step);
 			
 			debugPrint("hyperplaneCount:", hyperplanes.size() / step);
-			debugPrint("0-codes:", codes[0].size(), "1-codes:", codes[1].size());
 		}
 		
 		this.hyperplanes = hyperplanes.toArray();
@@ -277,7 +250,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			
 			final double[] higherLevelData = toData(codes, hyperplaneCount);
 			final int higherLevelDataStep = hyperplaneCount + 1;
-			final AtomicInteger higherLevelHyperplaneCount = new AtomicInteger();
+			final DoubleList higherLevelHyperplanes = new DoubleList();
 			
 			debugPrint("Experimental: partitioning higher level data...");
 			
@@ -285,7 +258,8 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 				
 				@Override
 				public final boolean hyperplane(final double bias, final double[] weights) {
-					higherLevelHyperplaneCount.incrementAndGet();
+					higherLevelHyperplanes.add(bias);
+					higherLevelHyperplanes.addAll(weights);
 					
 					return true;
 				}
@@ -297,8 +271,37 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 				
 			});
 			
-			debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplaneCount);
+			debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
+			
+			final Collection<BitSet>[] higherLevelCodes = instances(2, HASH_SET_FACTORY);
 		}
+	}
+
+	public static final Collection<BitSet>[] cluster(final double[] hyperplanes, final double[] data, final int step) {
+		debugPrint("Clustering...");
+		
+		final Collection<BitSet>[] result = instances(2, HASH_SET_FACTORY);
+		final TicToc timer = new TicToc();
+		final int dataLength = data.length;
+		
+		timer.tic();
+		
+		for (int i = 0; i < dataLength; i += step) {
+			if (LOGGING_MILLISECONDS <= timer.toc()) {
+				debugPrint(i, "/", dataLength);
+				timer.tic();
+			}
+			
+			final double[] item = copyOfRange(data, i, i + step - 1);
+			final int label = (int) data[i + step - 1];
+			final BitSet code = encode(item, hyperplanes);
+			
+			result[label].add(code);
+		}
+		
+		debugPrint("0-codes:", result[0].size(), "1-codes:", result[1].size());
+		
+		return result;
 	}
 	
 	public static final double[] toData(final Collection<BitSet>[] codes, final int codeSize) {
