@@ -2,6 +2,7 @@ package jnnet4;
 
 import static java.lang.Double.parseDouble;
 import static jnnet4.FeedforwardNeuralNetwork.reserve;
+import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -20,8 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import jnnet.DoubleList;
+
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
  * @author codistmonk (creation 2014-03-07)
@@ -224,7 +225,5 @@ public final class Dataset implements Serializable {
 	 * {@value}.
 	 */
 	public static final long LOGGING_MILLISECONDS = 5000L;
-	
-	public static final DefaultFactory<AtomicInteger> ATOMIC_INTEGER_FACTORY = DefaultFactory.forClass(AtomicInteger.class);
 	
 }

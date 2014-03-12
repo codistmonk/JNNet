@@ -4,12 +4,12 @@ import static java.lang.Math.exp;
 import static java.util.Arrays.copyOf;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
-import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
  * @author codistmonk (creation 2013-12-21)
@@ -21,6 +21,8 @@ public final class JNNetTools {
 	}
 	
 	public static final Random RANDOM = new Random(0L);
+	
+	public static final DefaultFactory<AtomicInteger> ATOMIC_INTEGER_FACTORY = DefaultFactory.forClass(AtomicInteger.class);
 	
 	public static final double[] doubles(final double... values) {
 		return values;

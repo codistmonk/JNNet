@@ -622,7 +622,7 @@ public final class FeedforwardNeuralNetworkTest {
 		return result;
 	}
 	
-	public static final <T, C extends Collection<T>> C intersection(final Collection<T> s1, final Collection<T> s2) {
+	public static final <T, C extends Collection<T>> C intersection(final C s1, final C s2) {
 		final C result = invoke(s1, "clone");
 		
 		result.retainAll(s2);

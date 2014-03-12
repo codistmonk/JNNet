@@ -4,16 +4,20 @@ import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
 import static java.util.Collections.swap;
 import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
+import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static jnnet4.JNNetTools.RANDOM;
 import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
 import static jnnet4.VectorStatistics.scaled;
 import static jnnet4.VectorStatistics.subtract;
+import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
+import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
+import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
@@ -31,8 +35,11 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.DoubleList;
 import net.sourceforge.aprog.swing.SwingTools;
@@ -223,12 +230,14 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		final Codeset codes = cluster(hyperplanes.toArray(), data, step);
 		
 		{
-			final int ambiguities = intersection(codes.getCodes()[0], codes.getCodes()[1]).size();
+			final int ambiguities = intersection(new HashSet<BitSet>(codes.getCodes()[0].keySet()), codes.getCodes()[1].keySet()).size();
 			
 			if (0 < ambiguities) {
 				System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguities:", ambiguities));
 				
-				codes.getCodes()[1].removeAll(codes.getCodes()[0]);
+				for (final BitSet code : codes.getCodes()[0].keySet()) {
+					codes.getCodes()[1].remove(code);
+				}
 			}
 		}
 		
@@ -238,7 +247,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		
 		this.hyperplanes = hyperplanes.toArray();
 		this.invertOutput = allowOutputInversion && codes.getCodes()[0].size() < codes.getCodes()[1].size();
-		this.clusters = this.invertOutput ? codes.getCodes()[0] : codes.getCodes()[1];
+		this.clusters = this.invertOutput ? codes.getCodes()[0].keySet() : codes.getCodes()[1].keySet();
 		
 		{
 			debugPrint("Experimental section...");
@@ -332,7 +341,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	}
 	
 	public static final Codeset newHigherLayer(final Codeset codes) {
-		final double[] higherLevelData = toData(codes.getCodes(), codes.getCodeSize());
+		final double[] higherLevelData = toData(array(codes.getCodes()[0].keySet(), codes.getCodes()[1].keySet()), codes.getCodeSize());
 		final int higherLevelDataStep = codes.getCodeSize() + 1;
 		final DoubleList higherLevelHyperplanes = new DoubleList();
 		
@@ -375,11 +384,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 				timer.tic();
 			}
 			
-			final double[] item = copyOfRange(data, i, i + step - 1);
-			final int label = (int) data[i + step - 1];
-			final BitSet code = encode(item, hyperplanes);
-			
-			result.getCodes()[label].add(code);
+			result.addCode((int) data[i + step - 1], encode(copyOfRange(data, i, i + step - 1), hyperplanes));
 		}
 		
 		debugPrint(result);
@@ -529,18 +534,22 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	 */
 	public static final class Codeset implements Serializable {
 		
-		private final Collection<BitSet>[] codes;
+		private final Map<BitSet, AtomicInteger>[] codes;
 		
 		private int codeSize;
 		
 		@SuppressWarnings("unchecked")
 		public Codeset(final int codeSize) {
-			this.codes = instances(2, HASH_SET_FACTORY);
+			this.codes = instances(2, HASH_MAP_FACTORY);
 			this.codeSize = codeSize;
 		}
 		
-		public final Collection<BitSet>[] getCodes() {
+		public final Map<BitSet, AtomicInteger>[] getCodes() {
 			return this.codes;
+		}
+		
+		public final void addCode(final int labelId, final BitSet code) {
+			getOrCreate(this.getCodes()[labelId], code, ATOMIC_INTEGER_FACTORY).incrementAndGet();
 		}
 		
 		public final int getCodeSize() {
@@ -553,7 +562,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			final TicToc timer = new TicToc();
 			final int codeSize = this.getCodeSize();
 			final BitSet result = new BitSet(codeSize);
-			final Collection<BitSet>[] newCodes = this.getCodes().clone();
+			final Collection<BitSet>[] newCodes = array(this.getCodes()[0].keySet(), this.getCodes()[1].keySet());
 			
 			timer.tic();
 			
@@ -584,9 +593,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			final int newCodeSize = codeSize - result.cardinality(); 
 			
 			for (int i = 0; i < 2; ++i) {
-				final Collection<BitSet> labelCodes = this.getCodes()[i];
-				
-				labelCodes.clear();
+				this.getCodes()[i].clear();
 				
 				for (final BitSet newCode : newCodes[i]) {
 					final BitSet code = new BitSet(newCodeSize);
@@ -597,7 +604,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 						}
 					}
 					
-					labelCodes.add(code);
+					this.addCode(i, code);
 				}
 			}
 			
