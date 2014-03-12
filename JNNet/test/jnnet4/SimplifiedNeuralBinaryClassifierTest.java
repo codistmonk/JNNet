@@ -1,12 +1,10 @@
 package jnnet4;
 
 import static java.util.Arrays.copyOfRange;
-import static java.util.Arrays.fill;
 import static java.util.Collections.sort;
 import static java.util.Collections.swap;
 import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.RANDOM;
-import static jnnet4.JNNetTools.uint8;
 import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
@@ -41,7 +39,6 @@ import jnnet.DoubleList;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.Tools;
@@ -56,19 +53,19 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	@Test
 	public final void test() {
 		final boolean showClassifier = true;
-		final boolean previewTrainingData = true;
-		final boolean previewValidationData = true;
+		final boolean previewTrainingData = false;
+		final boolean previewValidationData = false;
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
+//		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
-//		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
+		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		if (previewTrainingData) {
-			SwingTools.show(preview(trainingData, 64), "Training data", false);
+			SwingTools.show(preview(trainingData, 8), "Training data", false);
 		}
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
@@ -92,14 +89,14 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //		debugPrint("test:", classifier.evaluate(validationData));
 //		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		
-//		debugPrint("Loading test dataset started", new Date(timer.tic()));
-//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
-////		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
-//		debugPrint("Loading test dataset done in", timer.toc(), "ms");
-//		
-//		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-//		debugPrint("test:", classifier.evaluate(testData));
-//		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
+		debugPrint("Loading test dataset started", new Date(timer.tic()));
+		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+//		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
+		debugPrint("Loading test dataset done in", timer.toc(), "ms");
+		
+		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
+		debugPrint("test:", classifier.evaluate(testData));
+		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
 		if (showClassifier && classifier.getInputDimension() == 2) {
 			show(classifier, 256, 16.0, trainingData.getData());
@@ -523,10 +520,12 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	}
 	
 	public final static void generateHyperplanes(final Dataset trainingData, final HyperplaneHandler hyperplaneHandler) {
-		final int step = trainingData.getStep();
+		generateHyperplanes(trainingData.getData(), trainingData.getStep(), hyperplaneHandler);
+	}
+	
+	public final static void generateHyperplanes(final double[] data, final int step, final HyperplaneHandler hyperplaneHandler) {
 		final int inputDimension = step - 1;
-		final int itemCount = trainingData.getItemCount();
-		final double[] data = trainingData.getData();
+		final int itemCount = data.length / step;
 		final List<List<Integer>> todo = new ArrayList<List<Integer>>();
 		final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
 		boolean continueProcessing = true;
