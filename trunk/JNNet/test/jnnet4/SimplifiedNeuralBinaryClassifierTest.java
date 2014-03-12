@@ -245,7 +245,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		this.clusters = this.invertOutput ? codes.getCodes()[0] : codes.getCodes()[1];
 		
 		{
-			newHigherLayer(codes.getCodes(), hyperplaneCount);
+			newHigherLayer(codes);
 		}
 	}
 	
@@ -329,11 +329,11 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		}
 	}
 	
-	public static final void newHigherLayer(final Collection<BitSet>[] codes, final int codeSize) {
+	public static final Codeset newHigherLayer(final Codeset codes) {
 		debugPrint("Experimental: generating higher level data...");
 		
-		final double[] higherLevelData = toData(codes, codeSize);
-		final int higherLevelDataStep = codeSize + 1;
+		final double[] higherLevelData = toData(codes.getCodes(), codes.getCodeSize());
+		final int higherLevelDataStep = codes.getCodeSize() + 1;
 		final DoubleList higherLevelHyperplanes = new DoubleList();
 		
 		debugPrint("Experimental: partitioning higher level data...");
@@ -362,6 +362,8 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		removeHyperplanes(pruneHyperplanes(higherLevelCodes), higherLevelHyperplanes, higherLevelDataStep);
 		
 		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
+		
+		return higherLevelCodes;
 	}
 	
 	public static final Codeset cluster(final double[] hyperplanes, final double[] data, final int step) {
