@@ -223,30 +223,30 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		
 		debugPrint("hyperplaneCount:", hyperplaneCount);
 		
-		final Collection<BitSet>[] codes = cluster(hyperplanes.toArray(), data, step);
+		final Codeset codes = cluster(hyperplanes.toArray(), data, step);
 		
 		{
-			final int ambiguities = intersection(codes[0], codes[1]).size();
+			final int ambiguities = intersection(codes.getCodes()[0], codes.getCodes()[1]).size();
 			
 			if (0 < ambiguities) {
 				System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguities:", ambiguities));
 				
-				codes[1].removeAll(codes[0]);
+				codes.getCodes()[1].removeAll(codes.getCodes()[0]);
 			}
 		}
 		
 		if (allowHyperplanePruning) {
-			removeHyperplanes(pruneHyperplanes(codes, hyperplaneCount), hyperplanes, step);
+			removeHyperplanes(pruneHyperplanes(codes.getCodes(), hyperplaneCount), hyperplanes, step);
 			
 			debugPrint("hyperplaneCount:", hyperplanes.size() / step);
 		}
 		
 		this.hyperplanes = hyperplanes.toArray();
-		this.invertOutput = allowOutputInversion && codes[0].size() < codes[1].size();
-		this.clusters = this.invertOutput ? codes[0] : codes[1];
+		this.invertOutput = allowOutputInversion && codes.getCodes()[0].size() < codes.getCodes()[1].size();
+		this.clusters = this.invertOutput ? codes.getCodes()[0] : codes.getCodes()[1];
 		
 		{
-			newHigherLayer(codes, hyperplaneCount);
+			newHigherLayer(codes.getCodes(), hyperplaneCount);
 		}
 	}
 	
@@ -278,9 +278,9 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		
 		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
 		
-		final Collection<BitSet>[] higherLevelCodes = cluster(higherLevelHyperplanes.toArray(), higherLevelData, higherLevelDataStep);
+		final Codeset higherLevelCodes = cluster(higherLevelHyperplanes.toArray(), higherLevelData, higherLevelDataStep);
 		
-		removeHyperplanes(pruneHyperplanes(higherLevelCodes, higherLevelHyperplanes.size() / higherLevelDataStep), higherLevelHyperplanes, higherLevelDataStep);
+		removeHyperplanes(pruneHyperplanes(higherLevelCodes.getCodes(), higherLevelHyperplanes.size() / higherLevelDataStep), higherLevelHyperplanes, higherLevelDataStep);
 		
 		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
 	}
@@ -314,7 +314,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		
 	}
 
-	public static final Collection<BitSet>[] cluster(final double[] hyperplanes, final double[] data, final int step) {
+	public static final Codeset cluster(final double[] hyperplanes, final double[] data, final int step) {
 		debugPrint("Clustering...");
 		
 		final Codeset result = new Codeset(hyperplanes.length / step);
@@ -338,7 +338,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		
 		debugPrint("0-codes:", result.getCodes()[0].size(), "1-codes:", result.getCodes()[1].size());
 		
-		return result.getCodes();
+		return result;
 	}
 	
 	public static final double[] toData(final Collection<BitSet>[] codes, final int codeSize) {
