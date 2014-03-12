@@ -235,7 +235,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		}
 		
 		if (allowHyperplanePruning) {
-			removeHyperplanes(pruneHyperplanes(codes), hyperplanes, step);
+			removeHyperplanes(codes.prune(), hyperplanes, step);
 			
 			debugPrint("hyperplaneCount:", hyperplanes.size() / step);
 		}
@@ -245,7 +245,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		this.clusters = this.invertOutput ? codes.getCodes()[0] : codes.getCodes()[1];
 		
 		{
-			newHigherLayer(codes);
+			newHigherLayer(newHigherLayer(codes));
 		}
 	}
 	
@@ -359,7 +359,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		
 		final Codeset higherLevelCodes = cluster(higherLevelHyperplanes.toArray(), higherLevelData, higherLevelDataStep);
 		
-		removeHyperplanes(pruneHyperplanes(higherLevelCodes), higherLevelHyperplanes, higherLevelDataStep);
+		removeHyperplanes(higherLevelCodes.prune(), higherLevelHyperplanes, higherLevelDataStep);
 		
 		debugPrint("Experimental: higherLevelHyperplaneCount:", higherLevelHyperplanes.size() / higherLevelDataStep);
 		
@@ -511,59 +511,6 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		}
 	}
 	
-	public static final BitSet pruneHyperplanes(final Codeset codes) {
-		debugPrint("Pruning...");
-		
-		final int codeSize = codes.getCodeSize();
-		final BitSet markedHyperplanes = new BitSet(codeSize);
-		final Collection<BitSet>[] newCodes = codes.getCodes().clone();
-		
-		for (int bit = 0; bit < codeSize; ++bit) {
-			@SuppressWarnings("unchecked")
-			final Set<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
-			
-			for (int i = 0; i < 2; ++i) {
-				for (final BitSet code : newCodes[i]) {
-					final BitSet simplifiedCode = (BitSet) code.clone();
-					
-					simplifiedCode.clear(bit);
-					simplifiedCodes[i].add(simplifiedCode);
-				}
-			}
-			
-			final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
-			
-			if (ambiguities.isEmpty()) {
-				markedHyperplanes.set(bit);
-				System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
-			}
-		}
-		
-		final int newHyperplaneCount = codeSize - markedHyperplanes.cardinality(); 
-		
-		for (int i = 0; i < 2; ++i) {
-			final Collection<BitSet> labelCodes = codes.getCodes()[i];
-			
-			labelCodes.clear();
-			
-			for (final BitSet newCode : newCodes[i]) {
-				final BitSet code = new BitSet(newHyperplaneCount);
-				
-				for (int oldBit = 0, newBit = 0; oldBit < codeSize; ++oldBit) {
-					if (!markedHyperplanes.get(oldBit)) {
-						code.set(newBit++, newCode.get(oldBit));
-					}
-				}
-				
-				labelCodes.add(code);
-			}
-		}
-		
-		debugPrint(codes);
-		
-		return markedHyperplanes;
-	}
-	
 	public static final List<Integer> range(final int first, final int last) {
 		final List<Integer> result = new ArrayList<Integer>(last - first + 1);
 		
@@ -590,7 +537,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		
 		private final Collection<BitSet>[] codes;
 		
-		private final int codeSize;
+		private int codeSize;
 		
 		@SuppressWarnings("unchecked")
 		public Codeset(final int codeSize) {
@@ -606,9 +553,64 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			return this.codeSize;
 		}
 		
+		public final BitSet prune() {
+			debugPrint("Pruning...");
+			
+			final int codeSize = this.getCodeSize();
+			final BitSet markedHyperplanes = new BitSet(codeSize);
+			final Collection<BitSet>[] newCodes = this.getCodes().clone();
+			
+			for (int bit = 0; bit < codeSize; ++bit) {
+				@SuppressWarnings("unchecked")
+				final Set<BitSet>[] simplifiedCodes = instances(2, HASH_SET_FACTORY);
+				
+				for (int i = 0; i < 2; ++i) {
+					for (final BitSet code : newCodes[i]) {
+						final BitSet simplifiedCode = (BitSet) code.clone();
+						
+						simplifiedCode.clear(bit);
+						simplifiedCodes[i].add(simplifiedCode);
+					}
+				}
+				
+				final Set<BitSet> ambiguities = intersection(simplifiedCodes[0], simplifiedCodes[1]);
+				
+				if (ambiguities.isEmpty()) {
+					markedHyperplanes.set(bit);
+					System.arraycopy(simplifiedCodes, 0, newCodes, 0, 2);
+				}
+			}
+			
+			final int newCodeSize = codeSize - markedHyperplanes.cardinality(); 
+			
+			for (int i = 0; i < 2; ++i) {
+				final Collection<BitSet> labelCodes = this.getCodes()[i];
+				
+				labelCodes.clear();
+				
+				for (final BitSet newCode : newCodes[i]) {
+					final BitSet code = new BitSet(newCodeSize);
+					
+					for (int oldBit = 0, newBit = 0; oldBit < codeSize; ++oldBit) {
+						if (!markedHyperplanes.get(oldBit)) {
+							code.set(newBit++, newCode.get(oldBit));
+						}
+					}
+					
+					labelCodes.add(code);
+				}
+			}
+			
+			this.codeSize = newCodeSize;
+			
+			debugPrint(this);
+			
+			return markedHyperplanes;
+		}
+		
 		@Override
 		public final String toString() {
-			return "0-codes: " + this.getCodes()[0].size() + " 1-codes: " + this.getCodes()[1].size();
+			return "codeSize: " + this.getCodeSize() + " 0-codes: " + this.getCodes()[0].size() + " 1-codes: " + this.getCodes()[1].size();
 		}
 		
 		/**
