@@ -65,8 +65,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
-//		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
+		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
+//		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
@@ -75,7 +75,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
-		final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 20, true, true);
+		final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 10, true, true);
 		debugPrint("Building classifier done in", timer.toc(), "ms");
 		
 		debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
@@ -83,26 +83,26 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("training:", confusionMatrix);
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
-//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-//		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
-//		
-//		if (previewValidationData) {
-//			SwingTools.show(preview(validationData, 8), "Validation data", false);
-//		}
-//		
-//		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-//		debugPrint("test:", classifier.evaluate(validationData));
-//		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
-		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
-//		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
-		debugPrint("Loading test dataset done in", timer.toc(), "ms");
+		if (previewValidationData) {
+			SwingTools.show(preview(validationData, 8), "Validation data", false);
+		}
 		
-		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-		debugPrint("test:", classifier.evaluate(testData));
-		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
+		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+		debugPrint("test:", classifier.evaluate(validationData));
+		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+		
+//		debugPrint("Loading test dataset started", new Date(timer.tic()));
+//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+////		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
+//		debugPrint("Loading test dataset done in", timer.toc(), "ms");
+//		
+//		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
+//		debugPrint("test:", classifier.evaluate(testData));
+//		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
 		if (showClassifier && classifier.getInputDimension() == 2) {
 			show(classifier, 256, 16.0, trainingData.getData());
@@ -244,6 +244,8 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 				}
 				
 				System.err.println(debug(Tools.DEBUG_STACK_OFFSET, codes));
+				
+				Tools.gc(1L);
 			}
 		}
 		
