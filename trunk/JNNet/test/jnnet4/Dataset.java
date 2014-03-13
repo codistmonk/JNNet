@@ -161,6 +161,7 @@ public final class Dataset implements Serializable {
 			}
 			
 			debugPrint("labelCounts:", this.getLabelCounts());
+			debugPrint("inputDimension:", this.step - 1);
 			
 			if (this.step < 100) {
 				for (int i = 0; i < 2; ++i) {
