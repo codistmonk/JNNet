@@ -65,7 +65,9 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
+//		final Dataset trainingData = new Dataset("jnnet/iris_versicolor.txt");
+		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_2.train");
+//		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
@@ -74,41 +76,44 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			SwingTools.show(preview(trainingData, 8), "Training data", false);
 		}
 		
-		debugPrint("Building classifier started", new Date(timer.tic()));
-		final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 10, true, true);
-		debugPrint("Building classifier done in", timer.toc(), "ms");
-		
-		debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
-		final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData);
-		debugPrint("training:", confusionMatrix);
-		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
-		
-		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
-		
-		if (previewValidationData) {
-			SwingTools.show(preview(validationData, 8), "Validation data", false);
-		}
-		
-		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-		debugPrint("test:", classifier.evaluate(validationData));
-		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
-		
-//		debugPrint("Loading test dataset started", new Date(timer.tic()));
+		debugPrint("Loading test dataset started", new Date(timer.tic()));
+		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_2.test");
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
-////		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
-//		debugPrint("Loading test dataset done in", timer.toc(), "ms");
-//		
-//		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-//		debugPrint("test:", classifier.evaluate(testData));
-//		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
+//		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
+		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
-		if (showClassifier && classifier.getInputDimension() == 2) {
-			show(classifier, 256, 16.0, trainingData.getData());
+		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 100; maximumHyperplaneCount += 2) {
+			debugPrint("Building classifier started", new Date(timer.tic()));
+			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
+			debugPrint("Building classifier done in", timer.toc(), "ms");
+			
+			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
+			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData);
+			debugPrint("training:", confusionMatrix);
+			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
+			
+			debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
+			debugPrint("test:", classifier.evaluate(testData));
+			debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		}
 		
-		assertEquals(0, confusionMatrix.getTotalErrorCount());
+//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+//		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+//		
+//		if (previewValidationData) {
+//			SwingTools.show(preview(validationData, 8), "Validation data", false);
+//		}
+//		
+//		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+//		debugPrint("test:", classifier.evaluate(validationData));
+//		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+		
+//		if (showClassifier && classifier.getInputDimension() == 2) {
+//			show(classifier, 256, 16.0, trainingData.getData());
+//		}
+//		
+//		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
 	public static final void show(final BinaryClassifier classifier, final int imageSize, final double scale, final double[] trainingData) {

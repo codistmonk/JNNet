@@ -11,8 +11,12 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.*;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Date;
+
+import javax.imageio.ImageIO;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
@@ -41,7 +45,15 @@ public final class ProjectiveClassifierTest {
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		if (previewTrainingData) {
-			SwingTools.show(preview(trainingData, thumbnailSize), "Training data", false);
+			final BufferedImage preview = preview(trainingData, thumbnailSize);
+			
+			try {
+				ImageIO.write(preview, "png", new File("higgs_0_500000.png"));
+			} catch (final IOException exception) {
+				exception.printStackTrace();
+			}
+			
+			SwingTools.show(preview, "Training data", false);
 		}
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
