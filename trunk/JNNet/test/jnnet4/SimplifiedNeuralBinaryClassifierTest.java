@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -66,7 +67,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("jnnet/iris_versicolor.txt");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_2.train");
+		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_0.train");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
@@ -77,10 +78,18 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_2.test");
+		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_0.test");
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
 //		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
+		
+//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+//		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+//		
+//		if (previewValidationData) {
+//			SwingTools.show(preview(validationData, 8), "Validation data", false);
+//		}
 		
 		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 100; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
@@ -95,24 +104,16 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
 			debugPrint("test:", classifier.evaluate(testData));
 			debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
+			
+//			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+//			debugPrint("test:", classifier.evaluate(validationData));
+//			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+			
+			if (showClassifier && classifier.getInputDimension() == 2) {
+				show(classifier, 256, 16.0, trainingData.getData());
+			}
 		}
 		
-//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-//		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
-//		
-//		if (previewValidationData) {
-//			SwingTools.show(preview(validationData, 8), "Validation data", false);
-//		}
-//		
-//		debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-//		debugPrint("test:", classifier.evaluate(validationData));
-//		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
-		
-//		if (showClassifier && classifier.getInputDimension() == 2) {
-//			show(classifier, 256, 16.0, trainingData.getData());
-//		}
-//		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
@@ -214,7 +215,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		final int step = trainingDataset.getStep();
 		
 		generateHyperplanes(trainingDataset, new HyperplaneHandler() {
-
+			
 			@Override
 			public final boolean hyperplane(final double bias, final double[] weights) {
 				hyperplanes.add(bias);
@@ -459,13 +460,13 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	public final static void generateHyperplanes(final double[] data, final int step, final HyperplaneHandler hyperplaneHandler) {
 		final int inputDimension = step - 1;
 		final int itemCount = data.length / step;
-		final List<List<Integer>> todo = new ArrayList<List<Integer>>();
+		final List<List<Id>> todo = new ArrayList<List<Id>>();
 		final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
 		boolean continueProcessing = true;
 		final TicToc timer = new TicToc();
 		
 		timer.tic();
-		todo.add(range(0, itemCount - 1));
+		todo.add(idRange(0, itemCount - 1));
 		
 		while (!todo.isEmpty() && continueProcessing) {
 			if (LOGGING_MILLISECONDS < timer.toc()) {
@@ -473,12 +474,11 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 				timer.tic();
 			}
 			
-			final List<Integer> indices = todo.remove(0);
-			
+			final List<Id> ids = todo.remove(0);
 			final VectorStatistics[] statistics = instances(2, vectorStatisticsFactory);
 			
-			for (final int i : indices) {
-				final int sampleOffset = i * step;
+			for (final Id id : ids) {
+				final int sampleOffset = id.getId() * step;
 				final int labelOffset = sampleOffset + step - 1;
 				statistics[(int) data[labelOffset]].addValues(copyOfRange(data, sampleOffset, labelOffset));
 			}
@@ -497,27 +497,70 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 				}
 			}
 			
-			final double[] neuronLocation = scaled(add(cluster1, cluster0), 0.5);
+			final int indexCount = ids.size();
+			final double[] neuronLocation;
+			final int algo = 1;
+			
+			if (algo == 0) {
+				neuronLocation = scaled(add(cluster1, cluster0), 0.5);
+			} else {
+				for (int i = 0; i < indexCount; ++i) {
+					final int sampleOffset = ids.get(i).getId() * step;
+					ids.get(i).setSortingKey(dot(neuronWeights, copyOfRange(data, sampleOffset, sampleOffset + inputDimension)));
+				}
+				
+				Collections.sort(ids);
+				
+				
+				{
+					final double actualNegatives = statistics[0].getCount();
+					final double actualPositives = statistics[1].getCount();
+					final double[] predictedNegatives = new double[2];
+					double bestScore = 0.0;
+					int bestScoreIndex = 0;
+					
+					for (int i = 0; i < indexCount; ++i) {
+						final int sampleOffset = ids.get(i).getId() * step;
+						final int label = (int) data[sampleOffset + inputDimension];
+						++predictedNegatives[label];
+						final double trueNegatives = predictedNegatives[0];
+						final double falseNegatives = predictedNegatives[1];
+						final double negatives = trueNegatives + falseNegatives;
+						final double truePositives = actualPositives - falseNegatives;
+						final double positives = actualPositives + actualNegatives - negatives;
+						final double score = trueNegatives / negatives + truePositives / positives;
+						
+						if (bestScore < score) {
+							bestScore = score;
+							bestScoreIndex = i;
+						}
+					}
+					
+					final int i = ids.get(bestScoreIndex).getId() * step;
+					final int j = ids.get(bestScoreIndex + 1).getId() * step;
+					neuronLocation = scaled(add(copyOfRange(data, i, i + inputDimension), copyOfRange(data, j, j + inputDimension)), 0.5);
+				}
+			}
+			
 			final double neuronBias = -dot(neuronWeights, neuronLocation);
 			
 			continueProcessing = hyperplaneHandler.hyperplane(neuronBias, neuronWeights);
 			
 			{
-				final int m = indices.size();
 				int j = 0;
 				
-				for (int i = 0; i < m; ++i) {
-					final int sampleOffset = indices.get(i) * step;
+				for (int i = 0; i < indexCount; ++i) {
+					final int sampleOffset = ids.get(i).getId() * step;
 					final double d = dot(neuronWeights, copyOfRange(data, sampleOffset, sampleOffset + inputDimension)) + neuronBias;
 					
 					if (0 <= d) {
-						swap(indices, i, j++);
+						swap(ids, i, j++);
 					}
 				}
 				
-				if (0 < j && j < m) {
-					todo.add(indices.subList(0, j));
-					todo.add(indices.subList(j, m));
+				if (0 < j && j < indexCount) {
+					todo.add(ids.subList(0, j));
+					todo.add(ids.subList(j, indexCount));
 				}
 			}
 		}
@@ -528,6 +571,16 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		
 		for (int i = first; i <= last; ++i) {
 			result.add(i);
+		}
+		
+		return result;
+	}
+	
+	public static final List<Id> idRange(final int first, final int last) {
+		final List<Id> result = new ArrayList<Id>(last - first + 1);
+		
+		for (int i = first; i <= last; ++i) {
+			result.add(new Id(i));
 		}
 		
 		return result;
@@ -637,6 +690,43 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -6811555918840188741L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-21)
+	 */
+	public static final class Id implements Serializable, Comparable<Id> {
+		
+		private final int id;
+		
+		private double sortingKey;
+		
+		public Id(final int id) {
+			this.id = id;
+		}
+		
+		public final double getSortingKey() {
+			return this.sortingKey;
+		}
+		
+		public final void setSortingKey(final double sortingKey) {
+			this.sortingKey = sortingKey;
+		}
+		
+		public final int getId() {
+			return this.id;
+		}
+		
+		@Override
+		public final int compareTo(final Id that) {
+			return Double.compare(this.getSortingKey(), that.getSortingKey());
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -6816291687397666878L;
 		
 	}
 	
