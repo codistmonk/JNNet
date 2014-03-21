@@ -64,7 +64,7 @@ public final class JNNetDemo {
 		
 		final List<TrainingItem> trainingItems = new ArrayList<TrainingItem>();
 		final Random random = new Random(w + h);
-		final int trainingSetIndex = 2;
+		final int trainingSetIndex = 1;
 		
 		if (trainingSetIndex == 0) {
 			final int k = 6;
@@ -98,7 +98,8 @@ public final class JNNetDemo {
 		
 		final double scale = 5.0;
 //		final Network network = newNetwork(scale, 2, 16, 1);
-		final Network network = newNetwork(scale, 2, 48, 8, 1);
+//		final Network network = newNetwork(scale, 2, 48, 8, 1);
+		final Network network = newNetwork(scale, 2, 100, 1);
 //		final Network network = newNetwork(scale, 2, 2, 2, 1);
 //		
 //		network.getNeurons().get(0).getInputs()[0].setWeight(+10.0);
