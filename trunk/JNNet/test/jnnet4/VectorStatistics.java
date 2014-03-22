@@ -119,6 +119,17 @@ public final class VectorStatistics implements Serializable {
 		return result;
 	}
 	
+	public static final double[] add(final double[] v1, final double scale1, final double[] v2, final double scale2) {
+		final int n = v1.length;
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = v1[i] * scale1 + v2[i] * scale2;
+		}
+		
+		return result;
+	}
+	
 	public static final double dot(final double[] v1, final double[] v2) {
 		final int n = v1.length;
 		double result = 0.0;
