@@ -1,29 +1,22 @@
 package jnnet4;
 
-import static java.lang.reflect.Array.newInstance;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.awt.image.BufferedImage;
 import java.io.DataInputStream;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet4.MNISTConvert.IDX.DataType;
-import net.sourceforge.aprog.swing.SwingTools;
+
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
@@ -63,8 +56,6 @@ public final class MNISTConvert {
 				final IDX imageSet = new IDX(imagesInput);
 				
 				debugPrint(imageSet.getDataType(), Arrays.toString(imageSet.getDimensions()));
-	//			
-	//			SwingTools.show(toAwtImage(imageSet, 0), MNISTViewer.class.getSimpleName(), false);
 				
 				final short[] labelData = (short[]) labels.getData();
 				final short[][][] imagesData = (short[][][]) imageSet.getData();

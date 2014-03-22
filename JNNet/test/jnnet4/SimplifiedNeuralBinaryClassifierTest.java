@@ -80,6 +80,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
 		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_0.test");
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 500000, 500000);
 //		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
@@ -91,7 +92,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //			SwingTools.show(preview(validationData, 8), "Validation data", false);
 //		}
 		
-		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 100; maximumHyperplaneCount += 2) {
+		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 200; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
 			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
@@ -499,10 +500,13 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			
 			final int indexCount = ids.size();
 			final double[] neuronLocation;
-			final int algo = 1;
+			final int algo = 2;
 			
 			if (algo == 0) {
-				neuronLocation = scaled(add(cluster1, cluster0), 0.5);
+//				neuronLocation = scaled(add(cluster1, cluster0), 0.5);
+				neuronLocation = add(
+						cluster0, 15.0 / 16.0,
+						cluster1, 1.0 / 16.0);
 			} else {
 				for (int i = 0; i < indexCount; ++i) {
 					final int sampleOffset = ids.get(i).getId() * step;
@@ -510,7 +514,6 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 				}
 				
 				Collections.sort(ids);
-				
 				
 				{
 					final double actualNegatives = statistics[0].getCount();
@@ -528,7 +531,8 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 						final double negatives = trueNegatives + falseNegatives;
 						final double truePositives = actualPositives - falseNegatives;
 						final double positives = actualPositives + actualNegatives - negatives;
-						final double score = trueNegatives / negatives + truePositives / positives;
+						final double score = algo == 1 ? trueNegatives / negatives + truePositives / positives
+								: trueNegatives / actualNegatives + truePositives / actualPositives;
 						
 						if (bestScore < score) {
 							bestScore = score;
@@ -538,7 +542,10 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 					
 					final int i = ids.get(bestScoreIndex).getId() * step;
 					final int j = ids.get(bestScoreIndex + 1).getId() * step;
-					neuronLocation = scaled(add(copyOfRange(data, i, i + inputDimension), copyOfRange(data, j, j + inputDimension)), 0.5);
+//					neuronLocation = scaled(add(copyOfRange(data, i, i + inputDimension), copyOfRange(data, j, j + inputDimension)), 0.5);
+					neuronLocation = add(
+							copyOfRange(data, i, i + inputDimension), 15.0 / 16.0,
+							copyOfRange(data, j, j + inputDimension), 1.0 / 16.0);
 				}
 			}
 			
@@ -553,7 +560,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 					final int sampleOffset = ids.get(i).getId() * step;
 					final double d = dot(neuronWeights, copyOfRange(data, sampleOffset, sampleOffset + inputDimension)) + neuronBias;
 					
-					if (0 <= d) {
+					if (d < 0) {
 						swap(ids, i, j++);
 					}
 				}
