@@ -8,8 +8,8 @@ import java.lang.reflect.Field;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
  * @author codistmonk (creation 2013-12-21)
@@ -123,6 +123,10 @@ public final class JNNetTools {
 	
 	public static final int uint8(final double valueBetween0And1) {
 		return (int) (255.0 * valueBetween0And1);
+	}
+	
+	public static final int rgb(final double valueBetween0And1) {
+		return 0xFF000000 | (0x00010101 * uint8(valueBetween0And1));
 	}
 	
 	public static final Field getDeclaredField(final Class<?> cls, final String name) {

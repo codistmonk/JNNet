@@ -1,11 +1,14 @@
 package jnnet4;
 
+import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
 import static java.util.Collections.swap;
 import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static jnnet4.JNNetTools.RANDOM;
+import static jnnet4.JNNetTools.rgb;
+import static jnnet4.JNNetTools.uint8;
 import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
@@ -43,6 +46,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.DoubleList;
+import jnnet4.BinaryClassifier.EvaluationMonitor;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -134,13 +138,56 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_0.test");
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
+		final Collection<BufferedImage> falsePositives = new ArrayList<BufferedImage>();
+		final Collection<BufferedImage> falseNegatives = new ArrayList<BufferedImage>();
+		
 		for (int maximumHyperplaneCount = 10; maximumHyperplaneCount <= 10; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
 			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
-			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, null);
+			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, new EvaluationMonitor() {
+				
+				@Override
+				public final void truePositive(final int sampleId) {
+					ignore(sampleId);
+				}
+				
+				@Override
+				public final void trueNegative(final int sampleId) {
+					ignore(sampleId);
+				}
+				
+				@Override
+				public final void falsePositive(final int sampleId) {
+					this.getImage(sampleId, falsePositives);
+				}
+				
+				@Override
+				public final void falseNegative(final int sampleId) {
+					this.getImage(sampleId, falseNegatives);
+				}
+				
+				private final void getImage(final int sampleId, final Collection<BufferedImage> out) {
+					if (out.size() < 2) {
+						final int step = trainingData.getStep();
+						final int w = (int) sqrt(step - 1);
+						final int h = w;
+						final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+						
+						for (int y = 0, p = 0; y < h; ++y) {
+							for (int x = 0; x < w; ++x, ++p) {
+								image.setRGB(x, y, rgb(trainingData.getData()[sampleId * step + p] / 255.0));
+							}
+						}
+						
+						out.add(image);
+					}
+				}
+				
+			});
+			
 			debugPrint("training:", confusionMatrix);
 			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 			
@@ -151,6 +198,18 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			if (showClassifier && classifier.getInputDimension() == 2) {
 				show(classifier, 256, 16.0, trainingData.getData());
 			}
+		}
+		
+		{
+			for (final BufferedImage image : falseNegatives) {
+				SwingTools.show(image, "A false negative", false);
+			}
+			
+			for (final BufferedImage image : falsePositives) {
+				SwingTools.show(image, "A false positive", false);
+			}
+			
+			Tools.gc(60000L);
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());

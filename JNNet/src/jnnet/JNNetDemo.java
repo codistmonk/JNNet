@@ -6,7 +6,7 @@ import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 import static java.util.Collections.sort;
 import static jnnet.ConstantValueSource.ONE;
-import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
+import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.awt.Color;
