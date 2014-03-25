@@ -61,7 +61,79 @@ import org.junit.Test;
  */
 public final class SimplifiedNeuralBinaryClassifierTest {
 	
-//	@Test
+	/**
+	 * @author codistmonk (creation 2014-03-25)
+	 */
+	public static final class MNISTErrorMonitor implements EvaluationMonitor {
+		
+		private final Collection<BufferedImage> falseNegatives;
+		
+		private final Collection<BufferedImage> falsePositives;
+		
+		private final Dataset trainingData;
+		
+		private final int maximumImagesPerCategory;
+		
+		public MNISTErrorMonitor(final Dataset dataset, final int maximumImagesPerCategory) {
+			this.falseNegatives = new ArrayList<BufferedImage>(maximumImagesPerCategory);
+			this.falsePositives = new ArrayList<BufferedImage>(maximumImagesPerCategory);
+			this.trainingData = dataset;
+			this.maximumImagesPerCategory = maximumImagesPerCategory;
+		}
+		
+		public final Collection<BufferedImage> getFalseNegatives() {
+			return this.falseNegatives;
+		}
+		
+		public final Collection<BufferedImage> getFalsePositives() {
+			return this.falsePositives;
+		}
+		
+		@Override
+		public final void truePositive(final int sampleId) {
+			ignore(sampleId);
+		}
+		
+		@Override
+		public final void trueNegative(final int sampleId) {
+			ignore(sampleId);
+		}
+		
+		@Override
+		public final void falsePositive(final int sampleId) {
+			this.getImage(sampleId, this.falsePositives);
+		}
+		
+		@Override
+		public final void falseNegative(final int sampleId) {
+			this.getImage(sampleId, this.falseNegatives);
+		}
+		
+		private final void getImage(final int sampleId, final Collection<BufferedImage> out) {
+			if (out.size() < this.maximumImagesPerCategory) {
+				final int step = this.trainingData.getStep();
+				final int w = (int) sqrt(step - 1);
+				final int h = w;
+				final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+				
+				for (int y = 0, p = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x, ++p) {
+						image.setRGB(x, y, rgb(this.trainingData.getData()[sampleId * step + p] / 255.0));
+					}
+				}
+				
+				out.add(image);
+			}
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -3549752842564996266L;
+		
+	}
+
+	//	@Test
 	public final void test1() {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
@@ -138,8 +210,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_0.test");
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
-		final Collection<BufferedImage> falsePositives = new ArrayList<BufferedImage>();
-		final Collection<BufferedImage> falseNegatives = new ArrayList<BufferedImage>();
+		final MNISTErrorMonitor trainingMonitor = new MNISTErrorMonitor(trainingData, 2);
+		final MNISTErrorMonitor testMonitor = new MNISTErrorMonitor(testData, 2);
 		
 		for (int maximumHyperplaneCount = 10; maximumHyperplaneCount <= 10; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
@@ -147,52 +219,13 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
-			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, new EvaluationMonitor() {
-				
-				@Override
-				public final void truePositive(final int sampleId) {
-					ignore(sampleId);
-				}
-				
-				@Override
-				public final void trueNegative(final int sampleId) {
-					ignore(sampleId);
-				}
-				
-				@Override
-				public final void falsePositive(final int sampleId) {
-					this.getImage(sampleId, falsePositives);
-				}
-				
-				@Override
-				public final void falseNegative(final int sampleId) {
-					this.getImage(sampleId, falseNegatives);
-				}
-				
-				private final void getImage(final int sampleId, final Collection<BufferedImage> out) {
-					if (out.size() < 2) {
-						final int step = trainingData.getStep();
-						final int w = (int) sqrt(step - 1);
-						final int h = w;
-						final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
-						
-						for (int y = 0, p = 0; y < h; ++y) {
-							for (int x = 0; x < w; ++x, ++p) {
-								image.setRGB(x, y, rgb(trainingData.getData()[sampleId * step + p] / 255.0));
-							}
-						}
-						
-						out.add(image);
-					}
-				}
-				
-			});
+			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, trainingMonitor);
 			
 			debugPrint("training:", confusionMatrix);
 			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-			debugPrint("test:", classifier.evaluate(testData, null));
+			debugPrint("test:", classifier.evaluate(testData, testMonitor));
 			debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 			
 			if (showClassifier && classifier.getInputDimension() == 2) {
@@ -201,18 +234,24 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		{
-			for (final BufferedImage image : falseNegatives) {
-				SwingTools.show(image, "A false negative", false);
-			}
-			
-			for (final BufferedImage image : falsePositives) {
-				SwingTools.show(image, "A false positive", false);
-			}
+			show(trainingMonitor, "training");
+			show(testMonitor, "test");
 			
 			Tools.gc(60000L);
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
+	}
+	
+	public static final void show(final MNISTErrorMonitor trainingMonitor,
+			final String datasetType) {
+		for (final BufferedImage image : trainingMonitor.getFalseNegatives()) {
+			SwingTools.show(image, "A " + datasetType +" false negative", false);
+		}
+		
+		for (final BufferedImage image : trainingMonitor.getFalsePositives()) {
+			SwingTools.show(image, "A " + datasetType +" false positive", false);
+		}
 	}
 	
 	public static final void show(final BinaryClassifier classifier, final int imageSize, final double scale, final double[] trainingData) {
