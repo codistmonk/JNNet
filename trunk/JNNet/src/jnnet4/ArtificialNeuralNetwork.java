@@ -4,7 +4,7 @@ import static java.lang.Math.sqrt;
 import static jnnet4.JNNetTools.add;
 import static jnnet4.JNNetTools.getDeclaredField;
 import static jnnet4.JNNetTools.sigmoid;
-import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
+import static net.sourceforge.aprog.tools.MathTools.square;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;

@@ -1,6 +1,6 @@
 package jnnet;
 
-import static net.sourceforge.aprog.tools.MathTools.Statistics.square;
+import static net.sourceforge.aprog.tools.MathTools.square;
 
 import java.io.Serializable;
 
