@@ -18,6 +18,8 @@ import java.util.Date;
 
 import javax.imageio.ImageIO;
 
+import jnnet4.BinaryClassifier.Default;
+import jnnet4.BinaryClassifier.EvaluationMonitor;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
@@ -61,7 +63,7 @@ public final class ProjectiveClassifierTest {
 		debugPrint("Building classifier done in", timer.toc(), "ms");
 		
 		debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
-		final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData);
+		final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, null);
 		debugPrint("training:", confusionMatrix);
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
@@ -71,7 +73,7 @@ public final class ProjectiveClassifierTest {
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-		debugPrint("test:", classifier.evaluate(testData));
+		debugPrint("test:", classifier.evaluate(testData, null));
 		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
 		if (previewTestData) {
@@ -163,39 +165,8 @@ final class ProjectiveClassifier implements BinaryClassifier {
 	}
 	
 	@Override
-	public final SimpleConfusionMatrix evaluate(final Dataset trainingData) {
-		final TicToc timer = new TicToc();
-		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
-		final int step = trainingData.getStep();
-		final double[] data = trainingData.getData();
-		
-		timer.tic();
-		
-		for (int i = 0; i < data.length; i += step) {
-			if (LOGGING_MILLISECONDS <= timer.toc()) {
-				debugPrint(i, "/", data.length);
-				timer.tic();
-			}
-			
-			final double expected = data[i + step - 1];
-			final double actual = this.accept(copyOfRange(data, i, i + step - 1)) ? 1.0 : 0.0;
-			
-			if (expected != actual) {
-				if (expected == 1.0) {
-					result.getFalseNegativeCount().incrementAndGet();
-				} else {
-					result.getFalsePositiveCount().incrementAndGet();
-				}
-			} else {
-				if (expected == 1.0) {
-					result.getTruePositiveCount().incrementAndGet();
-				} else {
-					result.getTrueNegativeCount().incrementAndGet();
-				}
-			}
-		}
-		
-		return result;
+	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
+		return Default.defaultEvaluate(this, dataset, monitor);
 	}
 	
 	/**
