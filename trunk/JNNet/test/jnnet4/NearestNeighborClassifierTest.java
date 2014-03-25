@@ -43,7 +43,7 @@ public final class NearestNeighborClassifierTest {
 		debugPrint("Building classifier done in", timer.toc(), "ms");
 		
 		debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
-		final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData);
+		final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, null);
 		debugPrint("training:", confusionMatrix);
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
@@ -52,7 +52,7 @@ public final class NearestNeighborClassifierTest {
 //		debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		
 		debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-		debugPrint("test:", classifier.evaluate(testData));
+		debugPrint("test:", classifier.evaluate(testData, null));
 		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
 		if (showClassifier && classifier.getInputDimension() == 2) {
@@ -103,39 +103,8 @@ final class NearestNeighborClassifier implements BinaryClassifier {
 	}
 	
 	@Override
-	public final SimpleConfusionMatrix evaluate(final Dataset trainingData) {
-		final TicToc timer = new TicToc();
-		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
-		final int step = trainingData.getStep();
-		final double[] data = trainingData.getData();
-		
-		timer.tic();
-		
-		for (int i = 0; i < data.length; i += step) {
-			if (BinaryClassifier.LOGGING_MILLISECONDS <= timer.toc()) {
-				debugPrint(i, "/", data.length);
-				timer.tic();
-			}
-			
-			final double expected = data[i + step - 1];
-			final double actual = this.accept(copyOfRange(data, i, i + step - 1)) ? 1.0 : 0.0;
-			
-			if (expected != actual) {
-				if (expected == 1.0) {
-					result.getFalseNegativeCount().incrementAndGet();
-				} else {
-					result.getFalsePositiveCount().incrementAndGet();
-				}
-			} else {
-				if (expected == 1.0) {
-					result.getTruePositiveCount().incrementAndGet();
-				} else {
-					result.getTrueNegativeCount().incrementAndGet();
-				}
-			}
-		}
-		
-		return result;
+	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
+		return Default.defaultEvaluate(this, dataset, monitor);
 	}
 	
 	public static final double squaredDistance(final double[] v1, final double[] data, final int offset) {

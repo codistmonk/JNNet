@@ -57,8 +57,8 @@ import org.junit.Test;
  */
 public final class SimplifiedNeuralBinaryClassifierTest {
 	
-	@Test
-	public final void test() {
+//	@Test
+	public final void test1() {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
 		final boolean previewValidationData = false;
@@ -67,8 +67,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("jnnet/iris_versicolor.txt");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_0.train");
-//		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
+		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
@@ -77,20 +76,19 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			SwingTools.show(preview(trainingData, 8), "Training data", false);
 		}
 		
-		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_0.test");
-//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
-//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 500000, 500000);
-//		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
-		debugPrint("Loading test dataset done in", timer.toc(), "ms");
+		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
-//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-//		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
-//		
-//		if (previewValidationData) {
-//			SwingTools.show(preview(validationData, 8), "Validation data", false);
-//		}
+		if (previewValidationData) {
+			SwingTools.show(preview(validationData, 8), "Validation data", false);
+		}
+		
+//		debugPrint("Loading test dataset started", new Date(timer.tic()));
+////		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+////		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 500000, 500000);
+////		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
+//		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 200; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
@@ -98,17 +96,57 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
-			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData);
+			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, null);
+			debugPrint("training:", confusionMatrix);
+			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
+			
+			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+			debugPrint("test:", classifier.evaluate(validationData, null));
+			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+			
+//			debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
+//			debugPrint("test:", classifier.evaluate(testData));
+//			debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
+			
+			if (showClassifier && classifier.getInputDimension() == 2) {
+				show(classifier, 256, 16.0, trainingData.getData());
+			}
+		}
+		
+//		assertEquals(0, confusionMatrix.getTotalErrorCount());
+	}
+	
+	@Test
+	public final void test2() {
+		final boolean showClassifier = true;
+		final boolean previewTrainingData = false;
+		final TicToc timer = new TicToc();
+		
+		debugPrint("Loading training dataset started", new Date(timer.tic()));
+		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_0.train");
+		debugPrint("Loading training dataset done in", timer.toc(), "ms");
+		
+		if (previewTrainingData) {
+			SwingTools.show(preview(trainingData, 8), "Training data", false);
+		}
+		
+		debugPrint("Loading test dataset started", new Date(timer.tic()));
+		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_0.test");
+		debugPrint("Loading test dataset done in", timer.toc(), "ms");
+		
+		for (int maximumHyperplaneCount = 10; maximumHyperplaneCount <= 10; maximumHyperplaneCount += 2) {
+			debugPrint("Building classifier started", new Date(timer.tic()));
+			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
+			debugPrint("Building classifier done in", timer.toc(), "ms");
+			
+			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
+			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, null);
 			debugPrint("training:", confusionMatrix);
 			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
-			debugPrint("test:", classifier.evaluate(testData));
+			debugPrint("test:", classifier.evaluate(testData, null));
 			debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
-			
-//			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-//			debugPrint("test:", classifier.evaluate(validationData));
-//			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 			
 			if (showClassifier && classifier.getInputDimension() == 2) {
 				show(classifier, 256, 16.0, trainingData.getData());
@@ -298,39 +336,8 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	}
 	
 	@Override
-	public final SimpleConfusionMatrix evaluate(final Dataset trainingData) {
-		final TicToc timer = new TicToc();
-		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
-		final int step = trainingData.getStep();
-		final double[] data = trainingData.getData();
-		
-		timer.tic();
-		
-		for (int i = 0; i < data.length; i += step) {
-			if (LOGGING_MILLISECONDS <= timer.toc()) {
-				debugPrint(i, "/", data.length);
-				timer.tic();
-			}
-			
-			final double expected = data[i + step - 1];
-			final double actual = this.accept(copyOfRange(data, i, i + step - 1)) ? 1.0 : 0.0;
-			
-			if (expected != actual) {
-				if (expected == 1.0) {
-					result.getFalseNegativeCount().incrementAndGet();
-				} else {
-					result.getFalsePositiveCount().incrementAndGet();
-				}
-			} else {
-				if (expected == 1.0) {
-					result.getTruePositiveCount().incrementAndGet();
-				} else {
-					result.getTrueNegativeCount().incrementAndGet();
-				}
-			}
-		}
-		
-		return result;
+	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
+		return Default.defaultEvaluate(this, dataset, monitor);
 	}
 	
 	/**
@@ -500,13 +507,10 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			
 			final int indexCount = ids.size();
 			final double[] neuronLocation;
-			final int algo = 2;
+			final int algo = 0;
 			
 			if (algo == 0) {
-//				neuronLocation = scaled(add(cluster1, cluster0), 0.5);
-				neuronLocation = add(
-						cluster0, 15.0 / 16.0,
-						cluster1, 1.0 / 16.0);
+				neuronLocation = scaled(add(cluster1, cluster0), 0.5);
 			} else {
 				for (int i = 0; i < indexCount; ++i) {
 					final int sampleOffset = ids.get(i).getId() * step;
