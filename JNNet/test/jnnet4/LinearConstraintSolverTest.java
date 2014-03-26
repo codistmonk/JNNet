@@ -23,7 +23,7 @@ import org.junit.Test;
 public final class LinearConstraintSolverTest {
 	
 	@Test
-	public final void test() {
+	public final void test1() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
 		system.addConstraint(0.0, 1.0, 0.0);
 		system.addConstraint(0.0, 0.0, 1.0);
@@ -39,6 +39,36 @@ public final class LinearConstraintSolverTest {
 		assertFalse(system.accept(1.0, -0.5, -0.5));
 		
 		assertTrue(system.accept(system.solve()));
+	}
+	
+	@Test
+	public final void test2() {
+		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		system.addConstraint(0.0, 1.0, 0.0);
+		system.addConstraint(1.0, -1.0, 0.0);
+		
+		assertTrue(system.accept(1.0, 0.0, 0.0));
+		assertTrue(system.accept(1.0, 1.0, 0.0));
+		
+		assertFalse(system.accept(1.0, 1.5, 0.0));
+		assertFalse(system.accept(1.0, -0.5, 0.0));
+		
+		assertTrue(system.accept(system.solve()));
+	}
+	
+	@Test
+	public final void test3() {
+		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		system.addConstraint(0.0, -1.0, 0.0);
+		system.addConstraint(-1.0, 1.0, 0.0);
+		
+		assertFalse(system.accept(1.0, 0.0, 0.0));
+		assertFalse(system.accept(1.0, 1.0, 0.0));
+		
+		assertFalse(system.accept(1.0, 1.5, 0.0));
+		assertFalse(system.accept(1.0, -0.5, 0.0));
+		
+		assertFalse(system.accept(system.solve()));
 	}
 	
 	/**
