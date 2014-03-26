@@ -52,6 +52,7 @@ public final class LinearConstraintSystemTest {
 	@Test
 	public final void test2() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		
 		system.addConstraint(0.0, 1.0, 0.0);
 		system.addConstraint(1.0, -1.0, 0.0);
 		
@@ -67,6 +68,7 @@ public final class LinearConstraintSystemTest {
 	@Test
 	public final void test3() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		
 		system.addConstraint(0.0, -1.0, 0.0);
 		system.addConstraint(-1.0, 1.0, 0.0);
 		
@@ -81,6 +83,23 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test4() {
+		final LinearConstraintSystem system = new LinearConstraintSystem(4);
+		
+		system.addConstraint(0.0, 1.0, 0.0, 0.0);
+		system.addConstraint(0.0, 0.0, 1.0, 0.0);
+		system.addConstraint(0.0, 0.0, 0.0, 1.0);
+		system.addConstraint(-6.0, 1.0, 2.0, 3.0);
+		system.addConstraint(-5.0, 0.0, 0.0, 1.0);
+		
+		final double[] solution = system.solve();
+		
+		debugPrint(Arrays.toString(solution));
+		
+		assertTrue(system.accept(solution));
+	}
+	
+	@Test
+	public final void test5() {
 		final LinearConstraintSystem system = Tools.readObject("test/jnnet4/mnist0_system.jo");
 		
 		debugPrint(system.getData().size(), system.getOrder());
@@ -167,6 +186,12 @@ public final class LinearConstraintSystemTest {
 				if (value < 0.0) {
 					extendedPoint[extraDimension] -= value / extendedData[i + extendedOrder - 1];
 //					final double w = extendedData[i + extraDimension];
+//					
+//					for (int j = 0; j < extendedData.length; j += extendedOrder) {
+//						for (int k = j + 1; k < j + extendedOrder; ++k) {
+//							extendedData[k] *= w;
+//						}
+//					}
 //					
 //					for (int j = 0; j < extendedOrder; ++j) {
 //						extendedPoint[j] *= w;
