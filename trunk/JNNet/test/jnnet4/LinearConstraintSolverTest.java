@@ -81,7 +81,7 @@ public final class LinearConstraintSolverTest {
 	
 	@Test
 	public final void test4() {
-		final LinearConstraintSystem system = Tools.readObject("test/jnnet4/gisette_system.jo");
+		final LinearConstraintSystem system = Tools.readObject("test/jnnet4/mnist0_system.jo");
 		
 		debugPrint(system.getData().size(), system.getOrder());
 		
