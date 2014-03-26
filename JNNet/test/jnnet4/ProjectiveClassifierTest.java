@@ -2,13 +2,11 @@ package jnnet4;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static java.util.Arrays.copyOfRange;
 import static java.util.Arrays.fill;
 import static jnnet4.JNNetTools.uint8;
 import static jnnet4.ProjectiveClassifier.preview;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import static org.junit.Assert.*;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -18,8 +16,6 @@ import java.util.Date;
 
 import javax.imageio.ImageIO;
 
-import jnnet4.BinaryClassifier.Default;
-import jnnet4.BinaryClassifier.EvaluationMonitor;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
@@ -41,8 +37,7 @@ public final class ProjectiveClassifierTest {
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
-//		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
+		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
@@ -68,8 +63,7 @@ public final class ProjectiveClassifierTest {
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-//		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
 //		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
