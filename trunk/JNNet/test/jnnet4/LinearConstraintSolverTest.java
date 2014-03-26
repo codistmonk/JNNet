@@ -8,12 +8,9 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
 import java.io.Serializable;
-import java.util.Arrays;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
-import net.sourceforge.aprog.tools.MathTools;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -25,6 +22,7 @@ public final class LinearConstraintSolverTest {
 	@Test
 	public final void test1() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		
 		system.addConstraint(0.0, 1.0, 0.0);
 		system.addConstraint(0.0, 0.0, 1.0);
 		system.addConstraint(2.0, -1.0, -1.0);
@@ -39,6 +37,14 @@ public final class LinearConstraintSolverTest {
 		assertFalse(system.accept(1.0, -0.5, -0.5));
 		
 		assertTrue(system.accept(system.solve()));
+		
+		system.addConstraint(1.0, -1.0, -1.0);
+		
+		assertTrue(system.accept(system.solve()));
+		
+		system.addConstraint(-1.0, -1.0, -1.0);
+		
+		assertFalse(system.accept(system.solve()));
 	}
 	
 	@Test
@@ -132,8 +138,6 @@ public final class LinearConstraintSolverTest {
 				extendedData[j + extendedOrder - 1] = -1.0;
 			}
 			
-			debugPrint(Arrays.toString(extendedData));
-			
 			final double[] extendedPoint = new double[extendedOrder];
 			
 			extendedPoint[0] = 1.0;
@@ -146,15 +150,11 @@ public final class LinearConstraintSolverTest {
 				}
 			}
 			
-			debugPrint("extendedPoint:", Arrays.toString(extendedPoint));
-			
 			{
 				int remainingIterations = 10000;
 				
 				while (this.updateExtendedPoint(extendedPoint, extendedData) && 0 <= --remainingIterations);
 			}
-			
-			debugPrint("extendedPoint:", Arrays.toString(extendedPoint));
 			
 			return copyOf(extendedPoint, order);
 		}
