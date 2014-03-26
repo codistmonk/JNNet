@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
+import jnnet4.LinearConstraintSolverTest.LinearConstraintSystem;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -210,13 +211,75 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_0.test");
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
-		final MNISTErrorMonitor trainingMonitor = new MNISTErrorMonitor(trainingData, 2);
-		final MNISTErrorMonitor testMonitor = new MNISTErrorMonitor(testData, 2);
+		final MNISTErrorMonitor trainingMonitor = new MNISTErrorMonitor(trainingData, 0);
+		final MNISTErrorMonitor testMonitor = new MNISTErrorMonitor(testData, 0);
 		
 		for (int maximumHyperplaneCount = 10; maximumHyperplaneCount <= 10; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
-			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
+			final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
+			
+			{
+				debugPrint("Inverting classifier started", new Date(timer.tic()));
+				
+				final List<BufferedImage> examples = new ArrayList<BufferedImage>();
+				final int step = classifier.getInputDimension() + 1;
+				final int w = (int) sqrt(step - 1);
+				final int h = w;
+				final double[] hyperplanes = classifier.getHyperplanes();
+				final int n = hyperplanes.length;
+				
+				for (final BitSet code : classifier.getClusters()) {
+					debugPrint(code);
+					
+					final LinearConstraintSystem system = new LinearConstraintSystem(step);
+					
+					{
+						final double[] constraint = new double[step];
+						
+						for (int i = 1; i < step; ++i) {
+							constraint[i - 1] = 0.0;
+							constraint[i] = 1.0;
+							system.addConstraint(constraint);
+						}
+					}
+					
+					for (int i = 0, bit = 0; i < n; i += step, ++bit) {
+						final double scale = code.get(bit) ? 1.0 : -1.0;
+						final double[] constraint = new double[step];
+						constraint[0] = hyperplanes[i];
+						
+						for (int j = i + 1; j < i + step; ++j) {
+							constraint[j - i] = scale * hyperplanes[j];
+						}
+						
+						system.addConstraint(constraint);
+					}
+					
+					if (false) {
+						Tools.writeObject(system, "test/jnnet4/gisette_system.jo");
+					}
+					
+					final double[] example = system.solve();
+					
+					debugPrint(system.accept(example), Arrays.toString(example));
+					
+					final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+					
+					for (int y = 0, p = 1; y < h; ++y) {
+						for (int x = 0; x < w; ++x) {
+							image.setRGB(x, y, rgb(example[p] / example[0] / 255.0));
+						}
+					}
+					
+					examples.add(image);
+					break;
+				}
+				
+				debugPrint("Inverting classifier done in", timer.toc(), "ms");
+				
+				SwingTools.show(examples.get(0), "A cluster representative", false);
+			}
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
 			final SimpleConfusionMatrix confusionMatrix = classifier.evaluate(trainingData, trainingMonitor);
