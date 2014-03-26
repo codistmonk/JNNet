@@ -219,7 +219,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
-			{
+			if (true) {
 				debugPrint("Inverting classifier started", new Date(timer.tic()));
 				
 				final List<BufferedImage> examples = new ArrayList<BufferedImage>();
@@ -237,7 +237,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					if (true) {
 						final double[] constraint = new double[step];
 						
-						for (int i = 1; i < 100/*step*/; ++i) {
+						for (int i = 1; i < step; ++i) {
 							constraint[i - 1] = 0.0;
 							constraint[i] = 1.0;
 							system.addConstraint(constraint);
@@ -247,9 +247,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					for (int i = 0, bit = 0; i < n; i += step, ++bit) {
 						final double scale = code.get(bit) ? 1.0 : -1.0;
 						final double[] constraint = new double[step];
-						constraint[0] = hyperplanes[i];
 						
-						for (int j = i + 1; j < i + step; ++j) {
+						for (int j = i; j < i + step; ++j) {
 							constraint[j - i] = scale * hyperplanes[j];
 						}
 						
@@ -267,7 +266,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
 					
 					for (int y = 0, p = 1; y < h; ++y) {
-						for (int x = 0; x < w; ++x) {
+						for (int x = 0; x < w; ++x, ++p) {
 							image.setRGB(x, y, rgb(example[p] / example[0] / 255.0));
 						}
 					}
