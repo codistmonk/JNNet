@@ -134,7 +134,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 	}
 
-	//	@Test
+//	@Test
 	public final void test1() {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
@@ -256,8 +256,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 						system.addConstraint(constraint);
 					}
 					
-					if (true) {
-						Tools.writeObject(system, "test/jnnet4/gisette_system.jo");
+					if (false) {
+						Tools.writeObject(system, "test/jnnet4/mnist0_system.jo");
 					}
 					
 					final double[] example = system.solve();
