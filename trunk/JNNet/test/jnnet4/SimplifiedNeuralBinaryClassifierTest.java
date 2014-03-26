@@ -234,10 +234,10 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					
 					final LinearConstraintSystem system = new LinearConstraintSystem(step);
 					
-					{
+					if (true) {
 						final double[] constraint = new double[step];
 						
-						for (int i = 1; i < step; ++i) {
+						for (int i = 1; i < 100/*step*/; ++i) {
 							constraint[i - 1] = 0.0;
 							constraint[i] = 1.0;
 							system.addConstraint(constraint);
@@ -256,7 +256,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 						system.addConstraint(constraint);
 					}
 					
-					if (false) {
+					if (true) {
 						Tools.writeObject(system, "test/jnnet4/gisette_system.jo");
 					}
 					
@@ -273,6 +273,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					}
 					
 					examples.add(image);
+					
 					break;
 				}
 				
@@ -300,7 +301,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			show(trainingMonitor, "training");
 			show(testMonitor, "test");
 			
-			Tools.gc(60000L);
+			Tools.gc(10000L);
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());

@@ -83,7 +83,12 @@ public final class LinearConstraintSolverTest {
 	public final void test4() {
 		final LinearConstraintSystem system = Tools.readObject("test/jnnet4/gisette_system.jo");
 		
-		assertTrue(system.accept(system.solve()));
+		debugPrint(system.getData().size(), system.getOrder());
+		
+		final double[] solution = system.solve();
+		
+		debugPrint(Arrays.toString(solution));
+		assertTrue(system.accept(solution));
 	}
 	
 	/**
@@ -151,8 +156,6 @@ public final class LinearConstraintSolverTest {
 			
 			extendedPoint[0] = 1.0;
 			
-			debugPrint(extendedData.length, extendedOrder);
-			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 				
@@ -215,25 +218,17 @@ public final class LinearConstraintSolverTest {
 				for (int i = 0; i < extendedData.length; i += extendedOrder) {
 					final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 					
-//					if (epsilon < value) {
-//					}
 					// (point + k * direction) . h = 0
 					// value + k * direction . h = 0
 					// k = - value / (direction . h)
 					final double extendedDirectionValue = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedDirection);
-					
-//					debugPrint(extendedDirectionValue);
 					
 					if (epsilon < -extendedDirectionValue) {
 						smallestDisplacement = min(smallestDisplacement, -value / extendedDirectionValue);
 					}
 				}
 				
-				debugPrint(smallestDisplacement);
-				
 				if (!Double.isInfinite(smallestDisplacement) && epsilon < smallestDisplacement) {
-					debugPrint(smallestDisplacement, Arrays.toString(extendedDirection));
-					
 					for (int i = 1; i < extendedOrder; ++i) {
 						extendedPoint[i] += smallestDisplacement * extendedDirection[i];
 					}
