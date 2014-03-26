@@ -217,6 +217,8 @@ public final class LinearConstraintSystemTest {
 				extendedDirection[extendedOrder - 1] = smallestTipValue;
 				
 				double smallestDisplacement = Double.POSITIVE_INFINITY;
+//				double debugSmallestAcceptedValue = Double.POSITIVE_INFINITY;
+//				double debugExtendedDirectionValue = 0.0;
 				
 				for (int i = 0; i < extendedData.length; i += extendedOrder) {
 					final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
@@ -228,13 +230,21 @@ public final class LinearConstraintSystemTest {
 					
 					if (EPSILON < -extendedDirectionValue && EPSILON < value) {
 						smallestDisplacement = min(smallestDisplacement, -value / extendedDirectionValue);
+//						if (value < debugSmallestAcceptedValue) {
+//							debugSmallestAcceptedValue = value;
+//							debugExtendedDirectionValue = extendedDirectionValue;
+//						}
 //						debugPrint(value, extendedDirectionValue, i / extendedOrder, limitIds);
 //					} else {
 //						debugPrint(value, extendedDirectionValue, i / extendedOrder, limitIds);
 					}
 				}
 				
+//				debugPrint(debugSmallestAcceptedValue, debugExtendedDirectionValue, limitIds);
+				
 				if (!Double.isInfinite(smallestDisplacement) && EPSILON < smallestDisplacement) {
+//					debugPrint(smallestDisplacement);
+					
 					for (int i = 1; i < extendedOrder; ++i) {
 						extendedPoint[i] += smallestDisplacement * extendedDirection[i];
 					}
