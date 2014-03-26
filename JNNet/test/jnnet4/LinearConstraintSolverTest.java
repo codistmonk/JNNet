@@ -107,9 +107,9 @@ public final class LinearConstraintSolverTest {
 			
 //			extendedPoint[1] = 4.0;
 //			extendedPoint[2] = 1.0;
-			extendedPoint[extendedOrder - 2] = 1.0;
+			extendedPoint[0] = 1.0;
 			
-			debugPrint(Arrays.toString(extendedPoint));
+			debugPrint("extendedPoint:", Arrays.toString(extendedPoint));
 			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
@@ -129,7 +129,7 @@ public final class LinearConstraintSolverTest {
 				}
 			}
 			
-			debugPrint(Arrays.toString(extendedPoint));
+			debugPrint("extendedPoint:", Arrays.toString(extendedPoint));
 			
 			final IntList limitIds = new IntList();
 			final double[] direction = new double[extendedOrder];
@@ -158,6 +158,24 @@ public final class LinearConstraintSolverTest {
 			
 			direction[extendedOrder - 1] = smallestTipValue;
 			debugPrint(Arrays.toString(direction));
+			
+			double smallestDisplacement = Double.POSITIVE_INFINITY;
+			
+			for (int i = 0; i < extendedData.length; i += extendedOrder) {
+				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
+				
+				if (0.0 < value) {
+					smallestDisplacement = min(smallestDisplacement, value / direction[extendedOrder - 1]);
+				}
+			}
+			
+			debugPrint(smallestDisplacement);
+			
+			for (int i = 1; i < extendedOrder; ++i) {
+				extendedPoint[i] += smallestDisplacement * direction[i];
+			}
+			
+			debugPrint("extendedPoint:", Arrays.toString(extendedPoint));
 			
 			return null;
 		}
