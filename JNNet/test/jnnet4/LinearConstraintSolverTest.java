@@ -24,18 +24,18 @@ public final class LinearConstraintSolverTest {
 	@Test
 	public final void test() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
-		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
-		system.addConstraint(-1.0, -1.0, 2.0);
+		system.addConstraint(0.0, 0.0, 1.0);
+		system.addConstraint(2.0, -1.0, -1.0);
 		
-		assertTrue(system.accept(0.0, 0.0, 1.0));
+		assertTrue(system.accept(1.0, 0.0, 0.0));
+		assertTrue(system.accept(1.0, 1.0, 0.0));
 		assertTrue(system.accept(1.0, 0.0, 1.0));
-		assertTrue(system.accept(0.0, 1.0, 1.0));
-		assertTrue(system.accept(0.5, 0.5, 1.0));
+		assertTrue(system.accept(1.0, 0.5, 0.5));
 		assertTrue(system.accept(1.0, 1.0, 1.0));
 		
-		assertFalse(system.accept(1.5, 1.5, 1.0));
-		assertFalse(system.accept(-0.5, -0.5, 1.0));
+		assertFalse(system.accept(1.0, 1.5, 1.5));
+		assertFalse(system.accept(1.0, -0.5, -0.5));
 		
 		assertTrue(system.accept(system.solve()));
 	}
@@ -93,8 +93,6 @@ public final class LinearConstraintSolverTest {
 			
 			for (int i = 0, j = 0; i < data.length; i += order, j += extendedOrder) {
 				final double vectorNorm = vectorNorm(data, i, order);
-//				System.arraycopy(data, i, extendedData, j, order);
-//				extendedData[j + extendedOrder - 1] = -vectorNorm;
 				
 				for (int kI = i, kJ = j; kI < i + order; ++kI, ++kJ) {
 					extendedData[kJ] = data[kI] / vectorNorm;
@@ -107,6 +105,8 @@ public final class LinearConstraintSolverTest {
 			
 			final double[] extendedPoint = new double[extendedOrder];
 			
+//			extendedPoint[1] = 4.0;
+//			extendedPoint[2] = 1.0;
 			extendedPoint[extendedOrder - 2] = 1.0;
 			
 			debugPrint(Arrays.toString(extendedPoint));
@@ -140,7 +140,7 @@ public final class LinearConstraintSolverTest {
 				if (0.0 == value) {
 					limitIds.add(i / extendedOrder);
 					
-					for (int j = i; j < i + order; ++j) {
+					for (int j = i + 1; j < i + order; ++j) {
 						direction[j - i] += extendedData[j];
 					}
 				}
@@ -153,11 +153,11 @@ public final class LinearConstraintSolverTest {
 			}
 			
 			if (smallestTipValue <= 0.0) {
-				debugPrint("Optimum reached");
-			} else {
-				direction[extendedOrder - 1] = smallestTipValue;
-				debugPrint(Arrays.toString(direction));
+				throw new IllegalStateException();
 			}
+			
+			direction[extendedOrder - 1] = smallestTipValue;
+			debugPrint(Arrays.toString(direction));
 			
 			return null;
 		}
@@ -169,9 +169,9 @@ public final class LinearConstraintSolverTest {
 		
 		public static final double vectorNorm(final double[] data, final int offset, final int order) {
 			double sumOfSquares = 0.0;
-			final int end = offset + order - 1;
+			final int end = offset + order;
 			
-			for (int i = offset; i < end; ++i) {
+			for (int i = offset + 1; i < end; ++i) {
 				sumOfSquares += square(data[i]);
 			}
 			
