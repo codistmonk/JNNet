@@ -144,6 +144,7 @@ public final class LinearConstraintSystemTest {
 			final double[] data = this.getData().toArray();
 			final int order = this.getOrder();
 			final int extendedOrder = order + 1;
+			final int extraDimension = order;
 			final double[] extendedData = new double[data.length / order * extendedOrder];
 			
 			for (int i = 0, j = 0; i < data.length; i += order, j += extendedOrder) {
@@ -153,7 +154,7 @@ public final class LinearConstraintSystemTest {
 					extendedData[kJ] = data[kI] / vectorNorm;
 				}
 				
-				extendedData[j + extendedOrder - 1] = -1.0;
+				extendedData[j + extraDimension] = -1.0;
 			}
 			
 			final double[] extendedPoint = new double[extendedOrder];
@@ -164,9 +165,20 @@ public final class LinearConstraintSystemTest {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 				
 				if (value < 0.0) {
-					extendedPoint[extendedOrder - 1] -= value / extendedData[i + extendedOrder - 1];
+					extendedPoint[extraDimension] -= value / extendedData[i + extendedOrder - 1];
+//					final double w = extendedData[i + extraDimension];
+//					
+//					for (int j = 0; j < extendedOrder; ++j) {
+//						extendedPoint[j] *= w;
+//					}
+//					
+//					extendedPoint[extraDimension] -= value;
 				}
 			}
+			
+//			for (int i = 0; i < extendedData.length; i += extendedOrder) {
+//				debugPrint(i / extendedOrder, evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint));
+//			}
 			
 			{
 				int remainingIterations = 10000;
