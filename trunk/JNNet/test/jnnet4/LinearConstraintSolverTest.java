@@ -8,9 +8,11 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -75,6 +77,13 @@ public final class LinearConstraintSolverTest {
 		assertFalse(system.accept(1.0, -0.5, 0.0));
 		
 		assertFalse(system.accept(system.solve()));
+	}
+	
+	@Test
+	public final void test4() {
+		final LinearConstraintSystem system = Tools.readObject("test/jnnet4/gisette_system.jo");
+		
+		assertTrue(system.accept(system.solve()));
 	}
 	
 	/**
@@ -142,6 +151,8 @@ public final class LinearConstraintSolverTest {
 			
 			extendedPoint[0] = 1.0;
 			
+			debugPrint(extendedData.length, extendedOrder);
+			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 				
@@ -162,7 +173,7 @@ public final class LinearConstraintSolverTest {
 		private final boolean updateExtendedPoint(final double[] extendedPoint, final double[] extendedData) {
 			final int order = this.getOrder();
 			final int extendedOrder = extendedPoint.length;
-			final double epsilon = 1.0E-15;
+			final double epsilon = 1.0E-9;
 			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
@@ -194,6 +205,8 @@ public final class LinearConstraintSolverTest {
 				smallestTipValue = min(smallestTipValue, evaluate(extendedData, extendedOrder, i, extendedDirection));
 			}
 			
+			debugPrint(smallestTipValue);
+			
 			if (epsilon < smallestTipValue) {
 				extendedDirection[extendedOrder - 1] = smallestTipValue;
 				
@@ -202,17 +215,25 @@ public final class LinearConstraintSolverTest {
 				for (int i = 0; i < extendedData.length; i += extendedOrder) {
 					final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 					
-					if (epsilon < value) {
-						// (point + k * direction) . h = 0
-						// value + k * direction . h = 0
-						// k = - value / (direction . h)
-						final double extendedDirectionValue = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedDirection);
-						
+//					if (epsilon < value) {
+//					}
+					// (point + k * direction) . h = 0
+					// value + k * direction . h = 0
+					// k = - value / (direction . h)
+					final double extendedDirectionValue = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedDirection);
+					
+//					debugPrint(extendedDirectionValue);
+					
+					if (epsilon < -extendedDirectionValue) {
 						smallestDisplacement = min(smallestDisplacement, -value / extendedDirectionValue);
 					}
 				}
 				
-				if (!Double.isInfinite(smallestDisplacement)) {
+				debugPrint(smallestDisplacement);
+				
+				if (!Double.isInfinite(smallestDisplacement) && epsilon < smallestDisplacement) {
+					debugPrint(smallestDisplacement, Arrays.toString(extendedDirection));
+					
 					for (int i = 1; i < extendedOrder; ++i) {
 						extendedPoint[i] += smallestDisplacement * extendedDirection[i];
 					}
