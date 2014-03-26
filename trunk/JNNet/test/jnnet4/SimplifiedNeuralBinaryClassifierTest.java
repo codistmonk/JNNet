@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
-import jnnet4.LinearConstraintSolverTest.LinearConstraintSystem;
+import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;

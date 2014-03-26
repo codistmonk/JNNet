@@ -19,7 +19,7 @@ import org.junit.Test;
 /**
  * @author codistmonk (creation 2014-03-25)
  */
-public final class LinearConstraintSolverTest {
+public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test1() {
@@ -124,7 +124,11 @@ public final class LinearConstraintSolverTest {
 			final int n = data.length / this.getOrder();
 			
 			for (int i = 0; i < n; ++i) {
-				if (this.evaluate(i, point) < 0.0) {
+				final double value = this.evaluate(i, point);
+				
+				if (value + EPSILON < 0.0) {
+					debugPrint(i, value);
+					
 					return false;
 				}
 			}
@@ -168,6 +172,8 @@ public final class LinearConstraintSolverTest {
 				int remainingIterations = 10000;
 				
 				while (this.updateExtendedPoint(extendedPoint, extendedData) && 0 <= --remainingIterations);
+				
+				debugPrint("remainingIterations:", remainingIterations);
 			}
 			
 			return copyOf(extendedPoint, order);
@@ -176,12 +182,11 @@ public final class LinearConstraintSolverTest {
 		private final boolean updateExtendedPoint(final double[] extendedPoint, final double[] extendedData) {
 			final int order = this.getOrder();
 			final int extendedOrder = extendedPoint.length;
-			final double epsilon = 1.0E-9;
 			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 				
-				if (value + epsilon < 0.0) {
+				if (value + EPSILON < 0.0) {
 					debugPrint(i, i / extendedOrder, value);
 					throw new IllegalStateException();
 				}
@@ -193,7 +198,7 @@ public final class LinearConstraintSolverTest {
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 				
-				if (value + epsilon <= 2.0 * epsilon) {
+				if (value + EPSILON <= 2.0 * EPSILON) {
 					limitIds.add(i / extendedOrder);
 					
 					for (int j = i + 1; j < i + order; ++j) {
@@ -208,9 +213,7 @@ public final class LinearConstraintSolverTest {
 				smallestTipValue = min(smallestTipValue, evaluate(extendedData, extendedOrder, i, extendedDirection));
 			}
 			
-			debugPrint(smallestTipValue);
-			
-			if (epsilon < smallestTipValue) {
+			if (EPSILON < smallestTipValue) {
 				extendedDirection[extendedOrder - 1] = smallestTipValue;
 				
 				double smallestDisplacement = Double.POSITIVE_INFINITY;
@@ -223,19 +226,26 @@ public final class LinearConstraintSolverTest {
 					// k = - value / (direction . h)
 					final double extendedDirectionValue = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedDirection);
 					
-					if (epsilon < -extendedDirectionValue) {
+					if (EPSILON < -extendedDirectionValue && EPSILON < value) {
 						smallestDisplacement = min(smallestDisplacement, -value / extendedDirectionValue);
+//						debugPrint(value, extendedDirectionValue, i / extendedOrder, limitIds);
+//					} else {
+//						debugPrint(value, extendedDirectionValue, i / extendedOrder, limitIds);
 					}
 				}
 				
-				if (!Double.isInfinite(smallestDisplacement) && epsilon < smallestDisplacement) {
+				if (!Double.isInfinite(smallestDisplacement) && EPSILON < smallestDisplacement) {
 					for (int i = 1; i < extendedOrder; ++i) {
 						extendedPoint[i] += smallestDisplacement * extendedDirection[i];
 					}
 					
 					return true;
 				}
+				
+//				debugPrint(smallestDisplacement);
 			}
+			
+//			debugPrint(limitIds.size(), smallestTipValue, Arrays.toString(extendedPoint));
 			
 			return false;
 		}
@@ -244,6 +254,11 @@ public final class LinearConstraintSolverTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 7450111830241146851L;
+		
+		/**
+		 * {@value}.
+		 */
+		public static final double EPSILON = 1E-7;
 		
 		public static final double vectorNorm(final double[] data, final int offset, final int order) {
 			double sumOfSquares = 0.0;
