@@ -199,10 +199,15 @@ public final class LinearConstraintSystemTest {
 //					}
 //					
 //					extendedPoint[extraDimension] -= value;
+				} else if (-EPSILON <= evaluate(data, order, i / extendedOrder, extendedPoint)) {
+					extendedData[i + extraDimension] = 0.0;
 				}
 			}
 			
+//			debugPrint(Arrays.toString(extendedPoint));
+//			
 //			for (int i = 0; i < extendedData.length; i += extendedOrder) {
+//				debugPrint(Arrays.toString(Arrays.copyOfRange(extendedData, i, i + extendedOrder)));
 //				debugPrint(i / extendedOrder, evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint));
 //			}
 			
@@ -212,7 +217,8 @@ public final class LinearConstraintSystemTest {
 				
 				timer.tic();
 				
-				while (this.updateExtendedPoint(extendedPoint, extendedData) && 0 <= --remainingIterations) {
+				while (extendedPoint[extraDimension] <= -EPSILON &&
+						this.updateExtendedPoint(extendedPoint, extendedData) && 0 <= --remainingIterations) {
 					if (10000L <= timer.toc()) {
 						debugPrint("remainingIterations:", remainingIterations);
 						timer.tic();
@@ -220,13 +226,15 @@ public final class LinearConstraintSystemTest {
 				}
 				
 				debugPrint("remainingIterations:", remainingIterations);
-				debugPrint("extendedPoint:", Arrays.toString(extendedPoint));
+				debugPrint("extendedPoint[extraDimension]:", extendedPoint[extraDimension]);
 			}
 			
 			return copyOf(extendedPoint, order);
 		}
 
 		private final boolean updateExtendedPoint(final double[] extendedPoint, final double[] extendedData) {
+//			debugPrint(Arrays.toString(extendedPoint));
+			
 			final int order = this.getOrder();
 			final int extendedOrder = extendedPoint.length;
 			
@@ -237,8 +245,13 @@ public final class LinearConstraintSystemTest {
 			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
+				final double extendedDirectionValue = extendedData[i + extendedOrder - 1];
 				
-				if (value <= 10.0 * EPSILON) {
+//				debugPrint(i / extendedOrder, value, extendedDirectionValue);
+				
+				if (value <= 2.0 * EPSILON /*&& extendedDirectionValue < -2.0 * EPSILON*/) {
+//					debugPrint(i / extendedOrder, value, extendedDirectionValue);
+					
 					limitIds.add(i / extendedOrder);
 					
 					for (int j = i + 1; j < i + order; ++j) {
@@ -247,11 +260,15 @@ public final class LinearConstraintSystemTest {
 				}
 			}
 			
+//			debugPrint(limitIds, Arrays.toString(extendedDirection));
+			
 			double smallestTipValue = Double.POSITIVE_INFINITY;
 			
 			for (final int i : limitIds.toArray()) {
 				smallestTipValue = min(smallestTipValue, evaluate(extendedData, extendedOrder, i, extendedDirection));
 			}
+			
+//			debugPrint(smallestTipValue);
 			
 			if (EPSILON < smallestTipValue) {
 				extendedDirection[extendedOrder - 1] = smallestTipValue;

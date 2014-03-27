@@ -1,5 +1,6 @@
 package jnnet4;
 
+import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
@@ -267,18 +268,22 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					
 					for (int y = 0, p = 1; y < h; ++y) {
 						for (int x = 0; x < w; ++x, ++p) {
-							image.setRGB(x, y, rgb(example[p] / example[0] / 255.0));
+							image.setRGB(x, y, rgb(max(0.0, example[p] / example[0] / 255.0)));
 						}
 					}
 					
 					examples.add(image);
 					
-					break;
+					if (4 <= examples.size()) {
+						break;
+					}
 				}
 				
 				debugPrint("Inverting classifier done in", timer.toc(), "ms");
 				
-				SwingTools.show(examples.get(0), "A cluster representative", false);
+				for (int i = 0; i < 4; ++i) {
+					SwingTools.show(examples.get(i), "A cluster representative", false);
+				}
 			}
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
@@ -300,7 +305,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			show(trainingMonitor, "training");
 			show(testMonitor, "test");
 			
-			Tools.gc(10000L);
+			Tools.gc(60000L);
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
