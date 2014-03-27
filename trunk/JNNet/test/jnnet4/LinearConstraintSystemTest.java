@@ -12,6 +12,7 @@ import java.util.Arrays;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
@@ -206,11 +207,20 @@ public final class LinearConstraintSystemTest {
 //			}
 			
 			{
+				final TicToc timer = new TicToc();
 				int remainingIterations = 10000;
 				
-				while (this.updateExtendedPoint(extendedPoint, extendedData) && 0 <= --remainingIterations);
+				timer.tic();
+				
+				while (this.updateExtendedPoint(extendedPoint, extendedData) && 0 <= --remainingIterations) {
+					if (10000L <= timer.toc()) {
+						debugPrint("remainingIterations:", remainingIterations);
+						timer.tic();
+					}
+				}
 				
 				debugPrint("remainingIterations:", remainingIterations);
+				debugPrint("extendedPoint:", Arrays.toString(extendedPoint));
 			}
 			
 			return copyOf(extendedPoint, order);
@@ -220,14 +230,7 @@ public final class LinearConstraintSystemTest {
 			final int order = this.getOrder();
 			final int extendedOrder = extendedPoint.length;
 			
-			for (int i = 0; i < extendedData.length; i += extendedOrder) {
-				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
-				
-				if (value + EPSILON < 0.0) {
-					debugPrint(i, i / extendedOrder, value);
-					throw new IllegalStateException();
-				}
-			}
+			checkSolution(extendedData, extendedOrder, extendedPoint);
 			
 			final IntList limitIds = new IntList();
 			final double[] extendedDirection = new double[extendedOrder];
@@ -235,7 +238,7 @@ public final class LinearConstraintSystemTest {
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 				
-				if (value + EPSILON <= 2.0 * EPSILON) {
+				if (value <= 10.0 * EPSILON) {
 					limitIds.add(i / extendedOrder);
 					
 					for (int j = i + 1; j < i + order; ++j) {
@@ -265,7 +268,7 @@ public final class LinearConstraintSystemTest {
 					// k = - value / (direction . h)
 					final double extendedDirectionValue = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedDirection);
 					
-					if (EPSILON < -extendedDirectionValue && EPSILON < value) {
+					if (EPSILON < -extendedDirectionValue) {
 						smallestDisplacement = min(smallestDisplacement, -value / extendedDirectionValue);
 //						if (value < debugSmallestAcceptedValue) {
 //							debugSmallestAcceptedValue = value;
@@ -277,6 +280,8 @@ public final class LinearConstraintSystemTest {
 					}
 				}
 				
+				checkSolution(extendedData, extendedOrder, extendedPoint);
+				
 //				debugPrint(debugSmallestAcceptedValue, debugExtendedDirectionValue, limitIds);
 				
 				if (!Double.isInfinite(smallestDisplacement) && EPSILON < smallestDisplacement) {
@@ -285,6 +290,8 @@ public final class LinearConstraintSystemTest {
 					for (int i = 1; i < extendedOrder; ++i) {
 						extendedPoint[i] += smallestDisplacement * extendedDirection[i];
 					}
+					
+					checkSolution(extendedData, extendedOrder, extendedPoint);
 					
 					return true;
 				}
@@ -306,6 +313,17 @@ public final class LinearConstraintSystemTest {
 		 * {@value}.
 		 */
 		public static final double EPSILON = 1E-7;
+		
+		public static final void checkSolution(final double[] data, final int order, final double[] point) {
+			for (int i = 0; i < data.length; i += order) {
+				final double value = evaluate(data, order, i / order, point);
+				
+				if (value + EPSILON < 0.0) {
+					debugPrint(i, i / order, value);
+					throw new IllegalStateException();
+				}
+			}
+		}
 		
 		public static final double vectorNorm(final double[] data, final int offset, final int order) {
 			double sumOfSquares = 0.0;
