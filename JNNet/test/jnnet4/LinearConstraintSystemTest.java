@@ -108,6 +108,7 @@ public final class LinearConstraintSystemTest {
 		final double[] solution = system.solve();
 		
 		debugPrint(Arrays.toString(solution));
+		
 		assertTrue(system.accept(solution));
 	}
 	
@@ -147,8 +148,6 @@ public final class LinearConstraintSystemTest {
 				final double value = this.evaluate(i, point);
 				
 				if (value + EPSILON < 0.0) {
-					debugPrint(i, value);
-					
 					return false;
 				}
 			}
@@ -186,30 +185,10 @@ public final class LinearConstraintSystemTest {
 				
 				if (value < 0.0) {
 					extendedPoint[extraDimension] -= value / extendedData[i + extendedOrder - 1];
-//					final double w = extendedData[i + extraDimension];
-//					
-//					for (int j = 0; j < extendedData.length; j += extendedOrder) {
-//						for (int k = j + 1; k < j + extendedOrder; ++k) {
-//							extendedData[k] *= w;
-//						}
-//					}
-//					
-//					for (int j = 0; j < extendedOrder; ++j) {
-//						extendedPoint[j] *= w;
-//					}
-//					
-//					extendedPoint[extraDimension] -= value;
 				} else if (-EPSILON <= evaluate(data, order, i / extendedOrder, extendedPoint)) {
 					extendedData[i + extraDimension] = 0.0;
 				}
 			}
-			
-//			debugPrint(Arrays.toString(extendedPoint));
-//			
-//			for (int i = 0; i < extendedData.length; i += extendedOrder) {
-//				debugPrint(Arrays.toString(Arrays.copyOfRange(extendedData, i, i + extendedOrder)));
-//				debugPrint(i / extendedOrder, evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint));
-//			}
 			
 			{
 				final TicToc timer = new TicToc();
@@ -233,8 +212,6 @@ public final class LinearConstraintSystemTest {
 		}
 		
 		private final boolean updateExtendedPoint(final double[] extendedPoint, final double[] extendedData) {
-//			debugPrint(Arrays.toString(extendedPoint));
-			
 			final int order = this.getOrder();
 			final int extendedOrder = extendedPoint.length;
 			
@@ -245,13 +222,8 @@ public final class LinearConstraintSystemTest {
 			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
-//				final double extendedDirectionValue = extendedData[i + extendedOrder - 1];
 				
-//				debugPrint(i / extendedOrder, value, extendedDirectionValue);
-				
-				if (value <= 2.0 * EPSILON /*&& extendedDirectionValue < -2.0 * EPSILON*/) {
-//					debugPrint(i / extendedOrder, value, extendedDirectionValue);
-					
+				if (value <= 2.0 * EPSILON) {
 					limitIds.add(i / extendedOrder);
 					
 					for (int j = i + 1; j < i + order; ++j) {
@@ -260,22 +232,16 @@ public final class LinearConstraintSystemTest {
 				}
 			}
 			
-//			debugPrint(limitIds, Arrays.toString(extendedDirection));
-			
 			double smallestTipValue = 1.0;
 			
 			for (final int i : limitIds.toArray()) {
 				smallestTipValue = min(smallestTipValue, evaluate(extendedData, extendedOrder, i, extendedDirection));
 			}
 			
-//			debugPrint(smallestTipValue);
-			
 			if (EPSILON < smallestTipValue) {
 				extendedDirection[extendedOrder - 1] = smallestTipValue;
 				
 				double smallestDisplacement = -extendedPoint[extendedOrder - 1];
-//				double debugSmallestAcceptedValue = Double.POSITIVE_INFINITY;
-//				double debugExtendedDirectionValue = 0.0;
 				
 				for (int i = 0; i < extendedData.length; i += extendedOrder) {
 					final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
@@ -287,23 +253,12 @@ public final class LinearConstraintSystemTest {
 					
 					if (EPSILON < -extendedDirectionValue) {
 						smallestDisplacement = min(smallestDisplacement, -value / extendedDirectionValue);
-//						if (value < debugSmallestAcceptedValue) {
-//							debugSmallestAcceptedValue = value;
-//							debugExtendedDirectionValue = extendedDirectionValue;
-//						}
-//						debugPrint(value, extendedDirectionValue, i / extendedOrder, limitIds);
-//					} else {
-//						debugPrint(value, extendedDirectionValue, i / extendedOrder, limitIds);
 					}
 				}
 				
 				checkSolution(extendedData, extendedOrder, extendedPoint);
 				
-//				debugPrint(debugSmallestAcceptedValue, debugExtendedDirectionValue, limitIds);
-				
 				if (!Double.isInfinite(smallestDisplacement) && EPSILON < smallestDisplacement) {
-//					debugPrint(smallestDisplacement);
-					
 					for (int i = 1; i < extendedOrder; ++i) {
 						extendedPoint[i] += smallestDisplacement * extendedDirection[i];
 					}
@@ -312,11 +267,7 @@ public final class LinearConstraintSystemTest {
 					
 					return true;
 				}
-				
-				debugPrint(smallestDisplacement);
 			}
-			
-			debugPrint(limitIds.size(), smallestTipValue, Arrays.toString(extendedPoint));
 			
 			return false;
 		}
