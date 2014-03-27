@@ -202,7 +202,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_0.train");
+		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_4.train");
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		if (previewTrainingData) {
@@ -210,7 +210,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_0.test");
+		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_4.test");
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		final MNISTErrorMonitor trainingMonitor = new MNISTErrorMonitor(trainingData, 0);
@@ -266,7 +266,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					}
 					
 					if (false) {
-						Tools.writeObject(system, "test/jnnet4/mnist0_system.jo");
+						Tools.writeObject(system, "test/jnnet4/mnist4_system.jo");
 					}
 					
 					final double[] example = system.solve();
@@ -283,14 +283,14 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					
 					examples.add(image);
 					
-					if (4 <= examples.size()) {
+					if (1 <= examples.size()) {
 						break;
 					}
 				}
 				
 				debugPrint("Inverting classifier done in", timer.toc(), "ms");
 				
-				for (int i = 0; i < 4; ++i) {
+				for (int i = 0; i < examples.size(); ++i) {
 					SwingTools.show(examples.get(i), "A cluster representative", false);
 				}
 			}
