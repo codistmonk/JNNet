@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
@@ -239,9 +240,17 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 						final double[] constraint = new double[step];
 						
 						for (int i = 1; i < step; ++i) {
-							constraint[i - 1] = 0.0;
 							constraint[i] = 1.0;
 							system.addConstraint(constraint);
+							constraint[i] = 0.0;
+						}
+						
+						constraint[0] = 255.0;
+						
+						for (int i = 1; i < step; ++i) {
+							constraint[i] = -1.0;
+							system.addConstraint(constraint);
+							constraint[i] = 0.0;
 						}
 					}
 					
@@ -268,7 +277,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					
 					for (int y = 0, p = 1; y < h; ++y) {
 						for (int x = 0; x < w; ++x, ++p) {
-							image.setRGB(x, y, rgb(max(0.0, example[p] / example[0] / 255.0)));
+							image.setRGB(x, y, rgb(max(0.0, min(example[p] / example[0] / 255.0, 1.0))));
 						}
 					}
 					
