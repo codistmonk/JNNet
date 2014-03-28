@@ -240,7 +240,7 @@ public final class LinearConstraintSystemTest {
 			final IntList limitIds = new IntList();
 			final double[] extendedDirection = new double[extendedOrder];
 			
-			debugPrint(extendedPoint[extendedOrder - 1]);
+//			debugPrint(extendedPoint[extendedOrder - 1]);
 			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final int constraintId = i / extendedOrder;
@@ -256,7 +256,9 @@ public final class LinearConstraintSystemTest {
 				}
 			}
 			
-			double smallestTipValue = 1.0;
+			// XXX if smallestTipValue is too large, the displacement will be smaller and the convergence may fail
+			// XXX if smallestTipValue is too small, the convergence will be slower
+			double smallestTipValue = 0.1;
 			
 			for (final int i : limitIds.toArray()) {
 //				debugPrint(i, evaluate(extendedData, extendedOrder, i, extendedDirection) / extendedData[i * extendedOrder + extendedOrder - 1]);
@@ -264,11 +266,11 @@ public final class LinearConstraintSystemTest {
 						abs(evaluate(extendedData, extendedOrder, i, extendedDirection) / extendedData[i * extendedOrder + extendedOrder - 1]));
 			}
 			
-			debugPrint(smallestTipValue, limitIds);
-			
-			if (limitIds.size() == 2) {
-				debugPrint(Arrays.toString(extendedDirection));
-			}
+//			debugPrint(smallestTipValue, limitIds);
+//			
+//			if (limitIds.size() == 2) {
+//				debugPrint(Arrays.toString(extendedDirection));
+//			}
 			
 			if (EPSILON < smallestTipValue) {
 				extendedDirection[extendedOrder - 1] += smallestTipValue;
@@ -284,9 +286,9 @@ public final class LinearConstraintSystemTest {
 					if (EPSILON < -extendedDirectionValue) {
 						final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 						smallestDisplacement = min(smallestDisplacement, -value / extendedDirectionValue);
-						if (1567 < i / extendedOrder) {
-							debugPrint(i / extendedOrder, value, extendedDirectionValue, smallestDisplacement);
-						}
+//						if (1567 < i / extendedOrder) {
+//							debugPrint(i / extendedOrder, value, extendedDirectionValue, smallestDisplacement);
+//						}
 					}
 				}
 				
