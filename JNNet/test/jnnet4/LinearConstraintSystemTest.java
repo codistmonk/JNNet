@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.lang.Math.abs;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
@@ -195,6 +196,9 @@ public final class LinearConstraintSystemTest {
 			extendedPoint[0] = 1.0;
 //			Arrays.fill(extendedPoint, 1.0);
 			
+//			debugPrint(Arrays.toString(Arrays.copyOfRange(extendedData, 1572 * extendedOrder, 1573 * extendedOrder)));
+//			debugPrint(Arrays.toString(Arrays.copyOfRange(extendedData, 1576 * extendedOrder, 1577 * extendedOrder)));
+			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 				
@@ -207,7 +211,7 @@ public final class LinearConstraintSystemTest {
 			
 			{
 				final TicToc timer = new TicToc();
-				int remainingIterations = 1000000;
+				int remainingIterations = 1000;
 				
 				timer.tic();
 				
@@ -236,11 +240,15 @@ public final class LinearConstraintSystemTest {
 			final IntList limitIds = new IntList();
 			final double[] extendedDirection = new double[extendedOrder];
 			
+			debugPrint(extendedPoint[extendedOrder - 1]);
+			
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
-				final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
+				final int constraintId = i / extendedOrder;
+				final double value = evaluate(extendedData, extendedOrder, constraintId, extendedPoint);
 				
-				if (value <= 2.0 * EPSILON) {
-					limitIds.add(i / extendedOrder);
+				// XXX Maybe more constraints should be used as limits to prevent them from capping the displacement computation
+				if (value <= 1.0) {
+					limitIds.add(constraintId);
 					
 					for (int j = i + 1; j < i + order; ++j) {
 						extendedDirection[j - i] += extendedData[j];
@@ -248,18 +256,24 @@ public final class LinearConstraintSystemTest {
 				}
 			}
 			
-			double smallestTipValue = Double.POSITIVE_INFINITY;
+			double smallestTipValue = 1.0;
 			
 			for (final int i : limitIds.toArray()) {
 //				debugPrint(i, evaluate(extendedData, extendedOrder, i, extendedDirection) / extendedData[i * extendedOrder + extendedOrder - 1]);
 				smallestTipValue = min(smallestTipValue,
-						evaluate(extendedData, extendedOrder, i, extendedDirection) / abs(extendedData[i * extendedOrder + extendedOrder - 1]));
+						abs(evaluate(extendedData, extendedOrder, i, extendedDirection) / extendedData[i * extendedOrder + extendedOrder - 1]));
+			}
+			
+			debugPrint(smallestTipValue, limitIds);
+			
+			if (limitIds.size() == 2) {
+				debugPrint(Arrays.toString(extendedDirection));
 			}
 			
 			if (EPSILON < smallestTipValue) {
 				extendedDirection[extendedOrder - 1] += smallestTipValue;
 				
-				double smallestDisplacement = -extendedPoint[extendedOrder - 1];
+				double smallestDisplacement = -extendedPoint[extendedOrder - 1] / smallestTipValue;
 				
 				for (int i = 0; i < extendedData.length; i += extendedOrder) {
 					// (point + k * direction) . h = 0
@@ -270,10 +284,11 @@ public final class LinearConstraintSystemTest {
 					if (EPSILON < -extendedDirectionValue) {
 						final double value = evaluate(extendedData, extendedOrder, i / extendedOrder, extendedPoint);
 						smallestDisplacement = min(smallestDisplacement, -value / extendedDirectionValue);
+						if (1567 < i / extendedOrder) {
+							debugPrint(i / extendedOrder, value, extendedDirectionValue, smallestDisplacement);
+						}
 					}
 				}
-				
-//				debugPrint(smallestDisplacement);
 				
 				checkSolution(extendedData, extendedOrder, extendedPoint);
 				
@@ -286,6 +301,8 @@ public final class LinearConstraintSystemTest {
 					
 					return true;
 				}
+				
+				debugPrint(smallestDisplacement);
 			}
 			
 			return false;
