@@ -207,7 +207,7 @@ public final class LinearConstraintSystemTest {
 			
 			{
 				final TicToc timer = new TicToc();
-				int remainingIterations = 10000;
+				int remainingIterations = 1000000;
 				
 				timer.tic();
 				
