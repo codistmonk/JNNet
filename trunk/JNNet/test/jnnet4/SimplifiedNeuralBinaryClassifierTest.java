@@ -31,6 +31,7 @@ import static org.junit.Assert.*;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -46,6 +47,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.imageio.ImageIO;
 
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
@@ -196,14 +199,26 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	}
 	
 	@Test
-	public final void test2() {
+	public final void test2() throws Exception {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_4.train");
+		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_0.train");
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
+		
+		if (false) {
+			final double[] data = trainingData.getData();
+			final int n = data.length;
+			final int step = trainingData.getStep();
+			final String className = "0";
+			
+			for (int i = 0, k = 500; i < n && 0 < --k; i += step) {
+				final int label = (int) data[i + step - 1];
+				ImageIO.write(newImage(data, i, 28, 28), "png", new File((label == 0 ? "not" : "") + className + "/mnist_0_training_" + (i / step) + ".png"));
+			}
+		}
 		
 		if (previewTrainingData) {
 			SwingTools.show(preview(trainingData, 8), "Training data", false);
@@ -273,15 +288,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					
 					debugPrint(system.accept(example), Arrays.toString(example));
 					
-					final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
-					
-					for (int y = 0, p = 1; y < h; ++y) {
-						for (int x = 0; x < w; ++x, ++p) {
-							image.setRGB(x, y, rgb(max(0.0, min(example[p] / example[0] / 255.0, 1.0))));
-						}
-					}
-					
-					examples.add(image);
+					examples.add(newImage(example, 1, w, h));
 					
 					if (1 <= examples.size()) {
 						break;
@@ -318,6 +325,17 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
+	}
+	
+	public static final BufferedImage newImage(final double[] example, final int offset, final int w, final int h) {
+		final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+		
+		for (int y = 0, p = offset; y < h; ++y) {
+			for (int x = 0; x < w; ++x, ++p) {
+				image.setRGB(x, y, rgb(max(0.0, min(example[p] / example[0] / 255.0, 1.0))));
+			}
+		}
+		return image;
 	}
 	
 	public static final void show(final MNISTErrorMonitor trainingMonitor,
