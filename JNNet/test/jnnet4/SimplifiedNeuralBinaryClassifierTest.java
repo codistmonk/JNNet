@@ -1,5 +1,6 @@
 package jnnet4;
 
+import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
@@ -10,7 +11,6 @@ import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static jnnet4.JNNetTools.RANDOM;
 import static jnnet4.JNNetTools.rgb;
-import static jnnet4.JNNetTools.uint8;
 import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
@@ -21,12 +21,12 @@ import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTOR
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import static org.junit.Assert.*;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -40,7 +40,6 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -53,6 +52,7 @@ import javax.imageio.ImageIO;
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -203,20 +203,23 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
 		final TicToc timer = new TicToc();
+		final int digit = 4;
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_0.train");
+		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_" + digit + ".train");
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		if (false) {
 			final double[] data = trainingData.getData();
 			final int n = data.length;
 			final int step = trainingData.getStep();
-			final String className = "0";
+			
+			new File("mnist/" + digit).mkdirs();
+			new File("mnist/not" + digit).mkdirs();
 			
 			for (int i = 0, k = 500; i < n && 0 < --k; i += step) {
 				final int label = (int) data[i + step - 1];
-				ImageIO.write(newImage(data, i, 28, 28), "png", new File((label == 0 ? "not" : "") + className + "/mnist_0_training_" + (i / step) + ".png"));
+				ImageIO.write(newImage(data, i, 28, 28), "png", new File("mnist/" + (label == 0 ? "not" : "") + digit + "/mnist_" + digit + "_training_" + (i / step) + ".png"));
 			}
 		}
 		
@@ -225,7 +228,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_4.test");
+		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_" + digit + ".test");
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		final MNISTErrorMonitor trainingMonitor = new MNISTErrorMonitor(trainingData, 0);
@@ -239,7 +242,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			if (true) {
 				debugPrint("Inverting classifier started", new Date(timer.tic()));
 				
-				final List<BufferedImage> examples = new ArrayList<BufferedImage>();
+				final MosaicBuilder examples = new MosaicBuilder();
 				final int step = classifier.getInputDimension() + 1;
 				final int w = (int) sqrt(step - 1);
 				final int h = w;
@@ -281,24 +284,28 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					}
 					
 					if (false) {
-						Tools.writeObject(system, "test/jnnet4/mnist4_system.jo");
+						Tools.writeObject(system, "test/jnnet4/mnist" + digit + "_system.jo");
 					}
 					
 					final double[] example = system.solve();
 					
-					debugPrint(system.accept(example), Arrays.toString(example));
+					debugPrint(system.accept(example));
 					
-					examples.add(newImage(example, 1, w, h));
+					examples.getImages().add(newImage(example, 1, w, h));
 					
-					if (1 <= examples.size()) {
+					if (100 <= examples.getImages().size()) {
 						break;
 					}
 				}
 				
 				debugPrint("Inverting classifier done in", timer.toc(), "ms");
 				
-				for (int i = 0; i < examples.size(); ++i) {
-					SwingTools.show(examples.get(i), "A cluster representative", false);
+				{
+					final BufferedImage mosaic = examples.generateMosaic();
+					
+					ImageIO.write(mosaic, "png", new File("mosaic.png"));
+					
+					SwingTools.show(mosaic, "Cluster representatives", false);
 				}
 			}
 			
@@ -321,10 +328,77 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			show(trainingMonitor, "training");
 			show(testMonitor, "test");
 			
-			Tools.gc(60000L);
+			gc(10000L);
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-28)
+	 */
+	public static final class MosaicBuilder implements Serializable {
+		
+		private final List<BufferedImage> images;
+		
+		private final int preferredRowCount;
+		
+		public MosaicBuilder() {
+			this(0);
+		}
+		
+		public MosaicBuilder(final int preferredRowCount) {
+			this.images = new ArrayList<BufferedImage>();
+			this.preferredRowCount = preferredRowCount;
+		}
+		
+		public final List<BufferedImage> getImages() {
+			return this.images;
+		}
+		
+		public final int getPreferredRowCount() {
+			return this.preferredRowCount;
+		}
+		
+		public final BufferedImage generateMosaic() {
+			if (this.getImages().isEmpty()) {
+				return new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR);
+			}
+			final int rowCount = 0 < this.getPreferredRowCount() ? this.getPreferredRowCount() :
+				(int) ceil(sqrt(this.getImages().size()));
+			final int columnCount = (int) ceil((double) this.getImages().size() / rowCount);
+			
+			debugPrint(this.getImages().size(), rowCount, columnCount);
+			
+			final int imageWidth = this.getImages().get(0).getWidth();
+			final int imageHeight = this.getImages().get(0).getHeight();
+			final int mosaicWidth = columnCount * imageWidth;
+			final int mosaicHeight = columnCount * imageHeight;
+			final BufferedImage result = new BufferedImage(mosaicWidth, mosaicHeight, BufferedImage.TYPE_3BYTE_BGR);
+			
+			{
+				final Graphics2D g = result.createGraphics();
+				int i = 0;
+				
+				for (final BufferedImage image : this.getImages()) {
+					final int tileX = (i % columnCount) * imageWidth;
+					final int tileY = (i / columnCount) * imageHeight;
+					
+					g.drawImage(image, tileX, tileY, null);
+					++i;
+				}
+				
+				g.dispose();
+			}
+			
+			return result;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -3610143890164242310L;
+		
 	}
 	
 	public static final BufferedImage newImage(final double[] example, final int offset, final int w, final int h) {
