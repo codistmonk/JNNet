@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.lang.Math.abs;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
@@ -13,7 +14,6 @@ import java.util.Arrays;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
-
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -28,6 +28,7 @@ public final class LinearConstraintSystemTest {
 	public final void test1() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
 		
+//		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
 		system.addConstraint(0.0, 0.0, 1.0);
 		system.addConstraint(2.0, -1.0, -1.0);
@@ -41,21 +42,22 @@ public final class LinearConstraintSystemTest {
 		assertFalse(system.accept(1.0, 1.5, 1.5));
 		assertFalse(system.accept(1.0, -0.5, -0.5));
 		
-		assertTrue(system.accept(system.solve()));
+		assertTrue(system.accept(system.solve2()));
 		
 		system.addConstraint(1.0, -1.0, -1.0);
 		
-		assertTrue(system.accept(system.solve()));
+		assertTrue(system.accept(system.solve2()));
 		
 		system.addConstraint(-1.0, -1.0, -1.0);
 		
-		assertFalse(system.accept(system.solve()));
+		assertFalse(system.accept(system.solve2()));
 	}
 	
 	@Test
 	public final void test2() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
 		
+		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
 		system.addConstraint(1.0, -1.0, 0.0);
 		
@@ -65,13 +67,14 @@ public final class LinearConstraintSystemTest {
 		assertFalse(system.accept(1.0, 1.5, 0.0));
 		assertFalse(system.accept(1.0, -0.5, 0.0));
 		
-		assertTrue(system.accept(system.solve()));
+		assertTrue(system.accept(system.solve2()));
 	}
 	
 	@Test
 	public final void test3() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
 		
+		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, -1.0, 0.0);
 		system.addConstraint(-1.0, 1.0, 0.0);
 		
@@ -81,20 +84,21 @@ public final class LinearConstraintSystemTest {
 		assertFalse(system.accept(1.0, 1.5, 0.0));
 		assertFalse(system.accept(1.0, -0.5, 0.0));
 		
-		assertFalse(system.accept(system.solve()));
+		assertFalse(system.accept(system.solve2()));
 	}
 	
 	@Test
 	public final void test4() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(4);
 		
+		system.addConstraint(1.0, 0.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 0.0, 1.0, 0.0);
 		system.addConstraint(0.0, 0.0, 0.0, 1.0);
 		system.addConstraint(-6.0, 1.0, 2.0, 3.0);
 		system.addConstraint(-5.0, 0.0, 0.0, 1.0);
 		
-		final double[] solution = system.solve();
+		final double[] solution = system.solve2();
 		
 		debugPrint(Arrays.toString(solution));
 		
@@ -105,9 +109,17 @@ public final class LinearConstraintSystemTest {
 	public final void test5() {
 		final LinearConstraintSystem system = Tools.readObject("test/jnnet4/mnist0_system.jo");
 		
+//		{
+//			final double[] constraint = new double[system.getOrder()];
+//			
+//			constraint[0] = 1.0;
+//			
+//			system.addConstraint(constraint);
+//		}
+		
 		debugPrint(system.getData().size(), system.getOrder());
 		
-		final double[] solution = system.solve();
+		final double[] solution = system.solve2();
 		
 		debugPrint(Arrays.toString(solution));
 		
@@ -120,7 +132,7 @@ public final class LinearConstraintSystemTest {
 		
 		debugPrint(system.getData().size(), system.getOrder());
 		
-		final double[] solution = system.solve();
+		final double[] solution = system.solve2();
 		
 		debugPrint(Arrays.toString(solution));
 		
@@ -163,6 +175,8 @@ public final class LinearConstraintSystemTest {
 				final double value = this.evaluate(i, point);
 				
 				if (value + EPSILON < 0.0) {
+					debugPrint(i, value);
+					
 					return false;
 				}
 			}
@@ -170,8 +184,87 @@ public final class LinearConstraintSystemTest {
 			return true;
 		}
 		
-		public final double evaluate(final int constraintIndex, final double... point) {
-			return evaluate(this.getData().toArray(),  this.getOrder(), constraintIndex, point);
+		public final double evaluate(final int constraintId, final double... point) {
+			return evaluate(this.getData().toArray(),  this.getOrder(), constraintId, point);
+		}
+		
+		public final double[] solve2() {
+			final double[] data = this.getData().toArray();
+			final int order = this.getOrder();
+			final double[] result = copyOf(data, order);
+			
+			for (int i = order; i < data.length; i += order) {
+//				debugPrint(Arrays.toString(result));
+				double alpha = 0.0;
+				double beta = 1.0;
+				final double denominatorI = dot(result, 0, data, i, order);
+				
+				if (0.0 < denominatorI) {
+					alpha = -beta * dot(data, i, data, i, order) / denominatorI;
+				}
+				
+//				debugPrint(i / order, alpha, dot(data, i, data, i, order), denominatorI);
+				
+				for (int j = 0; j < i; j += order) {
+					double denominatorJ = dot(result, 0, data, j, order);
+					
+					if (denominatorJ < 0.0) {
+						debugPrint(i / order, j / order, denominatorJ);
+						
+						throw new IllegalStateException();
+					}
+					
+					if (0.0 != denominatorJ) {
+						final double ratio = -beta * dot(data, i, data, j, order) / denominatorJ;
+						
+						if (alpha < ratio) {
+							alpha = ratio;
+							
+//							debugPrint(i / order, j / order, alpha, dot(data, i, data, j, order), denominatorJ);
+						}
+					}
+				}
+				
+				if (0.0 <= denominatorI) {
+					alpha = alpha + 0.1;
+				} else {
+					double maxAlpha = -beta * dot(data, i, data, i, order) / denominatorI;
+					
+					if (maxAlpha <= alpha) {
+						debugPrint(i / order, alpha, maxAlpha);
+					}
+					
+					alpha = (alpha + maxAlpha) / 2.0;
+				}
+				
+				for (int j = 0; j < order; ++j) {
+					result[j] = alpha * result[j] + beta * data[i + j];
+				}
+				
+//				debugPrint(alpha);
+				
+				for (int j = 0; j < i; j += order) {
+					if (dot(result, 0, data, j, order) < 0.0) {
+//						debugPrint(j / order, dot(result, 0, data, j, order), denominatorI, alpha);
+						
+//						throw new IllegalStateException();
+					}
+				}
+			}
+			
+			debugPrint(Arrays.toString(result));
+			
+			return result;
+		}
+		
+		public static final double dot(final double[] data1, final int offset1, final double[] data2, final int offset2, final int n) {
+			double result = 0.0;
+			
+			for (int i = 0; i < n; ++i) {
+				result += data1[offset1 + i] * data2[offset2 + i];
+			}
+			
+			return result;
 		}
 		
 		public final double[] solve() {
