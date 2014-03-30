@@ -349,26 +349,32 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final File frames40 = new File(root + "/frames/x40/");
 		final File mitosis = new File(root + "/mitosis/");
 		final Map<String, VirtualImage40> images = new HashMap<String, VirtualImage40>();
+		final Map<String, PrintStream> outs = new HashMap<String, PrintStream>();
 		
-		for (final String file : frames40.list()) {
-			final String tileId = file.replaceAll("\\..+$", "");
-			final String basePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
-			
-			debugPrint(tileId, basePath);
-			
+		try {
+			for (final String file : frames40.list()) {
+				final String tileId = file.replaceAll("\\..+$", "");
+				final String imageBasePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
+				final String dataPath = new File(mitosis, tileId.substring(0, tileId.length() - 2) + ".data").toString();
+				
+				debugPrint(tileId, imageBasePath);
+				
 //			final BufferedImage image = ImageIO.read(new File(root + "/frames/x40/"+ tileId + ".png"));
 //			final VirtualImage40 image = new VirtualImage40(basePath);
-			final VirtualImage40 image = getOrCreate(images, basePath,
-					new DefaultFactory<VirtualImage40>(VirtualImage40.class, basePath));
-			
-			debugPrint(image.getWidth(), image.getHeight());
-			
-			final PrintStream out = new PrintStream(new File(mitosis, tileId + ".data"));
-			
-			try {
+				final VirtualImage40 image = getOrCreate(images, imageBasePath,
+						new DefaultFactory<VirtualImage40>(VirtualImage40.class, imageBasePath));
+				
+				debugPrint(image.getWidth(), image.getHeight());
+				
+//			final PrintStream out = new PrintStream(new File(mitosis, tileId + ".data"));
+				final PrintStream out = getOrCreate(outs, dataPath,
+						new DefaultFactory<PrintStream>(PrintStream.class, dataPath));
+				
 				convert(tileId, image, new File(mitosis, tileId + "_mitosis.csv"), out);
 				convert(tileId, image, new File(mitosis, tileId + "_not_mitosis.csv"), out);
-			} finally {
+			}
+		} finally {
+			for (final PrintStream out : outs.values()) {
 				out.close();
 			}
 		}
