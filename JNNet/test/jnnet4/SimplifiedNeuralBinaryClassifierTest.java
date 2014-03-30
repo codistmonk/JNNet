@@ -1,5 +1,6 @@
 package jnnet4;
 
+import static java.lang.Double.parseDouble;
 import static java.lang.Math.ceil;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -19,6 +20,7 @@ import static jnnet4.VectorStatistics.scaled;
 import static jnnet4.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -27,12 +29,16 @@ import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
+import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -42,9 +48,11 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -56,6 +64,7 @@ import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.Tools;
@@ -198,7 +207,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
-	@Test
+//	@Test
 	public final void test2() throws Exception {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
@@ -332,6 +341,196 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
+	}
+	
+	@Test
+	public final void test3() throws Exception {
+		final String root = "F:/icpr2014_mitos_atypia/A03";
+		final File frames40 = new File(root + "/frames/x40/");
+		final File mitosis = new File(root + "/mitosis/");
+		final Map<String, VirtualImage40> images = new HashMap<String, VirtualImage40>();
+		
+		for (final String file : frames40.list()) {
+			final String tileId = file.replaceAll("\\..+$", "");
+			final String basePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
+			
+			debugPrint(tileId, basePath);
+			
+//			final BufferedImage image = ImageIO.read(new File(root + "/frames/x40/"+ tileId + ".png"));
+//			final VirtualImage40 image = new VirtualImage40(basePath);
+			final VirtualImage40 image = getOrCreate(images, basePath,
+					new DefaultFactory<VirtualImage40>(VirtualImage40.class, basePath));
+			
+			debugPrint(image.getWidth(), image.getHeight());
+			
+			final PrintStream out = new PrintStream(new File(mitosis, tileId + ".data"));
+			
+			try {
+				convert(tileId, image, new File(mitosis, tileId + "_mitosis.csv"), out);
+				convert(tileId, image, new File(mitosis, tileId + "_not_mitosis.csv"), out);
+			} finally {
+				out.close();
+			}
+		}
+	}
+	
+	public static final void convert(final String tileId, final VirtualImage40 image, final File csv, final PrintStream out) throws FileNotFoundException {
+		final Scanner scanner = new Scanner(csv);
+		final int windowSize = 7;
+		
+		try {
+			while (scanner.hasNext()) {
+				final String[] line = scanner.nextLine().split(",");
+				final int x0 = (int) parseDouble(line[0]);
+				final int y0 = (int) parseDouble(line[1]);
+				final double score = parseDouble(line[2]);
+				final int label = score < 0.5 ? 0 : 1;
+				
+				for (int y = y0 - windowSize; y < y0 + windowSize; ++y) {
+					for (int x = x0 - windowSize; x < x0 + windowSize; ++x) {
+						final Color color = new Color(image.getRGB(tileId, x, y));
+						
+						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					}
+				}
+				
+				out.println(label);
+				
+//				line[2] = score < 0.5 ? "0" : "1";
+//				
+//				out.println(join(" ", line));
+				
+			}
+		} finally {
+			scanner.close();
+		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-30)
+	 */
+	public static final class VirtualImage40 implements Serializable {
+		
+		private final String basePath;
+		
+		private final BufferedImage[][] tiles;
+		
+		private final int width;
+		
+		private final int height;
+		
+		public VirtualImage40(final String basePath) {
+			this.basePath = basePath;
+			this.tiles = new BufferedImage[4][4];
+			
+			for (int quad0 = 0; quad0 <= 3; ++quad0) {
+				for (int quad1 = 0; quad1 <= 3; ++quad1) {
+					this.tiles[quad0][quad1] = readTile(quad0, quad1);
+				}
+			}
+			
+			this.width = this.tiles[0][0].getWidth() + this.tiles[0][1].getWidth() + this.tiles[1][0].getWidth() + this.tiles[1][1].getWidth();
+			this.height = this.tiles[0][0].getHeight() + this.tiles[0][2].getHeight() + this.tiles[2][0].getHeight() + this.tiles[2][2].getHeight();
+		}
+		
+		public final int getWidth() {
+			return this.width;
+		}
+		
+		public final int getHeight() {
+			return this.height;
+		}
+		
+		public final int getRGB(final String tileId, final int x, final int y) {
+			int quad0 = tileId.charAt(tileId.length() - 2) - 'A';
+			int quad1 = tileId.charAt(tileId.length() - 1) - 'a';
+			
+			BufferedImage tile = this.tiles[quad0][quad1];
+			int w = tile.getWidth();
+			int h = tile.getHeight();
+			
+			try {
+				if (x < 0) {
+					if (quad1 == 1 || quad1 == 3) {
+						--quad1;
+					} else {
+						++quad1;
+						
+						if (quad0 == 1 || quad0 == 3) {
+							--quad0;
+						} else {
+							throw new IllegalArgumentException();
+						}
+					}
+				} else if (w <= x) {
+					if (quad1 == 0 || quad1 == 2) {
+						++quad1;
+					} else {
+						--quad1;
+						
+						if (quad0 == 0 || quad0 == 2) {
+							++quad0;
+						} else {
+							throw new IllegalArgumentException();
+						}
+					}
+				}
+				
+				if (y < 0) {
+					if (quad1 == 2 || quad1 == 3) {
+						--quad1;
+					} else {
+						++quad1;
+						
+						if (quad0 == 2 || quad0 == 3) {
+							--quad0;
+						} else {
+							throw new IllegalArgumentException();
+						}
+					}
+				} else if (h <= y) {
+					if (quad1 == 0 || quad1 == 1) {
+						++quad1;
+					} else {
+						--quad1;
+						
+						if (quad0 == 0 || quad0 == 1) {
+							++quad0;
+						} else {
+							throw new IllegalArgumentException();
+						}
+					}
+				}
+			} catch (final IllegalArgumentException exception) {
+				ignore(exception);
+				
+				System.err.println(debug(DEBUG_STACK_OFFSET, tileId, x, y));
+				
+				return 0;
+			}
+			
+			tile = this.tiles[quad0][quad1];
+			w = tile.getWidth();
+			h = tile.getHeight();
+			
+			return tile.getRGB((w + x) % w, (h + y) % h);
+		}
+		
+		private final BufferedImage readTile(final int quad0, final int quad1) {
+			try {
+				final File file = new File(this.basePath + (char) ('A' + quad0) + "" + (char) ('a' + quad1) + ".png");
+				
+				return ImageIO.read(file);
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 5357895005657732226L;
+		
 	}
 	
 	/**
