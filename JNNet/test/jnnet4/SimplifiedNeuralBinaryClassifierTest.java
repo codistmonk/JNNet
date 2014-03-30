@@ -11,6 +11,7 @@ import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static jnnet4.JNNetTools.RANDOM;
 import static jnnet4.JNNetTools.rgb;
+import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem.unscale;
 import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
@@ -52,7 +53,6 @@ import javax.imageio.ImageIO;
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -257,7 +257,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					if (true) {
 						final double[] constraint = new double[step];
 						
-						for (int i = 1; i < step; ++i) {
+						for (int i = 0; i < step; ++i) {
 							constraint[i] = 1.0;
 							system.addConstraint(constraint);
 							constraint[i] = 0.0;
@@ -287,13 +287,13 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 						Tools.writeObject(system, "test/jnnet4/mnist" + digit + "_system.jo");
 					}
 					
-					final double[] example = system.solve();
+					final double[] example = unscale(system.solve2());
 					
 					debugPrint(system.accept(example));
 					
 					examples.getImages().add(newImage(example, 1, w, h));
 					
-					if (100 <= examples.getImages().size()) {
+					if (10 <= examples.getImages().size()) {
 						break;
 					}
 				}
