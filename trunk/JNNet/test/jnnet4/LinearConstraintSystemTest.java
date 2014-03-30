@@ -1,7 +1,6 @@
 package jnnet4;
 
 import static java.lang.Math.abs;
-import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
@@ -12,6 +11,7 @@ import static org.junit.Assert.*;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Random;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
@@ -120,7 +120,7 @@ public final class LinearConstraintSystemTest {
 		debugPrint(Arrays.toString(cross(v(0.5, 0.5, 1.0), v(0.0, k, 1.0))));
 		system.addConstraint(cross(v(0.5, 0.5, 1.0), v(0.0, k, 1.0)));
 		
-		assertTrue(system.accept(1.0, 1.0, 2.0));
+		assertTrue(system.accept(0.5, 0.5, 2.0));
 		
 		final double[] solution = system.solve2();
 		
@@ -244,7 +244,7 @@ public final class LinearConstraintSystemTest {
 		}
 		
 		public final double[] solve2() {
-			final int algo = 1;
+			final int algo = 0;
 			final double[] data = this.getData().toArray();
 			final int order = this.getOrder();
 			final double[] result = copyOf(data, order);
@@ -444,22 +444,23 @@ public final class LinearConstraintSystemTest {
 			final IntList limitIds = new IntList();
 			final double[] extendedDirection = new double[extendedOrder];
 			
+			// XXX The main problem is computing the direction; it seems to be equivalent to solving the same problem with a reduced set of constraints
 			for (int i = 0; i < extendedData.length; i += extendedOrder) {
 				final int constraintId = i / extendedOrder;
 				final double value = evaluate(extendedData, extendedOrder, constraintId, extendedPoint);
 				
 				// XXX Maybe more constraints should be used as limits to prevent them from capping the displacement computation
-				if (value <= 1.0) {
+				if (value <= 0.5) {
 					limitIds.add(constraintId);
 					
 					for (int j = i + 1; j < i + order; ++j) {
-						extendedDirection[j - i] += extendedData[j];
+						extendedDirection[j - i] += extendedData[j] * 0.5;
 					}
 				}
 			}
 			
-			// XXX if smallestTipValue is too large, the displacement will be smaller and the convergence may fail
-			// XXX if smallestTipValue is too small, the convergence will be slower
+			// XXX If smallestTipValue is too large, the displacement will be smaller and the convergence may fail
+			// XXX If smallestTipValue is too small, the convergence will be slower
 			double smallestTipValue = 0.1;
 			
 			for (final int i : limitIds.toArray()) {

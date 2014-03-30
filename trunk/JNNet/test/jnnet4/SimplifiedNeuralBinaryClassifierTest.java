@@ -203,7 +203,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
 		final TicToc timer = new TicToc();
-		final int digit = 4;
+		final int digit = 9;
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_" + digit + ".train");
@@ -293,7 +293,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					
 					examples.getImages().add(newImage(example, 1, w, h));
 					
-					if (10 <= examples.getImages().size()) {
+					if (100 <= examples.getImages().size()) {
 						break;
 					}
 				}
@@ -303,7 +303,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				{
 					final BufferedImage mosaic = examples.generateMosaic();
 					
-					ImageIO.write(mosaic, "png", new File("mosaic.png"));
+					ImageIO.write(mosaic, "png", new File("mnsit_" + digit + "_mosaic.png"));
 					
 					SwingTools.show(mosaic, "Cluster representatives", false);
 				}
