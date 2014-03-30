@@ -109,17 +109,18 @@ public final class LinearConstraintSystemTest {
 	@Test
 	public final void test5() {
 		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		final double k = 1.0 / 1000.0;
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
-		// (1/4,0,1)x(1/2,1/2,1)
-		debugPrint(Arrays.toString(cross(v(0.25, 0.0, 1.0), v(0.5, 0.5, 1.0))));
-		system.addConstraint(cross(v(0.25, 0.0, 1.0), v(0.5, 0.5, 1.0)));
-		// (1/2,1/2,1)x(0,1/4,1)
-		debugPrint(Arrays.toString(cross(v(0.5, 0.5, 1.0), v(0.0, 0.25, 1.0))));
-		system.addConstraint(cross(v(0.5, 0.5, 1.0), v(0.0, 0.25, 1.0)));
+		// (k,0,1)x(1/2,1/2,1)
+		debugPrint(Arrays.toString(cross(v(k, 0.0, 1.0), v(0.5, 0.5, 1.0))));
+		system.addConstraint(cross(v(k, 0.0, 1.0), v(0.5, 0.5, 1.0)));
+		// (1/2,1/2,1)x(0,k,1)
+		debugPrint(Arrays.toString(cross(v(0.5, 0.5, 1.0), v(0.0, k, 1.0))));
+		system.addConstraint(cross(v(0.5, 0.5, 1.0), v(0.0, k, 1.0)));
 		
-		assertTrue(system.accept(0.125, 0.125, 1.0));
+		assertTrue(system.accept(1.0, 1.0, 2.0));
 		
 		final double[] solution = system.solve2();
 		
@@ -243,7 +244,7 @@ public final class LinearConstraintSystemTest {
 		}
 		
 		public final double[] solve2() {
-			final int algo = 0;
+			final int algo = 1;
 			final double[] data = this.getData().toArray();
 			final int order = this.getOrder();
 			final double[] result = copyOf(data, order);
@@ -252,7 +253,7 @@ public final class LinearConstraintSystemTest {
 				return this.solve();
 			} else if (algo == 1) {
 				final TicToc timer = new TicToc();
-				int remainingIterations = 10000000;
+				int remainingIterations = 1000000;
 				boolean done;
 				
 				timer.tic();
@@ -284,6 +285,8 @@ public final class LinearConstraintSystemTest {
 					
 //					debugPrint(remainingIterations, done, Arrays.toString(result));
 				} while (!done && 0 < --remainingIterations);
+				
+				debugPrint(remainingIterations);
 				
 				return unscale(result);
 			}
