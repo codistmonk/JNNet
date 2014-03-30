@@ -355,20 +355,17 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			for (final String file : frames40.list()) {
 				final String tileId = file.replaceAll("\\..+$", "");
 				final String imageBasePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
-				final String dataPath = new File(mitosis, tileId.substring(0, tileId.length() - 2) + ".data").toString();
+				final String dataPath = new File(mitosis, tileId.substring(0, tileId.length() - 2)).toString();
 				
 				debugPrint(tileId, imageBasePath);
 				
-//			final BufferedImage image = ImageIO.read(new File(root + "/frames/x40/"+ tileId + ".png"));
-//			final VirtualImage40 image = new VirtualImage40(basePath);
 				final VirtualImage40 image = getOrCreate(images, imageBasePath,
 						new DefaultFactory<VirtualImage40>(VirtualImage40.class, imageBasePath));
 				
 				debugPrint(image.getWidth(), image.getHeight());
 				
-//			final PrintStream out = new PrintStream(new File(mitosis, tileId + ".data"));
 				final PrintStream out = getOrCreate(outs, dataPath,
-						new DefaultFactory<PrintStream>(PrintStream.class, dataPath));
+						new DefaultFactory<PrintStream>(PrintStream.class, dataPath + ".data"));
 				
 				convert(tileId, image, new File(mitosis, tileId + "_mitosis.csv"), out);
 				convert(tileId, image, new File(mitosis, tileId + "_not_mitosis.csv"), out);
@@ -377,12 +374,17 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			for (final PrintStream out : outs.values()) {
 				out.close();
 			}
+			
+			ImageIO.write(mitosisMosaicBuilder[0].generateMosaic(), "png", new File(mitosis, "not_mitosis_mosaic.png"));
+			ImageIO.write(mitosisMosaicBuilder[1].generateMosaic(), "png", new File(mitosis, "mitosis_mosaic.png"));
 		}
 	}
 	
+	private static final MosaicBuilder[] mitosisMosaicBuilder = instances(2, DefaultFactory.forClass(MosaicBuilder.class));
+	
 	public static final void convert(final String tileId, final VirtualImage40 image, final File csv, final PrintStream out) throws FileNotFoundException {
 		final Scanner scanner = new Scanner(csv);
-		final int windowSize = 7;
+		final int windowHalfSize = 32;
 		
 		try {
 			while (scanner.hasNext()) {
@@ -391,21 +393,22 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				final int y0 = (int) parseDouble(line[1]);
 				final double score = parseDouble(line[2]);
 				final int label = score < 0.5 ? 0 : 1;
+				final BufferedImage element = new BufferedImage(2 * windowHalfSize, 2 * windowHalfSize, BufferedImage.TYPE_3BYTE_BGR);
 				
-				for (int y = y0 - windowSize; y < y0 + windowSize; ++y) {
-					for (int x = x0 - windowSize; x < x0 + windowSize; ++x) {
-						final Color color = new Color(image.getRGB(tileId, x, y));
+				for (int y = y0 - windowHalfSize; y < y0 + windowHalfSize; ++y) {
+					for (int x = x0 - windowHalfSize; x < x0 + windowHalfSize; ++x) {
+						final int rgb = image.getRGB(tileId, x, y);
+						final Color color = new Color(rgb);
 						
 						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+						
+						element.setRGB(x - (x0 - windowHalfSize), y - (y0 - windowHalfSize), rgb);
 					}
 				}
 				
 				out.println(label);
 				
-//				line[2] = score < 0.5 ? "0" : "1";
-//				
-//				out.println(join(" ", line));
-				
+				mitosisMosaicBuilder[label].getImages().add(element);
 			}
 		} finally {
 			scanner.close();
