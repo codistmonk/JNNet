@@ -44,7 +44,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test1() {
-		final AbstractLinearConstraintSystem system = new LinearConstraintSystem(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140325(3);
 		
 //		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
@@ -100,14 +100,14 @@ public final class LinearConstraintSystemTest {
 		final SimplexSolver solver = new SimplexSolver();
 		final PointValuePair solution = solver.optimize(f, constraints, GoalType.MAXIMIZE, true);
 		
-		LinearConstraintSystem.unscale(solution.getPoint());
+		LinearConstraintSystem20140325.unscale(solution.getPoint());
 		
 		debugPrint(Arrays.toString(solution.getPoint()), solution.getValue());
 	}
 	
 	@Test
 	public final void test2() {
-		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		final LinearConstraintSystem20140325 system = new LinearConstraintSystem20140325(3);
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
@@ -124,7 +124,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test3() {
-		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		final LinearConstraintSystem20140325 system = new LinearConstraintSystem20140325(3);
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, -1.0, 0.0);
@@ -141,7 +141,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test4() {
-		final LinearConstraintSystem system = new LinearConstraintSystem(4);
+		final LinearConstraintSystem20140325 system = new LinearConstraintSystem20140325(4);
 		
 		system.addConstraint(1.0, 0.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0, 0.0);
@@ -159,7 +159,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test5() {
-		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		final LinearConstraintSystem20140325 system = new LinearConstraintSystem20140325(3);
 		final double k = 1.0 / 1000.0;
 		
 		system.addConstraint(1.0, 0.0, 0.0);
@@ -182,7 +182,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test6() {
-		final LinearConstraintSystem system = AbstractLinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin", LinearConstraintSystem.class, true);
+		final LinearConstraintSystem20140325 system = LinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin", LinearConstraintSystem20140325.class, true);
 		
 //		{
 //			final double[] constraint = new double[system.getOrder()];
@@ -203,7 +203,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test7() {
-		final LinearConstraintSystem system = AbstractLinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin", LinearConstraintSystem.class, true);
+		final LinearConstraintSystem20140325 system = LinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin", LinearConstraintSystem20140325.class, true);
 		
 		debugPrint(system.getData().size(), system.getOrder());
 		
@@ -248,11 +248,11 @@ public final class LinearConstraintSystemTest {
 	/**
 	 * @author codistmonk (creation 2014-04-05)
 	 */
-	public static abstract class AbstractLinearConstraintSystem implements Serializable {
+	public static abstract interface LinearConstraintSystem extends Serializable {
 		
 		public abstract int getOrder();
 		
-		public abstract AbstractLinearConstraintSystem addConstraint(double... constraint);
+		public abstract LinearConstraintSystem addConstraint(double... constraint);
 		
 		public abstract int getConstraintCount();
 		
@@ -263,11 +263,6 @@ public final class LinearConstraintSystemTest {
 		public abstract double[] solve();
 		
 		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = 1169231483186984321L;
-		
-		/**
 		 * @author codistmonk (creation 2014-04-05)
 		 */
 		public static final class IO {
@@ -276,11 +271,11 @@ public final class LinearConstraintSystemTest {
 				throw new IllegalInstantiationException();
 			}
 			
-			public static final <T extends AbstractLinearConstraintSystem> T read(final String inputId, final Class<T> resultClass, final boolean closeInput) {
+			public static final <T extends LinearConstraintSystem> T read(final String inputId, final Class<T> resultClass, final boolean closeInput) {
 				return read(new DataInputStream(getResourceAsStream(inputId)), resultClass, closeInput);
 			}
 			
-			public static final <T extends AbstractLinearConstraintSystem> T read(final DataInputStream input, final Class<T> resultClass, final boolean closeInput) {
+			public static final <T extends LinearConstraintSystem> T read(final DataInputStream input, final Class<T> resultClass, final boolean closeInput) {
 				try {
 					final int order = input.readInt();
 					int constraintCount = input.readInt();
@@ -309,7 +304,7 @@ public final class LinearConstraintSystemTest {
 				}
 			}
 			
-			public static final void write(final AbstractLinearConstraintSystem system, final String outputId, final boolean closeOutput) {
+			public static final void write(final LinearConstraintSystem system, final String outputId, final boolean closeOutput) {
 				try {
 					write(system, new DataOutputStream(new FileOutputStream(outputId)), closeOutput);
 				} catch (final FileNotFoundException exception) {
@@ -317,7 +312,7 @@ public final class LinearConstraintSystemTest {
 				}
 			}
 			
-			public static final void write(final AbstractLinearConstraintSystem system, final DataOutputStream output, final boolean closeOutput) {
+			public static final void write(final LinearConstraintSystem system, final DataOutputStream output, final boolean closeOutput) {
 				try {
 					final int order = system.getOrder();
 					final int constraintCount = system.getConstraintCount();
@@ -350,17 +345,18 @@ public final class LinearConstraintSystemTest {
 	/**
 	 * @author codistmonk (creation 2014-03-25)
 	 */
-	public static final class LinearConstraintSystem extends AbstractLinearConstraintSystem {
+	public static final class LinearConstraintSystem20140325 implements LinearConstraintSystem {
 		
 		private final DoubleList data;
 		
 		private final int order;
 		
-		public LinearConstraintSystem(final int order) {
+		public LinearConstraintSystem20140325(final int order) {
 			this.order = order;
 			this.data = new DoubleList();
 		}
 		
+		@Override
 		public final int getOrder() {
 			return this.order;
 		}
@@ -370,7 +366,7 @@ public final class LinearConstraintSystemTest {
 		}
 		
 		@Override
-		public final LinearConstraintSystem addConstraint(final double... constraint) {
+		public final LinearConstraintSystem20140325 addConstraint(final double... constraint) {
 			this.getData().addAll(constraint);
 			
 			return this;

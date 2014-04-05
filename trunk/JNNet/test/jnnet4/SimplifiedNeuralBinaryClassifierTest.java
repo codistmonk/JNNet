@@ -12,7 +12,7 @@ import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static jnnet4.JNNetTools.RANDOM;
 import static jnnet4.JNNetTools.rgb;
-import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem.unscale;
+import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325.unscale;
 import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
@@ -60,8 +60,8 @@ import javax.imageio.ImageIO;
 
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
-import jnnet4.LinearConstraintSystemTest.AbstractLinearConstraintSystem;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
+import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -262,7 +262,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				for (final BitSet code : classifier.getClusters()) {
 					debugPrint(code);
 					
-					final AbstractLinearConstraintSystem system = new LinearConstraintSystem(step);
+					final LinearConstraintSystem system = new LinearConstraintSystem20140325(step);
 					
 					if (true) {
 						final double[] constraint = new double[step];
