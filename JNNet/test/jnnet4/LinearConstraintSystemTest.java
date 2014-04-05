@@ -13,7 +13,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
@@ -23,7 +22,6 @@ import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 import org.ojalgo.TestUtils;
-import org.ojalgo.optimisation.linear.LinearSolver;
 import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.GoalType;
 import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.LinearConstraint;
 import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.LinearObjectiveFunction;
@@ -38,7 +36,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test1() {
-		final LinearConstraintSystem system = new LinearConstraintSystem(3);
+		final AbstractLinearConstraintSystem system = new LinearConstraintSystem(3);
 		
 //		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
@@ -54,15 +52,15 @@ public final class LinearConstraintSystemTest {
 		assertFalse(system.accept(1.0, 1.5, 1.5));
 		assertFalse(system.accept(1.0, -0.5, -0.5));
 		
-		assertTrue(system.accept(system.solve2()));
+		assertTrue(system.accept(system.solve()));
 		
 		system.addConstraint(1.0, -1.0, -1.0);
 		
-		assertTrue(system.accept(system.solve2()));
+		assertTrue(system.accept(system.solve()));
 		
 		system.addConstraint(-1.0, -1.0, -1.0);
 		
-		assertFalse(system.accept(system.solve2()));
+		assertFalse(system.accept(system.solve()));
 	}
 	
 	@Test
@@ -113,7 +111,7 @@ public final class LinearConstraintSystemTest {
 		assertFalse(system.accept(1.0, 1.5, 0.0));
 		assertFalse(system.accept(1.0, -0.5, 0.0));
 		
-		assertTrue(system.accept(system.solve2()));
+		assertTrue(system.accept(system.solve0()));
 	}
 	
 	@Test
@@ -130,7 +128,7 @@ public final class LinearConstraintSystemTest {
 		assertFalse(system.accept(1.0, 1.5, 0.0));
 		assertFalse(system.accept(1.0, -0.5, 0.0));
 		
-		assertFalse(system.accept(system.solve2()));
+		assertFalse(system.accept(system.solve0()));
 	}
 	
 	@Test
@@ -144,7 +142,7 @@ public final class LinearConstraintSystemTest {
 		system.addConstraint(-6.0, 1.0, 2.0, 3.0);
 		system.addConstraint(-5.0, 0.0, 0.0, 1.0);
 		
-		final double[] solution = system.solve2();
+		final double[] solution = system.solve0();
 		
 		debugPrint(Arrays.toString(solution));
 		
@@ -167,7 +165,7 @@ public final class LinearConstraintSystemTest {
 		
 		assertTrue(system.accept(0.5, 0.5, 2.0));
 		
-		final double[] solution = system.solve2();
+		final double[] solution = system.solve0();
 		
 		debugPrint(Arrays.toString(solution));
 		
@@ -188,7 +186,7 @@ public final class LinearConstraintSystemTest {
 		
 		debugPrint(system.getData().size(), system.getOrder());
 		
-		final double[] solution = system.solve2();
+		final double[] solution = system.solve();
 		
 		debugPrint(Arrays.toString(solution));
 		
@@ -201,7 +199,7 @@ public final class LinearConstraintSystemTest {
 		
 		debugPrint(system.getData().size(), system.getOrder());
 		
-		final double[] solution = system.solve2();
+		final double[] solution = system.solve();
 		
 		debugPrint(Arrays.toString(solution));
 		
@@ -240,33 +238,55 @@ public final class LinearConstraintSystemTest {
 	}
 	
 	/**
+	 * @author codistmonk (creation 2014-04-05)
+	 */
+	public static abstract class AbstractLinearConstraintSystem implements Serializable {
+		
+		public abstract int getOrder();
+		
+		public abstract AbstractLinearConstraintSystem addConstraint(double... constraint);
+		
+		public abstract boolean accept(double... point);
+		
+		public abstract double[] solve();
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 1169231483186984321L;
+		
+	}
+	
+	/**
 	 * @author codistmonk (creation 2014-03-25)
 	 */
-	public static final class LinearConstraintSystem implements Serializable {
+	public static final class LinearConstraintSystem extends AbstractLinearConstraintSystem {
 		
 		private final DoubleList data;
 		
 		private final int order;
 		
 		public LinearConstraintSystem(final int order) {
-			this.data = new DoubleList();
 			this.order = order;
-		}
-		
-		public final DoubleList getData() {
-			return this.data;
+			this.data = new DoubleList();
 		}
 		
 		public final int getOrder() {
 			return this.order;
 		}
 		
+		public final DoubleList getData() {
+			return this.data;
+		}
+		
+		@Override
 		public final LinearConstraintSystem addConstraint(final double... constraint) {
 			this.getData().addAll(constraint);
 			
 			return this;
 		}
 		
+		@Override
 		public final boolean accept(final double... point) {
 			final double[] data = this.getData().toArray();
 			final int n = data.length / this.getOrder();
@@ -288,17 +308,21 @@ public final class LinearConstraintSystemTest {
 			return evaluate(this.getData().toArray(),  this.getOrder(), constraintId, point);
 		}
 		
-		public final double[] solve2() {
+		@Override
+		public final double[] solve() {
 			final int algo = 0;
+			
+			if (algo == 0) {
+				return this.solve0();
+			}
+			
 			final double[] data = this.getData().toArray();
 			final int order = this.getOrder();
 			final double[] result = copyOf(data, order);
 			final TicToc timer = new TicToc();
 			int remainingIterations = 10;
 			
-			if (algo == 0) {
-				return this.solve();
-			} else if (algo == 1) {
+			if (algo == 1) {
 				boolean done;
 				
 				timer.tic();
@@ -447,7 +471,7 @@ public final class LinearConstraintSystemTest {
 			throw new IllegalStateException();
 		}
 		
-		public final double[] solve() {
+		public final double[] solve0() {
 			final double[] data = this.getData().toArray();
 			final int order = this.getOrder();
 			final int extendedOrder = order + 1;

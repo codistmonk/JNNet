@@ -60,6 +60,7 @@ import javax.imageio.ImageIO;
 
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
+import jnnet4.LinearConstraintSystemTest.AbstractLinearConstraintSystem;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
@@ -261,7 +262,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				for (final BitSet code : classifier.getClusters()) {
 					debugPrint(code);
 					
-					final LinearConstraintSystem system = new LinearConstraintSystem(step);
+					final AbstractLinearConstraintSystem system = new LinearConstraintSystem(step);
 					
 					if (true) {
 						final double[] constraint = new double[step];
@@ -296,7 +297,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 						Tools.writeObject(system, "test/jnnet4/mnist" + digit + "_system.jo");
 					}
 					
-					final double[] example = unscale(system.solve2());
+					final double[] example = unscale(system.solve());
 					
 					debugPrint(system.accept(example));
 					
