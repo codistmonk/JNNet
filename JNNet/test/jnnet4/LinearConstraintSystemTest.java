@@ -10,7 +10,10 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
@@ -19,6 +22,14 @@ import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
+import org.ojalgo.TestUtils;
+import org.ojalgo.optimisation.linear.LinearSolver;
+import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.GoalType;
+import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.LinearConstraint;
+import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.LinearObjectiveFunction;
+import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.PointValuePair;
+import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.Relationship;
+import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.SimplexSolver;
 
 /**
  * @author codistmonk (creation 2014-03-25)
@@ -52,6 +63,40 @@ public final class LinearConstraintSystemTest {
 		system.addConstraint(-1.0, -1.0, -1.0);
 		
 		assertFalse(system.accept(system.solve2()));
+	}
+	
+	@Test
+	public final void test1b() {
+        final LinearObjectiveFunction f = new LinearObjectiveFunction(new double[] { 2, 2, 1 }, 0);
+        final Collection<LinearConstraint> constraints = new ArrayList<LinearConstraint>();
+        constraints.add(new LinearConstraint(new double[] { 1, 1, 0 }, Relationship.GEQ, 1));
+        constraints.add(new LinearConstraint(new double[] { 1, 0, 1 }, Relationship.GEQ, 1));
+        constraints.add(new LinearConstraint(new double[] { 0, 1, 0 }, Relationship.GEQ, 1));
+
+        final SimplexSolver solver = new SimplexSolver();
+        final PointValuePair solution = solver.optimize(f, constraints, GoalType.MINIMIZE, true);
+
+        TestUtils.assertEquals(0.0, solution.getPoint()[0], .0000001);
+        TestUtils.assertEquals(1.0, solution.getPoint()[1], .0000001);
+        TestUtils.assertEquals(1.0, solution.getPoint()[2], .0000001);
+        TestUtils.assertEquals(3.0, solution.getValue(), .0000001);
+	}
+	
+	@Test
+	public final void test1c() {
+		final LinearObjectiveFunction f = new LinearObjectiveFunction(new double[] { 0, 0, 0, 1 }, 0);
+		final Collection<LinearConstraint> constraints = new ArrayList<LinearConstraint>();
+		constraints.add(new LinearConstraint(new double[] { 0, 1, 0, -1 }, Relationship.GEQ, 1));
+		constraints.add(new LinearConstraint(new double[] { 0, 0, 1, -1 }, Relationship.GEQ, 1));
+		constraints.add(new LinearConstraint(new double[] { 2, -1, -1, -1 }, Relationship.GEQ, 1));
+		constraints.add(new LinearConstraint(new double[] { 1, -1, -1, -1 }, Relationship.GEQ, 1));
+		
+		final SimplexSolver solver = new SimplexSolver();
+		final PointValuePair solution = solver.optimize(f, constraints, GoalType.MAXIMIZE, true);
+		
+		LinearConstraintSystem.unscale(solution.getPoint());
+		
+		debugPrint(Arrays.toString(solution.getPoint()), solution.getValue());
 	}
 	
 	@Test

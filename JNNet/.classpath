@@ -9,6 +9,7 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/Libraries/aparapi/Aparapi_2013_01_23_windows_x86_64.zip!/api"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/ojalgo-33.0.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
