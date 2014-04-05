@@ -7,16 +7,24 @@ import static java.util.Arrays.copyOf;
 import static java.util.Arrays.fill;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.*;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
-
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -174,7 +182,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test6() {
-		final LinearConstraintSystem system = Tools.readObject("test/jnnet4/mnist0_system.jo");
+		final LinearConstraintSystem system = AbstractLinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin", LinearConstraintSystem.class, true);
 		
 //		{
 //			final double[] constraint = new double[system.getOrder()];
@@ -195,7 +203,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test7() {
-		final LinearConstraintSystem system = Tools.readObject("test/jnnet4/mnist4_system.jo");
+		final LinearConstraintSystem system = AbstractLinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin", LinearConstraintSystem.class, true);
 		
 		debugPrint(system.getData().size(), system.getOrder());
 		
@@ -246,6 +254,10 @@ public final class LinearConstraintSystemTest {
 		
 		public abstract AbstractLinearConstraintSystem addConstraint(double... constraint);
 		
+		public abstract int getConstraintCount();
+		
+		public abstract double[] getConstraint(int constraintId);
+		
 		public abstract boolean accept(double... point);
 		
 		public abstract double[] solve();
@@ -254,6 +266,84 @@ public final class LinearConstraintSystemTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 1169231483186984321L;
+		
+		/**
+		 * @author codistmonk (creation 2014-04-05)
+		 */
+		public static final class IO {
+			
+			private IO() {
+				throw new IllegalInstantiationException();
+			}
+			
+			public static final <T extends AbstractLinearConstraintSystem> T read(final String inputId, final Class<T> resultClass, final boolean closeInput) {
+				return read(new DataInputStream(getResourceAsStream(inputId)), resultClass, closeInput);
+			}
+			
+			public static final <T extends AbstractLinearConstraintSystem> T read(final DataInputStream input, final Class<T> resultClass, final boolean closeInput) {
+				try {
+					final int order = input.readInt();
+					int constraintCount = input.readInt();
+					final double[] constraint = new double[order];
+					final T result = resultClass.getConstructor(int.class).newInstance(order);
+					
+					while (0 <= --constraintCount) {
+						for (int j = 0; j < order; ++j) {
+							constraint[j] = input.readDouble();
+						}
+						
+						result.addConstraint(constraint);
+					}
+					
+					return result;
+				} catch (final Exception exception) {
+					throw unchecked(exception);
+				} finally {
+					if (closeInput) {
+						try {
+							input.close();
+						} catch (final IOException exception) {
+							throw unchecked(exception);
+						}
+					}
+				}
+			}
+			
+			public static final void write(final AbstractLinearConstraintSystem system, final String outputId, final boolean closeOutput) {
+				try {
+					write(system, new DataOutputStream(new FileOutputStream(outputId)), closeOutput);
+				} catch (final FileNotFoundException exception) {
+					throw unchecked(exception);
+				}
+			}
+			
+			public static final void write(final AbstractLinearConstraintSystem system, final DataOutputStream output, final boolean closeOutput) {
+				try {
+					final int order = system.getOrder();
+					final int constraintCount = system.getConstraintCount();
+					
+					output.writeInt(order);
+					output.writeInt(constraintCount);
+					
+					for (int constraintId = 0; constraintId < constraintCount; ++constraintId) {
+						for (final double value : system.getConstraint(constraintId)) {
+							output.writeDouble(value);
+						}
+					}
+				} catch (final Exception exception) {
+					throw unchecked(exception);
+				} finally {
+					if (closeOutput) {
+						try {
+							output.close();
+						} catch (final IOException exception) {
+							throw unchecked(exception);
+						}
+					}
+				}
+			}
+			
+		}
 		
 	}
 	
@@ -284,6 +374,21 @@ public final class LinearConstraintSystemTest {
 			this.getData().addAll(constraint);
 			
 			return this;
+		}
+		
+		@Override
+		public final int getConstraintCount() {
+			return this.getData().size() / this.getOrder();
+		}
+		
+		@Override
+		public final double[] getConstraint(final int constraintId) {
+			final int order = this.getOrder();
+			final double[] result = new double[order];
+			
+			System.arraycopy(this.getData().toArray(), constraintId * order, result, 0, order);
+			
+			return result;
 		}
 		
 		@Override
