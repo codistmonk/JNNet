@@ -17,16 +17,15 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
+
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 import org.ojalgo.TestUtils;
@@ -107,7 +106,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test2() {
-		final LinearConstraintSystem20140325 system = new LinearConstraintSystem20140325(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140325(3);
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
@@ -119,12 +118,12 @@ public final class LinearConstraintSystemTest {
 		assertFalse(system.accept(1.0, 1.5, 0.0));
 		assertFalse(system.accept(1.0, -0.5, 0.0));
 		
-		assertTrue(system.accept(system.solve0()));
+		assertTrue(system.accept(system.solve()));
 	}
 	
 	@Test
 	public final void test3() {
-		final LinearConstraintSystem20140325 system = new LinearConstraintSystem20140325(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140325(3);
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, -1.0, 0.0);
@@ -136,12 +135,12 @@ public final class LinearConstraintSystemTest {
 		assertFalse(system.accept(1.0, 1.5, 0.0));
 		assertFalse(system.accept(1.0, -0.5, 0.0));
 		
-		assertFalse(system.accept(system.solve0()));
+		assertFalse(system.accept(system.solve()));
 	}
 	
 	@Test
 	public final void test4() {
-		final LinearConstraintSystem20140325 system = new LinearConstraintSystem20140325(4);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140325(4);
 		
 		system.addConstraint(1.0, 0.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0, 0.0);
@@ -150,7 +149,7 @@ public final class LinearConstraintSystemTest {
 		system.addConstraint(-6.0, 1.0, 2.0, 3.0);
 		system.addConstraint(-5.0, 0.0, 0.0, 1.0);
 		
-		final double[] solution = system.solve0();
+		final double[] solution = system.solve();
 		
 		debugPrint(Arrays.toString(solution));
 		
@@ -159,7 +158,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test5() {
-		final LinearConstraintSystem20140325 system = new LinearConstraintSystem20140325(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140325(3);
 		final double k = 1.0 / 1000.0;
 		
 		system.addConstraint(1.0, 0.0, 0.0);
@@ -173,7 +172,7 @@ public final class LinearConstraintSystemTest {
 		
 		assertTrue(system.accept(0.5, 0.5, 2.0));
 		
-		final double[] solution = system.solve0();
+		final double[] solution = system.solve();
 		
 		debugPrint(Arrays.toString(solution));
 		
