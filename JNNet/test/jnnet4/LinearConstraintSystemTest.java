@@ -174,7 +174,8 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test6() {
-		final LinearConstraintSystem20140325 system = LinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin", LinearConstraintSystem20140325.class, true);
+		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin",
+				OjAlgoLinearConstraintSystem.class, true);
 		
 //		{
 //			final double[] constraint = new double[system.getOrder()];
@@ -184,7 +185,7 @@ public final class LinearConstraintSystemTest {
 //			system.addConstraint(constraint);
 //		}
 		
-		debugPrint(system.getData().size(), system.getOrder());
+//		debugPrint(system.getData().size(), system.getOrder());
 		
 		final double[] solution = system.solve();
 		
@@ -195,9 +196,10 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test7() {
-		final LinearConstraintSystem20140325 system = LinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin", LinearConstraintSystem20140325.class, true);
+		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin",
+				OjAlgoLinearConstraintSystem.class, true);
 		
-		debugPrint(system.getData().size(), system.getOrder());
+//		debugPrint(system.getData().size(), system.getOrder());
 		
 		final double[] solution = system.solve();
 		

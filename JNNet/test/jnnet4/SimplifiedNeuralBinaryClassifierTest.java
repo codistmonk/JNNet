@@ -29,7 +29,6 @@ import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
-import static net.sourceforge.aprog.tools.Tools.join;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.awt.Color;
@@ -61,11 +60,10 @@ import javax.imageio.ImageIO;
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
-import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325;
+import jnnet4.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.Tools;
@@ -77,78 +75,6 @@ import org.junit.Test;
  */
 public final class SimplifiedNeuralBinaryClassifierTest {
 	
-	/**
-	 * @author codistmonk (creation 2014-03-25)
-	 */
-	public static final class MNISTErrorMonitor implements EvaluationMonitor {
-		
-		private final Collection<BufferedImage> falseNegatives;
-		
-		private final Collection<BufferedImage> falsePositives;
-		
-		private final Dataset trainingData;
-		
-		private final int maximumImagesPerCategory;
-		
-		public MNISTErrorMonitor(final Dataset dataset, final int maximumImagesPerCategory) {
-			this.falseNegatives = new ArrayList<BufferedImage>(maximumImagesPerCategory);
-			this.falsePositives = new ArrayList<BufferedImage>(maximumImagesPerCategory);
-			this.trainingData = dataset;
-			this.maximumImagesPerCategory = maximumImagesPerCategory;
-		}
-		
-		public final Collection<BufferedImage> getFalseNegatives() {
-			return this.falseNegatives;
-		}
-		
-		public final Collection<BufferedImage> getFalsePositives() {
-			return this.falsePositives;
-		}
-		
-		@Override
-		public final void truePositive(final int sampleId) {
-			ignore(sampleId);
-		}
-		
-		@Override
-		public final void trueNegative(final int sampleId) {
-			ignore(sampleId);
-		}
-		
-		@Override
-		public final void falsePositive(final int sampleId) {
-			this.getImage(sampleId, this.falsePositives);
-		}
-		
-		@Override
-		public final void falseNegative(final int sampleId) {
-			this.getImage(sampleId, this.falseNegatives);
-		}
-		
-		private final void getImage(final int sampleId, final Collection<BufferedImage> out) {
-			if (out.size() < this.maximumImagesPerCategory) {
-				final int step = this.trainingData.getStep();
-				final int w = (int) sqrt(step - 1);
-				final int h = w;
-				final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
-				
-				for (int y = 0, p = 0; y < h; ++y) {
-					for (int x = 0; x < w; ++x, ++p) {
-						image.setRGB(x, y, rgb(this.trainingData.getData()[sampleId * step + p] / 255.0));
-					}
-				}
-				
-				out.add(image);
-			}
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -3549752842564996266L;
-		
-	}
-
 //	@Test
 	public final void test1() {
 		final boolean showClassifier = true;
@@ -208,12 +134,12 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
-//	@Test
+	@Test
 	public final void test2() throws Exception {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
 		final TicToc timer = new TicToc();
-		final int digit = 9;
+		final int digit = 4;
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_" + digit + ".train");
@@ -262,7 +188,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				for (final BitSet code : classifier.getClusters()) {
 					debugPrint(code);
 					
-					final LinearConstraintSystem system = new LinearConstraintSystem20140325(step);
+//					final LinearConstraintSystem system = new LinearConstraintSystem20140325(step);
+					final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(step);
 					
 					if (true) {
 						final double[] constraint = new double[step];
@@ -344,7 +271,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
-	@Test
+//	@Test
 	public final void test3() throws Exception {
 		final String root = "F:/icpr2014_mitos_atypia/A03";
 		final File frames40 = new File(root + "/frames/x40/");
@@ -701,6 +628,78 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				break;
 			}
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-03-25)
+	 */
+	public static final class MNISTErrorMonitor implements EvaluationMonitor {
+		
+		private final Collection<BufferedImage> falseNegatives;
+		
+		private final Collection<BufferedImage> falsePositives;
+		
+		private final Dataset trainingData;
+		
+		private final int maximumImagesPerCategory;
+		
+		public MNISTErrorMonitor(final Dataset dataset, final int maximumImagesPerCategory) {
+			this.falseNegatives = new ArrayList<BufferedImage>(maximumImagesPerCategory);
+			this.falsePositives = new ArrayList<BufferedImage>(maximumImagesPerCategory);
+			this.trainingData = dataset;
+			this.maximumImagesPerCategory = maximumImagesPerCategory;
+		}
+		
+		public final Collection<BufferedImage> getFalseNegatives() {
+			return this.falseNegatives;
+		}
+		
+		public final Collection<BufferedImage> getFalsePositives() {
+			return this.falsePositives;
+		}
+		
+		@Override
+		public final void truePositive(final int sampleId) {
+			ignore(sampleId);
+		}
+		
+		@Override
+		public final void trueNegative(final int sampleId) {
+			ignore(sampleId);
+		}
+		
+		@Override
+		public final void falsePositive(final int sampleId) {
+			this.getImage(sampleId, this.falsePositives);
+		}
+		
+		@Override
+		public final void falseNegative(final int sampleId) {
+			this.getImage(sampleId, this.falseNegatives);
+		}
+		
+		private final void getImage(final int sampleId, final Collection<BufferedImage> out) {
+			if (out.size() < this.maximumImagesPerCategory) {
+				final int step = this.trainingData.getStep();
+				final int w = (int) sqrt(step - 1);
+				final int h = w;
+				final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+				
+				for (int y = 0, p = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x, ++p) {
+						image.setRGB(x, y, rgb(this.trainingData.getData()[sampleId * step + p] / 255.0));
+					}
+				}
+				
+				out.add(image);
+			}
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -3549752842564996266L;
+		
 	}
 	
 }
