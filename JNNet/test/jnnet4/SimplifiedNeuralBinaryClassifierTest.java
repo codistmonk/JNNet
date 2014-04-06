@@ -134,7 +134,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
-	@Test
+//	@Test
 	public final void test2() throws Exception {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
@@ -271,40 +271,46 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
-//	@Test
+	@Test
 	public final void test3() throws Exception {
-		final String root = "F:/icpr2014_mitos_atypia/A03";
-		final File frames40 = new File(root + "/frames/x40/");
-		final File mitosis = new File(root + "/mitosis/");
-		final Map<String, VirtualImage40> images = new HashMap<String, VirtualImage40>();
-		final Map<String, PrintStream> outs = new HashMap<String, PrintStream>();
+		if (false) {
+			debugPrint(ImageIO.read(new File("F:/icpr2014_mitos_atypia/A18/frames/x40/A18_00Cc.png")));
+			
+			if (true) return;
+		}
+		
+		final String root = "F:/icpr2014_mitos_atypia/";
+		final PrintStream out = new PrintStream(new File(root, "A.data"));
 		
 		try {
-			for (final String file : frames40.list()) {
-				final String tileId = file.replaceAll("\\..+$", "");
-				final String imageBasePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
-				final String dataPath = new File(mitosis, tileId.substring(0, tileId.length() - 2)).toString();
+			for (final String imageSetId : array("A03", "A04", "A05", "A07", "A10", "A11", "A12", "A14", "A15", "A17", "A18")) {
+				final String imageSetRoot = root + imageSetId;
+				final File frames40 = new File(imageSetRoot + "/frames/x40/");
+				final File mitosis = new File(imageSetRoot + "/mitosis/");
+				final Map<String, VirtualImage40> images = new HashMap<String, VirtualImage40>();
 				
-				debugPrint(tileId, imageBasePath);
-				
-				final VirtualImage40 image = getOrCreate(images, imageBasePath,
-						new DefaultFactory<VirtualImage40>(VirtualImage40.class, imageBasePath));
-				
-				debugPrint(image.getWidth(), image.getHeight());
-				
-				final PrintStream out = getOrCreate(outs, dataPath,
-						new DefaultFactory<PrintStream>(PrintStream.class, dataPath + ".data"));
-				
-				convert(tileId, image, new File(mitosis, tileId + "_mitosis.csv"), out);
-				convert(tileId, image, new File(mitosis, tileId + "_not_mitosis.csv"), out);
+				try {
+					for (final String file : frames40.list()) {
+						final String tileId = file.replaceAll("\\..+$", "");
+						final String imageBasePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
+						
+						debugPrint(tileId, imageBasePath);
+						
+						final VirtualImage40 image = getOrCreate(images, imageBasePath,
+								new DefaultFactory<VirtualImage40>(VirtualImage40.class, imageBasePath));
+						
+						debugPrint(image.getWidth(), image.getHeight());
+						
+						convert(tileId, image, new File(mitosis, tileId + "_mitosis.csv"), out);
+						convert(tileId, image, new File(mitosis, tileId + "_not_mitosis.csv"), out);
+					}
+				} finally {
+					ImageIO.write(mitosisMosaicBuilder[0].generateMosaic(), "png", new File(mitosis, "not_mitosis_mosaic.png"));
+					ImageIO.write(mitosisMosaicBuilder[1].generateMosaic(), "png", new File(mitosis, "mitosis_mosaic.png"));
+				}
 			}
 		} finally {
-			for (final PrintStream out : outs.values()) {
-				out.close();
-			}
-			
-			ImageIO.write(mitosisMosaicBuilder[0].generateMosaic(), "png", new File(mitosis, "not_mitosis_mosaic.png"));
-			ImageIO.write(mitosisMosaicBuilder[1].generateMosaic(), "png", new File(mitosis, "mitosis_mosaic.png"));
+			out.close();
 		}
 	}
 	
@@ -454,11 +460,12 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		private final BufferedImage readTile(final int quad0, final int quad1) {
+			final File file = new File(this.basePath + (char) ('A' + quad0) + "" + (char) ('a' + quad1) + ".png");
+			
 			try {
-				final File file = new File(this.basePath + (char) ('A' + quad0) + "" + (char) ('a' + quad1) + ".png");
-				
 				return ImageIO.read(file);
 			} catch (final IOException exception) {
+				System.err.println(debug(DEBUG_STACK_OFFSET, "Error reading file", file));
 				throw unchecked(exception);
 			}
 		}
