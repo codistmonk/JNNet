@@ -68,7 +68,7 @@ import org.junit.Test;
  */
 public final class SimplifiedNeuralBinaryClassifierTest {
 	
-	@Test
+//	@Test
 	public final void test1() {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
@@ -262,6 +262,33 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
+	}
+	
+	@Test
+	public final void test3() throws Exception {
+		final TicToc timer = new TicToc();
+		
+		debugPrint("Loading training dataset started", new Date(timer.tic()));
+		final Dataset trainingData = new Dataset("F:/icpr2014_mitos_atypia/A.data", -1, 0, 20000);
+		debugPrint("Loading training dataset done in", timer.toc(), "ms");
+		
+		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+		final Dataset validationData = new Dataset("F:/icpr2014_mitos_atypia/A.data", -1, 20000, 10000);
+		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+		
+		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 40; maximumHyperplaneCount += 2) {
+			debugPrint("Building classifier started", new Date(timer.tic()));
+			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
+			debugPrint("Building classifier done in", timer.toc(), "ms");
+			
+			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
+			debugPrint("training:", classifier.evaluate(trainingData, null));
+			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
+			
+			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+			debugPrint("training:", classifier.evaluate(validationData, null));
+			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+		}
 	}
 	
 	public static final BufferedImage newImage(final double[] example, final int offset, final int w, final int h) {
