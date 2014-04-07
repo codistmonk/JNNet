@@ -1,6 +1,5 @@
 package jnnet4;
 
-import static java.util.Arrays.copyOfRange;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.io.Serializable;
@@ -52,20 +51,17 @@ public abstract interface BinaryClassifier extends Serializable {
 				final Dataset dataset, final EvaluationMonitor monitor) {
 			final TicToc timer = new TicToc();
 			final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
-			final int step = dataset.getStep();
-			final double[] data = dataset.getData();
 			
 			timer.tic();
 			
-			for (int i = 0; i < data.length; i += step) {
+			for (int sampleId = 0; sampleId < dataset.getItemCount(); ++sampleId) {
 				if (LOGGING_MILLISECONDS <= timer.toc()) {
-					debugPrint(i, "/", data.length);
+					debugPrint(sampleId, "/", dataset.getItemCount());
 					timer.tic();
 				}
 				
-				final double expected = data[i + step - 1];
-				final double actual = classifier.accept(copyOfRange(data, i, i + step - 1)) ? 1.0 : 0.0;
-				final int sampleId = i / step;
+				final double expected = dataset.getItemLabel(sampleId);
+				final double actual = classifier.accept(dataset.getItemWeights(sampleId)) ? 1.0 : 0.0;
 				
 				if (expected != actual) {
 					if (expected == 1.0) {
