@@ -474,11 +474,11 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	
 	private final boolean invertOutput;
 	
-	public SimplifiedNeuralBinaryClassifier(final CSVDataset trainingDataset) {
+	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset) {
 		this(trainingDataset, 0.5, Integer.MAX_VALUE, true, true);
 	}
 	
-	public SimplifiedNeuralBinaryClassifier(final CSVDataset trainingDataset, final double k, final int maximumHyperplaneCount,
+	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset, final double k, final int maximumHyperplaneCount,
 			final boolean allowHyperplanePruning, final boolean allowOutputInversion) {
 		debugPrint("Partitioning...");
 		
