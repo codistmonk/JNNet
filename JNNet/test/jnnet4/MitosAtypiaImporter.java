@@ -11,12 +11,16 @@ import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.awt.Color;
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -24,6 +28,7 @@ import java.util.Scanner;
 import javax.imageio.ImageIO;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -53,6 +58,8 @@ public final class MitosAtypiaImporter {
 		
 		try {
 			for (final String imageSetId : array("A03", "A04", "A05", "A07", "A10", "A11", "A12", "A14", "A15", "A17", "A18")) {
+				debugPrint(new Date());
+				
 				final String imageSetRoot = root + imageSetId;
 				final File frames40 = new File(imageSetRoot + "/frames/x40/");
 				final File mitosis = new File(imageSetRoot + "/mitosis/");
@@ -70,8 +77,8 @@ public final class MitosAtypiaImporter {
 						
 						debugPrint(image.getWidth(), image.getHeight());
 						
-						convert(tileId, image, new File(mitosis, tileId + "_mitosis.csv"), out);
-						convert(tileId, image, new File(mitosis, tileId + "_not_mitosis.csv"), out);
+						convert(image, tileId, new File(mitosis, tileId + "_mitosis.csv"), out);
+						convert(image, tileId, new File(mitosis, tileId + "_not_mitosis.csv"), out);
 					}
 				} finally {
 					ImageIO.write(mitosisMosaicBuilder[0].generateMosaic(), "png", new File(mitosis, "not_mitosis_mosaic.png"));
@@ -80,87 +87,133 @@ public final class MitosAtypiaImporter {
 			}
 		} finally {
 			out.close();
+			
+			debugPrint(new Date());
 		}
 	}
 	
-	public static final void convert(final String tileId, final VirtualImage40 image, final File csv, final PrintStream out) throws FileNotFoundException {
-		final Scanner scanner = new Scanner(csv);
+	public static final void convert(final VirtualImage40 image, final String tileId, final File csv, final PrintStream out) throws FileNotFoundException {
+		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
 		final int windowHalfSize = 32;
+		final Collection<Point> positivePoints = new ArrayList<Point>();
+		final Scanner scanner = new Scanner(csv);
 		
 		try {
 			while (scanner.hasNext()) {
+				monitor.ping();
+				
 				final String[] line = scanner.nextLine().split(",");
 				final int x0 = (int) parseDouble(line[0]);
 				final int y0 = (int) parseDouble(line[1]);
 				final double score = parseDouble(line[2]);
 				final int label = score < 0.5 ? 0 : 1;
-				final BufferedImage element = new BufferedImage(2 * windowHalfSize, 2 * windowHalfSize, BufferedImage.TYPE_3BYTE_BGR);
 				
-				for (int y = y0 - windowHalfSize; y < y0 + windowHalfSize; ++y) {
-					for (int x = x0 - windowHalfSize; x < x0 + windowHalfSize; ++x) {
-						final int rgb = image.getRGB(tileId, x, y);
+				mitosisMosaicBuilder[label].getImages().add(convert(image, tileId,
+						windowHalfSize, x0, y0, label, out));
+				
+				if (label == 1) {
+					positivePoints.add(new Point(x0, y0));
+				}
+			}
+			
+			if (!csv.getName().endsWith("_not_mitosis.csv")){
+				final BufferedImage tile = image.getTile(tileId);
+				final int w = tile.getWidth();
+				final int h = tile.getHeight();
+				final int xStep = w / 4;
+				final int yStep = h / 4;
+				
+				for (int y = windowHalfSize; y + windowHalfSize <= h; y += yStep) {
+					for (int x = windowHalfSize; x + windowHalfSize <= w; x += xStep) {
+						monitor.ping();
 						
-						element.setRGB(x - (x0 - windowHalfSize), y - (y0 - windowHalfSize), rgb);
-					}
-				}
-				
-				mitosisMosaicBuilder[label].getImages().add(element);
-				
-				// 0°
-				{
-					for (int y = 0; y < 2 * windowHalfSize; ++y) {
-						for (int x = 0; x < 2 * windowHalfSize; ++x) {
-							final Color color = new Color(element.getRGB(x, y));
-							
-							out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+						boolean ok = true;
+						
+						for (final Point point : positivePoints) {
+							if (point.distance(x, y) <= 2.0 * windowHalfSize) {
+								ok = false;
+								break;
+							}
+						}
+						
+						if (ok) {
+							convert(image, tileId, windowHalfSize, x, y, 0, out);
 						}
 					}
-					
-					out.println(label);
-				}
-				
-				// 90°
-				{
-					for (int x = 0; x < 2 * windowHalfSize; ++x) {
-						for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
-							final Color color = new Color(element.getRGB(x, y));
-							
-							out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
-						}
-					}
-					
-					out.println(label);
-				}
-				
-				// 180°
-				{
-					for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
-						for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
-							final Color color = new Color(element.getRGB(x, y));
-							
-							out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
-						}
-					}
-					
-					out.println(label);
-				}
-				
-				// 270°
-				{
-					for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
-						for (int y = 0; y < 2 * windowHalfSize; ++y) {
-							final Color color = new Color(element.getRGB(x, y));
-							
-							out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
-						}
-					}
-					
-					out.println(label);
 				}
 			}
 		} finally {
 			scanner.close();
+			monitor.end();
 		}
+	}
+	
+	private static final BufferedImage convert(final VirtualImage40 image,
+			final String tileId, final int windowHalfSize, final int x0,
+			final int y0, final int label, final PrintStream out) {
+		final BufferedImage result = new BufferedImage(2 * windowHalfSize, 2 * windowHalfSize, BufferedImage.TYPE_3BYTE_BGR);
+		
+		for (int y = y0 - windowHalfSize; y < y0 + windowHalfSize; ++y) {
+			for (int x = x0 - windowHalfSize; x < x0 + windowHalfSize; ++x) {
+				final int rgb = image.getRGB(tileId, x, y);
+				
+				result.setRGB(x - (x0 - windowHalfSize), y - (y0 - windowHalfSize), rgb);
+			}
+		}
+		
+		// 0°
+		{
+			for (int y = 0; y < 2 * windowHalfSize; ++y) {
+				for (int x = 0; x < 2 * windowHalfSize; ++x) {
+					final Color color = new Color(result.getRGB(x, y));
+					
+					out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+				}
+			}
+			
+			out.println(label);
+		}
+		
+		// 90°
+		{
+			for (int x = 0; x < 2 * windowHalfSize; ++x) {
+				for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
+					final Color color = new Color(result.getRGB(x, y));
+					
+					out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+				}
+			}
+			
+			out.println(label);
+		}
+		
+		// 180°
+		{
+			for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
+				for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
+					final Color color = new Color(result.getRGB(x, y));
+					
+					out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+				}
+			}
+			
+			out.println(label);
+		}
+		
+		// 270°
+		{
+			for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
+				for (int y = 0; y < 2 * windowHalfSize; ++y) {
+					final Color color = new Color(result.getRGB(x, y));
+					
+					out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+				}
+			}
+			
+			out.println(label);
+		}
+		
+		return result;
 	}
 	
 	/**
@@ -196,6 +249,13 @@ public final class MitosAtypiaImporter {
 		
 		public final int getHeight() {
 			return this.height;
+		}
+		
+		public final BufferedImage getTile(final String tileId) {
+			final int quad0 = tileId.charAt(tileId.length() - 2) - 'A';
+			final int quad1 = tileId.charAt(tileId.length() - 1) - 'a';
+			
+			return this.tiles[quad0][quad1];
 		}
 		
 		public final int getRGB(final String tileId, final int x, final int y) {
@@ -288,6 +348,44 @@ public final class MitosAtypiaImporter {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 5357895005657732226L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-07)
+	 */
+	public static final class ConsoleMonitor implements Serializable {
+		
+		private final TicToc timer;
+		
+		private final long periodMilliseconds;
+		
+		private boolean newLineNeeded;
+		
+		public ConsoleMonitor(final long periodMilliseconds) {
+			this.timer = new TicToc();
+			this.periodMilliseconds = periodMilliseconds;
+			this.timer.tic();
+		}
+		
+		public final void ping() {
+			if (this.periodMilliseconds <= this.timer.toc()) {
+				System.out.print('.');
+				this.newLineNeeded = true;
+				this.timer.tic();
+			}
+		}
+		
+		public final void end() {
+			if (this.newLineNeeded) {
+				System.out.println();
+			}
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -3669736743010335592L;
 		
 	}
 	
