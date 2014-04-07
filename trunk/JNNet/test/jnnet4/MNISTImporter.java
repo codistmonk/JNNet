@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
 
-import jnnet4.MNISTConvert.IDX.DataType;
+import jnnet4.MNISTImporter.IDX.DataType;
 
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -24,9 +24,9 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2014-03-21)
  */
-public final class MNISTConvert {
+public final class MNISTImporter {
 	
-	private MNISTConvert() {
+	private MNISTImporter() {
 		throw new IllegalInstantiationException();
 	}
 	
