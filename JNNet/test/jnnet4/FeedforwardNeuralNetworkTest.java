@@ -285,10 +285,10 @@ public final class FeedforwardNeuralNetworkTest {
 //		final TrainingData trainingData = new Dataset("jnnet/iris_virginica.txt");
 //		final TrainingData trainingData = new Dataset("../Libraries/datasets/skin_nonskin.txt");
 //		final TrainingData trainingData = new Dataset("../Libraries/datasets/p53_2012/K9.data");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
+		final CSVDataset trainingData = new CSVDataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final TrainingData trainingData = new Dataset("../Libraries/datasets/mammographic_masses.data");
-		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
-		final Dataset testData = null;//new Dataset("../Libraries/datasets/gisette/gisette_test.data");
+		final CSVDataset validationData = new CSVDataset("../Libraries/datasets/gisette/gisette_valid.data");
+		final CSVDataset testData = null;//new Dataset("../Libraries/datasets/gisette/gisette_test.data");
 		
 		/*
 		 * Considerations on this dataset:
@@ -342,7 +342,7 @@ public final class FeedforwardNeuralNetworkTest {
 		assertEquals(0L, totalTrainingErrorCount);
 	}
 	
-	public static final SimpleConfusionMatrix evaluate(final FeedforwardNeuralNetwork network, final Dataset dataset) {
+	public static final SimpleConfusionMatrix evaluate(final FeedforwardNeuralNetwork network, final CSVDataset dataset) {
 		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
 		final int step = dataset.getItemSize();
 		final int inputDimension = step - 1;
@@ -384,11 +384,11 @@ public final class FeedforwardNeuralNetworkTest {
 		loadDLL("aparapi");
 	}
 	
-	public static final FeedforwardNeuralNetwork newClassifier(final Dataset trainingData) {
+	public static final FeedforwardNeuralNetwork newClassifier(final CSVDataset trainingData) {
 		return newClassifier(trainingData, true, true, Integer.MAX_VALUE);
 	}
 	
-	public static final FeedforwardNeuralNetwork newClassifier(final Dataset trainingData,
+	public static final FeedforwardNeuralNetwork newClassifier(final CSVDataset trainingData,
 			final boolean removeRedundantNeurons, final boolean allowOutputInversion, final int maximumPartitioningNeuronCount) {
 		final boolean debug = true;
 		
