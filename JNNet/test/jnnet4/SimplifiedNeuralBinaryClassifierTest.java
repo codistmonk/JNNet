@@ -332,17 +332,64 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				for (int y = y0 - windowHalfSize; y < y0 + windowHalfSize; ++y) {
 					for (int x = x0 - windowHalfSize; x < x0 + windowHalfSize; ++x) {
 						final int rgb = image.getRGB(tileId, x, y);
-						final Color color = new Color(rgb);
-						
-						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
 						
 						element.setRGB(x - (x0 - windowHalfSize), y - (y0 - windowHalfSize), rgb);
 					}
 				}
 				
-				out.println(label);
-				
 				mitosisMosaicBuilder[label].getImages().add(element);
+				
+				// 0°
+				{
+					for (int y = 0; y < 2 * windowHalfSize; ++y) {
+						for (int x = 0; x < 2 * windowHalfSize; ++x) {
+							final Color color = new Color(element.getRGB(x, y));
+							
+							out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+						}
+					}
+					
+					out.println(label);
+				}
+				
+				// 90°
+				{
+					for (int x = 0; x < 2 * windowHalfSize; ++x) {
+						for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
+							final Color color = new Color(element.getRGB(x, y));
+							
+							out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+						}
+					}
+					
+					out.println(label);
+				}
+				
+				// 180°
+				{
+					for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
+						for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
+							final Color color = new Color(element.getRGB(x, y));
+							
+							out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+						}
+					}
+					
+					out.println(label);
+				}
+				
+				// 270°
+				{
+					for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
+						for (int y = 0; y < 2 * windowHalfSize; ++y) {
+							final Color color = new Color(element.getRGB(x, y));
+							
+							out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+						}
+					}
+					
+					out.println(label);
+				}
 			}
 		} finally {
 			scanner.close();
