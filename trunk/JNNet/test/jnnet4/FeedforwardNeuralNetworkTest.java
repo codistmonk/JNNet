@@ -23,9 +23,9 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Set;
 
+import jnnet4.BinaryClassifier.Default;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -301,7 +301,7 @@ public final class FeedforwardNeuralNetworkTest {
 //		final TrainingData trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0);
 		
 		debugPrint("Loading data done in", timer.toc(), "ms");
-		final int inputDimension = trainingData.getStep() - 1;
+		final int inputDimension = trainingData.getItemSize() - 1;
 		final boolean showNetwork = inputDimension < 3 && true;
 		debugPrint("Building network started", new Date(timer.tic()));
 		final FeedforwardNeuralNetwork network = newClassifier(trainingData, true, true, 100).pack(1);
@@ -336,27 +336,26 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 		
 		if (showNetwork) {
-			show(network, 512, 20.0, trainingData.getData());
+			show(network, 512, 20.0, trainingData.getData_());
 		}
 		
 		assertEquals(0L, totalTrainingErrorCount);
 	}
 	
-	public static final SimpleConfusionMatrix evaluate(final FeedforwardNeuralNetwork network, final Dataset trainingData) {
+	public static final SimpleConfusionMatrix evaluate(final FeedforwardNeuralNetwork network, final Dataset dataset) {
 		final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
-		final int step = trainingData.getStep();
+		final int step = dataset.getItemSize();
 		final int inputDimension = step - 1;
 		final int outputId = network.getNeuronCount() - 1;
-		final double[] data = trainingData.getData();
 		
-		for (int i = 0; i < data.length; i += step) {
+		for (int i = 0; i < dataset.getItemCount(); ++i) {
 			for (int j = 0; j < inputDimension; ++j) {
-				network.getNeuronValues()[1 + j] = data[i + j];
+				network.getNeuronValues()[1 + j] = dataset.getItemValue(i, j);
 			}
 			
 			network.update(0);
 			
-			final double expected = data[i + step - 1];
+			final double expected = dataset.getItemLabel(i);
 			final double actual = network.getNeuronValues()[outputId];
 			
 			if (expected != actual) {
@@ -396,10 +395,9 @@ public final class FeedforwardNeuralNetworkTest {
 		debugPrint("Building neural network...");
 		
 		final FeedforwardNeuralNetwork result = new FeedforwardNeuralNetwork();
-		final int step = trainingData.getStep();
+		final int step = trainingData.getItemSize();
 		final int inputDimension = step - 1;
 		final int itemCount = trainingData.getItemCount();
-		final double[] data = trainingData.getData();
 		
 		debugPrint("trainingItemCount:", itemCount, "inputDimension:", inputDimension);
 		
@@ -416,7 +414,7 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			result.newLayer();
 			
-			generateHyperplanes(trainingData, new SimplifiedNeuralBinaryClassifier.HyperplaneHandler() {
+			generateHyperplanes(trainingData, 0.5, new SimplifiedNeuralBinaryClassifier.HyperplaneHandler() {
 				
 				@Override
 				public boolean hyperplane(final double bias, final double[] weights) {
@@ -453,13 +451,13 @@ public final class FeedforwardNeuralNetworkTest {
 			@SuppressWarnings("unchecked")
 			final Set<BitSet>[] codes = instances(2, HASH_SET_FACTORY);
 			
-			for (int i = 0; i < data.length; i += step) {
-				if ((i / step) % 10000 == 0) {
-					debugPrint(i, "/", data.length);
+			for (int i = 0; i < trainingData.getItemCount(); ++i) {
+				if (i % 10000 == 0) {
+					debugPrint(i, "/", trainingData.getItemCount());
 				}
 				
 				for (int j = 0; j < inputDimension; ++j) {
-					result.getNeuronValues()[1 + j] = data[i + j];
+					result.getNeuronValues()[1 + j] = trainingData.getItemValue(i, j);
 				}
 				
 				result.update(0);
@@ -472,7 +470,7 @@ public final class FeedforwardNeuralNetworkTest {
 					}
 				}
 				
-				codes[(int) data[i + step - 1]].add(code);
+				codes[(int) trainingData.getItemLabel(i)].add(code);
 			}
 			
 			if (removeRedundantNeurons) {

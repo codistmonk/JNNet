@@ -76,7 +76,7 @@ public final class ProjectiveClassifierTest {
 		}
 		
 		if (showClassifier && classifier.getInputDimension() == 2) {
-			SimplifiedNeuralBinaryClassifierTest.show(classifier, 256, 16.0, trainingData.getData());
+			SimplifiedNeuralBinaryClassifierTest.show(classifier, 256, 16.0, trainingData.getData_());
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
@@ -98,7 +98,7 @@ final class ProjectiveClassifier implements BinaryClassifier {
 	private final int thumbnailSize;
 	
 	public ProjectiveClassifier(final Dataset trainingData, final int thumbnailSize) {
-		this.inputDimension = trainingData.getStep() - 1;
+		this.inputDimension = trainingData.getItemSize() - 1;
 		this.statistics = trainingData.getStatistics();
 		this.image = preview(trainingData, thumbnailSize);
 		this.thumbnailSize = thumbnailSize;
@@ -186,10 +186,10 @@ final class ProjectiveClassifier implements BinaryClassifier {
 	}
 	
 	public static final BufferedImage preview(final Dataset dataset, final int thumbnailSize) {
-		final int step = dataset.getStep();
-		final double[] data = dataset.getData();
+		final int step = dataset.getItemSize();
+		final double[] data = dataset.getData_();
 		final int n = data.length;
-		final int inputDimension = dataset.getStep() - 1;
+		final int inputDimension = dataset.getItemSize() - 1;
 		final int w = inputDimension * (thumbnailSize + 1) - 1;
 		final int h = w;
 		final BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);

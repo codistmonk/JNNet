@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.lang.Double.parseDouble;
+import static java.util.Arrays.copyOfRange;
 import static jnnet4.FeedforwardNeuralNetwork.reserve;
 import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
@@ -21,13 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import jnnet.DoubleList;
-
 import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2014-03-07)
  */
-public final class Dataset implements Serializable {
+public final class Dataset implements Data {
 	
 	private final Map<String, Integer> labelIds;
 	
@@ -39,7 +39,7 @@ public final class Dataset implements Serializable {
 	
 	private final DoubleList data;
 	
-	private int step;
+	private int itemSize;
 	
 	public Dataset(final String resourcePath) {
 		this(resourcePath, -1, 0, Integer.MAX_VALUE);
@@ -97,7 +97,7 @@ public final class Dataset implements Serializable {
 					
 					buffer = reserve(buffer, n);
 					final int labelOffset = 0 <= labelIndex ? labelIndex : n - 1;
-					boolean itemIsValid = this.step == 0 || this.step == n;
+					boolean itemIsValid = this.itemSize == 0 || this.itemSize == n;
 					
 					for (int i = 0, j = 0; i < values.length && itemIsValid; ++i) {
 						try {
@@ -112,7 +112,7 @@ public final class Dataset implements Serializable {
 					
 					if (itemIsValid) {
 						final int itemOffset = this.data.size();
-						this.step = n;
+						this.itemSize = n;
 						
 						for (int i = 0; i < n - 1; ++i) {
 							this.data.add(buffer[i]);
@@ -148,11 +148,11 @@ public final class Dataset implements Serializable {
 					}
 				}
 				{
-					final double[] data = this.getData();
+					final double[] data = this.getData_();
 					final int n = data.length;
 					
-					for (int i = 0; i < n; i += this.step) {
-						data[i + this.step - 1] = this.getLabelIds().get(this.getLabels().get((int) data[i + this.step - 1]));
+					for (int i = 0; i < n; i += this.itemSize) {
+						data[i + this.itemSize - 1] = this.getLabelIds().get(this.getLabels().get((int) data[i + this.itemSize - 1]));
 					}
 				}
 				
@@ -161,9 +161,9 @@ public final class Dataset implements Serializable {
 			}
 			
 			debugPrint("labelCounts:", this.getLabelCounts());
-			debugPrint("inputDimension:", this.step - 1);
+			debugPrint("inputDimension:", this.itemSize - 1);
 			
-			if (this.step < 100) {
+			if (this.itemSize < 100) {
 				for (int i = 0; i < 2; ++i) {
 					debugPrint(i + "-statistics");
 					debugPrint("means:", Arrays.toString(this.statistics[i].getMeans()));
@@ -205,16 +205,38 @@ public final class Dataset implements Serializable {
 		return this.statistics;
 	}
 	
-	public final double[] getData() {
+	public final double[] getData_() {
 		return this.data.toArray();
 	}
 	
-	public final int getStep() {
-		return this.step;
+	@Override
+	public final double getItemValue(final int itemId, final int index) {
+		return this.data.get(itemId * this.getItemSize() + index);
 	}
 	
+	@Override
+	public final int getItemSize() {
+		return this.itemSize;
+	}
+	
+	@Override
 	public final int getItemCount() {
-		return this.getData().length / this.getStep();
+		return this.getData_().length / this.getItemSize();
+	}
+	
+	@Override
+	public final double[] getItem(final int itemId) {
+		return copyOfRange(this.getData_(), itemId * this.getItemSize(), (itemId + 1) * this.getItemSize());
+	}
+	
+	@Override
+	public final double[] getItemWeights(final int itemId) {
+		return copyOfRange(this.getData_(), itemId * this.getItemSize(), (itemId + 1) * this.getItemSize() - 1);
+	}
+	
+	@Override
+	public final double getItemLabel(final int itemId) {
+		return this.getItemValue(itemId, this.getItemSize() - 1);
 	}
 	
 	/**
@@ -226,5 +248,24 @@ public final class Dataset implements Serializable {
 	 * {@value}.
 	 */
 	public static final long LOGGING_MILLISECONDS = 5000L;
+	
+}
+
+/**
+ * @author codistmonk (creation 2014-04-07)
+ */
+abstract interface Data extends Serializable {
+	
+	public abstract int getItemCount();
+	
+	public abstract int getItemSize();
+	
+	public abstract double getItemValue(int itemId, int valueId);
+	
+	public abstract double[] getItem(int itemId);
+	
+	public abstract double[] getItemWeights(int itemId);
+	
+	public abstract double getItemLabel(int itemId);
 	
 }
