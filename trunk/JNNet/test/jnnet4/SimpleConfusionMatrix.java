@@ -41,6 +41,30 @@ public final class SimpleConfusionMatrix implements Serializable {
 				this.getTrueNegativeCount().get() + this.getFalseNegativeCount().get();
 	}
 	
+	public final long getPredictedPositiveCount() {
+		return this.getTruePositiveCount().get() + this.getFalsePositiveCount().get();
+	}
+	
+	public final long getPredictedNegativeCount() {
+		return this.getTrueNegativeCount().get() + this.getFalseNegativeCount().get();
+	}
+	
+	public final long getActualPositiveCount() {
+		return this.getTruePositiveCount().get() + this.getFalseNegativeCount().get();
+	}
+	
+	public final long getActualNegativeCount() {
+		return this.getTrueNegativeCount().get() + this.getFalsePositiveCount().get();
+	}
+	
+	public final double getSensitivity() {
+		return this.getTruePositiveCount().doubleValue() / this.getActualPositiveCount();
+	}
+	
+	public final double getSpecificity() {
+		return this.getTrueNegativeCount().doubleValue() / this.getActualNegativeCount();
+	}
+	
 	@Override
 	public final String toString() {
 		return "totalSamples: " + this.getTotalSampleCount() +
@@ -48,7 +72,10 @@ public final class SimpleConfusionMatrix implements Serializable {
 				" truePositives: " + this.getTruePositiveCount() +
 				" falsePositives: " + this.getFalsePositiveCount() +
 				" trueNegatives: " + this.getTrueNegativeCount() +
-				" falseNegatives: " + this.getFalseNegativeCount();
+				" falseNegatives: " + this.getFalseNegativeCount() +
+				" sensitivity: " + this.getSensitivity() +
+				" specificity: " + this.getSpecificity() +
+				" (se+sp)/2: " + (this.getSensitivity() + this.getSpecificity()) / 2.0;
 	}
 	
 	/**

@@ -267,16 +267,18 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	@Test
 	public final void test3() throws Exception {
 		final TicToc timer = new TicToc();
+		final int trainingItems = 50000;
+		final int validationItems = 10000;
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("F:/icpr2014_mitos_atypia/A.data", -1, 0, 20000);
+		final Dataset trainingData = new Dataset("F:/icpr2014_mitos_atypia/A.data", -1, 0, trainingItems);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final Dataset validationData = new Dataset("F:/icpr2014_mitos_atypia/A.data", -1, 20000, 10000);
+		final Dataset validationData = new Dataset("F:/icpr2014_mitos_atypia/A.data", -1, trainingItems, validationItems);
 		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
-		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 40; maximumHyperplaneCount += 2) {
+		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 200; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
 			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
