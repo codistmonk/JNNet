@@ -25,7 +25,7 @@ public final class NearestNeighborClassifierTest {
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
-		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
+		final CSVDataset trainingData = new CSVDataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 //		debugPrint("Loading validation dataset started", new Date(timer.tic()));
@@ -34,7 +34,7 @@ public final class NearestNeighborClassifierTest {
 		
 //		debugPrint("Loading test dataset started", new Date(timer.tic()));
 //		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
-		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
+		final CSVDataset testData = new CSVDataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
 //		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Building classifier started", new Date(timer.tic()));
@@ -72,7 +72,7 @@ final class NearestNeighborClassifier implements BinaryClassifier {
 	
 	private final int inputDimension;
 	
-	public NearestNeighborClassifier(final Dataset trainingData) {
+	public NearestNeighborClassifier(final CSVDataset trainingData) {
 		this.prototypes = trainingData.getData_();
 		this.inputDimension= trainingData.getItemSize() - 1;
 	}
@@ -102,7 +102,7 @@ final class NearestNeighborClassifier implements BinaryClassifier {
 	}
 	
 	@Override
-	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
+	public final SimpleConfusionMatrix evaluate(final CSVDataset dataset, final EvaluationMonitor monitor) {
 		return Default.defaultEvaluate(this, dataset, monitor);
 	}
 	

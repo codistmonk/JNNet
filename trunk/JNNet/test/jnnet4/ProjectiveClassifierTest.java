@@ -37,7 +37,7 @@ public final class ProjectiveClassifierTest {
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
+		final CSVDataset trainingData = new CSVDataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
@@ -63,7 +63,7 @@ public final class ProjectiveClassifierTest {
 		debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
+		final CSVDataset testData = new CSVDataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
 //		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
@@ -97,7 +97,7 @@ final class ProjectiveClassifier implements BinaryClassifier {
 	
 	private final int thumbnailSize;
 	
-	public ProjectiveClassifier(final Dataset trainingData, final int thumbnailSize) {
+	public ProjectiveClassifier(final CSVDataset trainingData, final int thumbnailSize) {
 		this.inputDimension = trainingData.getItemSize() - 1;
 		this.statistics = trainingData.getStatistics();
 		this.image = preview(trainingData, thumbnailSize);
@@ -160,7 +160,7 @@ final class ProjectiveClassifier implements BinaryClassifier {
 	}
 	
 	@Override
-	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
+	public final SimpleConfusionMatrix evaluate(final CSVDataset dataset, final EvaluationMonitor monitor) {
 		return Default.defaultEvaluate(this, dataset, monitor);
 	}
 	
@@ -185,7 +185,7 @@ final class ProjectiveClassifier implements BinaryClassifier {
 		}
 	}
 	
-	public static final BufferedImage preview(final Dataset dataset, final int thumbnailSize) {
+	public static final BufferedImage preview(final CSVDataset dataset, final int thumbnailSize) {
 		final int step = dataset.getItemSize();
 		final double[] data = dataset.getData_();
 		final int n = data.length;

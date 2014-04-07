@@ -78,7 +78,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
 //		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("jnnet/iris_versicolor.txt");
-		final Dataset trainingData = new Dataset("../Libraries/datasets/gisette/gisette_train.data");
+		final CSVDataset trainingData = new CSVDataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
@@ -88,7 +88,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final Dataset validationData = new Dataset("../Libraries/datasets/gisette/gisette_valid.data");
+		final CSVDataset validationData = new CSVDataset("../Libraries/datasets/gisette/gisette_valid.data");
 		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
 		if (previewValidationData) {
@@ -135,7 +135,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final int digit = 4;
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("../Libraries/datasets/mnist/mnist_" + digit + ".train");
+		final CSVDataset trainingData = new CSVDataset("../Libraries/datasets/mnist/mnist_" + digit + ".train");
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		if (false) {
@@ -157,7 +157,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = new Dataset("../Libraries/datasets/mnist/mnist_" + digit + ".test");
+		final CSVDataset testData = new CSVDataset("../Libraries/datasets/mnist/mnist_" + digit + ".test");
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		final MNISTErrorMonitor trainingMonitor = new MNISTErrorMonitor(trainingData, 0);
@@ -271,11 +271,11 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final int validationItems = 10000;
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = new Dataset("F:/icpr2014_mitos_atypia/A.data", -1, 0, trainingItems);
+		final CSVDataset trainingData = new CSVDataset("F:/icpr2014_mitos_atypia/A.data", -1, 0, trainingItems);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final Dataset validationData = new Dataset("F:/icpr2014_mitos_atypia/A.data", -1, trainingItems, validationItems);
+		final CSVDataset validationData = new CSVDataset("F:/icpr2014_mitos_atypia/A.data", -1, trainingItems, validationItems);
 		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
 		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 80; maximumHyperplaneCount += 2) {
@@ -396,11 +396,11 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		private final Collection<BufferedImage> falsePositives;
 		
-		private final Dataset trainingData;
+		private final CSVDataset trainingData;
 		
 		private final int maximumImagesPerCategory;
 		
-		public MNISTErrorMonitor(final Dataset dataset, final int maximumImagesPerCategory) {
+		public MNISTErrorMonitor(final CSVDataset dataset, final int maximumImagesPerCategory) {
 			this.falseNegatives = new ArrayList<BufferedImage>(maximumImagesPerCategory);
 			this.falsePositives = new ArrayList<BufferedImage>(maximumImagesPerCategory);
 			this.trainingData = dataset;
@@ -474,11 +474,11 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	
 	private final boolean invertOutput;
 	
-	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset) {
+	public SimplifiedNeuralBinaryClassifier(final CSVDataset trainingDataset) {
 		this(trainingDataset, 0.5, Integer.MAX_VALUE, true, true);
 	}
 	
-	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset, final double k, final int maximumHyperplaneCount,
+	public SimplifiedNeuralBinaryClassifier(final CSVDataset trainingDataset, final double k, final int maximumHyperplaneCount,
 			final boolean allowHyperplanePruning, final boolean allowOutputInversion) {
 		debugPrint("Partitioning...");
 		
@@ -567,7 +567,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	}
 	
 	@Override
-	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
+	public final SimpleConfusionMatrix evaluate(final CSVDataset dataset, final EvaluationMonitor monitor) {
 		return Default.defaultEvaluate(this, dataset, monitor);
 	}
 	
@@ -594,7 +594,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	}
 	
 	public static final Codeset newHigherLayer(final Codeset codes) {
-		final Data higherLevelData = toData(array(codes.getCodes()[0].keySet(), codes.getCodes()[1].keySet()), codes.getCodeSize());
+		final Dataset higherLevelData = toData(array(codes.getCodes()[0].keySet(), codes.getCodes()[1].keySet()), codes.getCodeSize());
 		final int higherLevelDataStep = codes.getCodeSize() + 1;
 		final DoubleList higherLevelHyperplanes = new DoubleList();
 		
@@ -622,7 +622,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		return higherLevelCodes;
 	}
 	
-	public static final Codeset cluster(final double[] hyperplanes, final Data data) {
+	public static final Codeset cluster(final double[] hyperplanes, final Dataset data) {
 		debugPrint("Clustering...");
 		
 		final int step = data.getItemSize() - 1;
@@ -645,7 +645,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		return result;
 	}
 	
-	public static final Data toData(final Collection<BitSet>[] codes, final int codeSize) {
+	public static final Dataset toData(final Collection<BitSet>[] codes, final int codeSize) {
 		final int itemSize = codeSize + 1;
 		final int n = (codes[0].size() + codes[1].size()) * itemSize;
 		final double[] data = new double[n];
@@ -660,7 +660,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			}
 		}
 		
-		return new Data() {
+		return new Dataset() {
 			
 			@Override
 			public final int getItemCount() {
@@ -729,7 +729,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		return code;
 	}
 	
-	public static final void generateHyperplanes(final Data trainingData, final double k, final HyperplaneHandler hyperplaneHandler) {
+	public static final void generateHyperplanes(final Dataset trainingData, final double k, final HyperplaneHandler hyperplaneHandler) {
 		final int inputDimension = trainingData.getItemSize() - 1;
 		final int itemCount = trainingData.getItemCount();
 		final List<List<Id>> todo = new ArrayList<List<Id>>();
