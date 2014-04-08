@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.lang.Double.parseDouble;
+import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
@@ -13,17 +14,23 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
@@ -47,54 +54,91 @@ public final class MitosAtypiaImporter {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
-		if (false) {
-			debugPrint(ImageIO.read(new File("F:/icpr2014_mitos_atypia/A18/frames/x40/A18_00Cc.png")));
-			
-			if (true) return;
-		}
-		
+		final Operation operation = Operation.TEST_DATA_FILE;
 		final String root = "F:/icpr2014_mitos_atypia/";
-		final PrintStream out = new PrintStream(new File(root, "A.data"));
+		final int windowHalfSize = 32;
 		
-		try {
-			for (final String imageSetId : array("A03", "A04", "A05", "A07", "A10", "A11", "A12", "A14", "A15", "A17", "A18")) {
-				debugPrint(new Date());
-				
-				final String imageSetRoot = root + imageSetId;
-				final File frames40 = new File(imageSetRoot + "/frames/x40/");
-				final File mitosis = new File(imageSetRoot + "/mitosis/");
-				final Map<String, VirtualImage40> images = new HashMap<String, VirtualImage40>();
-				
-				try {
-					for (final String file : frames40.list()) {
-						final String tileId = file.replaceAll("\\..+$", "");
-						final String imageBasePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
-						
-						debugPrint(tileId, imageBasePath);
-						
-						final VirtualImage40 image = getOrCreate(images, imageBasePath,
-								new DefaultFactory<VirtualImage40>(VirtualImage40.class, imageBasePath));
-						
-						debugPrint(image.getWidth(), image.getHeight());
-						
-						convert(image, tileId, new File(mitosis, tileId + "_mitosis.csv"), out);
-						convert(image, tileId, new File(mitosis, tileId + "_not_mitosis.csv"), out);
-					}
-				} finally {
-					ImageIO.write(mitosisMosaicBuilder[0].generateMosaic(), "png", new File(mitosis, "not_mitosis_mosaic.png"));
-					ImageIO.write(mitosisMosaicBuilder[1].generateMosaic(), "png", new File(mitosis, "mitosis_mosaic.png"));
-				}
-			}
-		} finally {
-			out.close();
+		if (Operation.TEST_PNG.equals(operation)) {
+			debugPrint(ImageIO.read(new File(root, "A18/frames/x40/A18_00Cc.png")));
+		} else if (Operation.MAKE_DATA_FILE.equals(operation)) {
+			final PrintStream out = new PrintStream(new File(root, "A.data"));
 			
+			try {
+				for (final String imageSetId : array("A03", "A04", "A05", "A07", "A10", "A11", "A12", "A14", "A15", "A17", "A18")) {
+					debugPrint(new Date());
+					
+					final String imageSetRoot = root + imageSetId;
+					final File frames40 = new File(imageSetRoot + "/frames/x40/");
+					final File mitosis = new File(imageSetRoot + "/mitosis/");
+					final Map<String, VirtualImage40> images = new HashMap<String, VirtualImage40>();
+					
+					try {
+						for (final String file : frames40.list()) {
+							final String tileId = file.replaceAll("\\..+$", "");
+							final String imageBasePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
+							
+							debugPrint(tileId, imageBasePath);
+							
+							final VirtualImage40 image = getOrCreate(images, imageBasePath,
+									new DefaultFactory<VirtualImage40>(VirtualImage40.class, imageBasePath));
+							
+							debugPrint(image.getWidth(), image.getHeight());
+							
+							convert(image, tileId, new File(mitosis, tileId + "_mitosis.csv"), windowHalfSize, out);
+							convert(image, tileId, new File(mitosis, tileId + "_not_mitosis.csv"), windowHalfSize, out);
+						}
+					} finally {
+						ImageIO.write(mitosisMosaicBuilder[0].generateMosaic(), "png", new File(mitosis, "not_mitosis_mosaic.png"));
+						ImageIO.write(mitosisMosaicBuilder[1].generateMosaic(), "png", new File(mitosis, "mitosis_mosaic.png"));
+					}
+				}
+			} finally {
+				out.close();
+				
+				debugPrint(new Date());
+			}
+		} else if (Operation.TEST_DATA_FILE.equals(operation)) {
 			debugPrint(new Date());
+			
+			final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
+//			final Scanner scanner = new Scanner(Tools.getResourceAsStream(root + "A.data"));
+			final BufferedReader scanner = new BufferedReader(new FileReader(root + "A.data"));
+			final Map<Integer, AtomicInteger> lineSizes = new TreeMap<Integer, AtomicInteger>();
+			final DefaultFactory<AtomicInteger> atomicIntegerFactory = DefaultFactory.forClass(AtomicInteger.class);
+			
+			try {
+				int lineCount = 0;
+				
+				String l = scanner.readLine();
+				
+				while (l != null) {
+					monitor.ping();
+					final String[] line = l.trim().split(" ");
+					final int lineSize = line.length;
+					getOrCreate(lineSizes, lineSize, atomicIntegerFactory).incrementAndGet();
+					++lineCount;
+					
+					if (lineSize != (int) (square(windowHalfSize * 2.0) * 3.0 + 1.0)) {
+						monitor.pause();
+						System.err.println(debug(DEBUG_STACK_OFFSET, lineCount, lineSize, Arrays.toString(line)));
+					}
+					
+					l = scanner.readLine();
+				}
+				
+				monitor.pause();
+				debugPrint(lineCount, lineSizes);
+			} finally {
+				scanner.close();
+				
+				monitor.pause();
+				debugPrint(new Date());
+			}
 		}
 	}
 	
-	public static final void convert(final VirtualImage40 image, final String tileId, final File csv, final PrintStream out) throws FileNotFoundException {
+	public static final void convert(final VirtualImage40 image, final String tileId, final File csv, final int windowHalfSize, final PrintStream out) throws FileNotFoundException {
 		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
-		final int windowHalfSize = 32;
 		final Collection<Point> positivePoints = new ArrayList<Point>();
 		final Scanner scanner = new Scanner(csv);
 		
@@ -144,7 +188,7 @@ public final class MitosAtypiaImporter {
 			}
 		} finally {
 			scanner.close();
-			monitor.end();
+			monitor.pause();
 		}
 	}
 	
@@ -360,24 +404,25 @@ public final class MitosAtypiaImporter {
 		
 		private final long periodMilliseconds;
 		
-		private boolean newLineNeeded;
+		private final AtomicBoolean newLineNeeded;
 		
 		public ConsoleMonitor(final long periodMilliseconds) {
 			this.timer = new TicToc();
 			this.periodMilliseconds = periodMilliseconds;
+			this.newLineNeeded = new AtomicBoolean();
 			this.timer.tic();
 		}
 		
 		public final void ping() {
 			if (this.periodMilliseconds <= this.timer.toc()) {
 				System.out.print('.');
-				this.newLineNeeded = true;
+				this.newLineNeeded.set(true);
 				this.timer.tic();
 			}
 		}
 		
-		public final void end() {
-			if (this.newLineNeeded) {
+		public final void pause() {
+			if (this.newLineNeeded.getAndSet(false)) {
 				System.out.println();
 			}
 		}
@@ -386,6 +431,15 @@ public final class MitosAtypiaImporter {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -3669736743010335592L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-08)
+	 */
+	public static enum Operation {
+		
+		TEST_PNG, MAKE_DATA_FILE, TEST_DATA_FILE
 		
 	}
 	
