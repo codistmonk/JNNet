@@ -1047,14 +1047,14 @@ final class Functional {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static final <In, Out> Out[] map(final Class<Out> resultComponentType,
+	public static final <In, Out, OutArray> OutArray map(final Class<Out> resultComponentType,
 			final Object methodObject, final Method method, final In[] singleArguments) {
 		try {
 			final int n = singleArguments.length;
-			final Out[] result = (Out[]) Array.newInstance(resultComponentType, n);
+			final OutArray result = (OutArray) Array.newInstance(resultComponentType, n);
 			
 			for (int i = 0; i < n; ++i) {
-				result[i] = (Out) method.invoke(methodObject, singleArguments[i]);
+				Array.set(result, i, method.invoke(methodObject, singleArguments[i]));
 			}
 			
 			return result;

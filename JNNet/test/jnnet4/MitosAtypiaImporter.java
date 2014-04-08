@@ -54,46 +54,64 @@ public final class MitosAtypiaImporter {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
-		final Operation operation = Operation.TEST_DATA_FILE;
+		final Operation operation = Operation.MAKE_DATA_FILE;
 		final String root = "F:/icpr2014_mitos_atypia/";
 		final int windowHalfSize = 32;
 		
 		if (Operation.TEST_PNG.equals(operation)) {
-			debugPrint(ImageIO.read(new File(root, "A18/frames/x40/A18_00Cc.png")));
+			
+			for (final String imageSetId : array("A03", "A04", "A05", "A07", "A10", "A11", "A12", "A14", "A15", "A17", "A18")) {
+				debugPrint(imageSetId);
+				
+				for (final File file : new File(root, imageSetId + "/frames/x40/").listFiles()) {
+					if (file.getName().endsWith(".png")) {
+						try {
+							ImageIO.read(file).toString();
+						} catch (final Exception exception) {
+							System.err.println(debug(DEBUG_STACK_OFFSET, "Error reading file", file));
+						}
+					}
+				}
+			}
 		} else if (Operation.MAKE_DATA_FILE.equals(operation)) {
-			final PrintStream out = new PrintStream(new File(root, "A.data"));
+//			final PrintStream out = new PrintStream(new File(root, "A.data"));
+			final PrintStream out = null;
 			
 			try {
 				for (final String imageSetId : array("A03", "A04", "A05", "A07", "A10", "A11", "A12", "A14", "A15", "A17", "A18")) {
-					debugPrint(new Date());
+					debugPrint(imageSetId, new Date());
 					
 					final String imageSetRoot = root + imageSetId;
 					final File frames40 = new File(imageSetRoot + "/frames/x40/");
 					final File mitosis = new File(imageSetRoot + "/mitosis/");
 					final Map<String, VirtualImage40> images = new HashMap<String, VirtualImage40>();
 					
-					try {
-						for (final String file : frames40.list()) {
-							final String tileId = file.replaceAll("\\..+$", "");
-							final String imageBasePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
-							
-							debugPrint(tileId, imageBasePath);
-							
-							final VirtualImage40 image = getOrCreate(images, imageBasePath,
-									new DefaultFactory<VirtualImage40>(VirtualImage40.class, imageBasePath));
-							
-							debugPrint(image.getWidth(), image.getHeight());
-							
-							convert(image, tileId, new File(mitosis, tileId + "_mitosis.csv"), windowHalfSize, out);
-							convert(image, tileId, new File(mitosis, tileId + "_not_mitosis.csv"), windowHalfSize, out);
-						}
-					} finally {
-						ImageIO.write(mitosisMosaicBuilder[0].generateMosaic(), "png", new File(mitosis, "not_mitosis_mosaic.png"));
-						ImageIO.write(mitosisMosaicBuilder[1].generateMosaic(), "png", new File(mitosis, "mitosis_mosaic.png"));
+					for (final String file : frames40.list()) {
+						final String tileId = file.replaceAll("\\..+$", "");
+						final String imageBasePath = new File(frames40, tileId.substring(0, tileId.length() - 2)).toString();
+						
+						debugPrint(tileId, imageBasePath);
+						
+						final VirtualImage40 image = getOrCreate(images, imageBasePath,
+								new DefaultFactory<VirtualImage40>(VirtualImage40.class, imageBasePath));
+						
+						debugPrint(image.getWidth(), image.getHeight());
+						
+						convert(image, tileId, new File(mitosis, tileId + "_mitosis.csv"), windowHalfSize, out);
+						convert(image, tileId, new File(mitosis, tileId + "_not_mitosis.csv"), windowHalfSize, out);
+					}
+					
+					if (out != null) {
+						out.flush();
 					}
 				}
 			} finally {
-				out.close();
+				if (out != null) {
+					out.close();
+				}
+				
+				ImageIO.write(mitosisMosaicBuilder[0].generateMosaic(), "png", new File(root, "not_mitosis_mosaic.png"));
+				ImageIO.write(mitosisMosaicBuilder[1].generateMosaic(), "png", new File(root, "mitosis_mosaic.png"));
 				
 				debugPrint(new Date());
 			}
@@ -192,6 +210,8 @@ public final class MitosAtypiaImporter {
 		}
 	}
 	
+	private static int debugLineId = 0;
+	
 	private static final BufferedImage convert(final VirtualImage40 image,
 			final String tileId, final int windowHalfSize, final int x0,
 			final int y0, final int label, final PrintStream out) {
@@ -211,24 +231,53 @@ public final class MitosAtypiaImporter {
 				for (int x = 0; x < 2 * windowHalfSize; ++x) {
 					final Color color = new Color(result.getRGB(x, y));
 					
-					out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					if (out != null) {
+						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					}
 				}
 			}
 			
-			out.println(label);
+			if (out != null) {
+				out.println(label);
+			}
+			
+			++debugLineId;
 		}
 		
 		// 90°
 		{
+			String line = "";
+			
 			for (int x = 0; x < 2 * windowHalfSize; ++x) {
 				for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
 					final Color color = new Color(result.getRGB(x, y));
 					
-					out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					if (out != null) {
+						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					}
+					
+					if (debugLineId == 66641) {
+						line += (color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					}
 				}
 			}
 			
-			out.println(label);
+			
+			if (out != null) {
+				out.println(label);
+			}
+			
+			if (debugLineId == 66641) {
+				line += (label);
+			}
+			
+			if (debugLineId == 66641) {
+//				debugPrint(line);
+				debugPrint(line.trim().split(" ").length);
+//				System.exit(0);
+			}
+			
+			++debugLineId;
 		}
 		
 		// 180°
@@ -237,11 +286,18 @@ public final class MitosAtypiaImporter {
 				for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
 					final Color color = new Color(result.getRGB(x, y));
 					
-					out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					if (out != null) {
+						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					}
 				}
 			}
 			
-			out.println(label);
+			
+			if (out != null) {
+				out.println(label);
+			}
+			
+			++debugLineId;
 		}
 		
 		// 270°
@@ -250,11 +306,18 @@ public final class MitosAtypiaImporter {
 				for (int y = 0; y < 2 * windowHalfSize; ++y) {
 					final Color color = new Color(result.getRGB(x, y));
 					
-					out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					if (out != null) {
+						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+					}
 				}
 			}
 			
-			out.println(label);
+			
+			if (out != null) {
+				out.println(label);
+			}
+			
+			++debugLineId;
 		}
 		
 		return result;
@@ -414,8 +477,12 @@ public final class MitosAtypiaImporter {
 		}
 		
 		public final void ping() {
+			this.ping(".");
+		}
+		
+		public final void ping(final String text) {
 			if (this.periodMilliseconds <= this.timer.toc()) {
-				System.out.print('.');
+				System.out.print(text);
 				this.newLineNeeded.set(true);
 				this.timer.tic();
 			}
