@@ -267,7 +267,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	@Test
 	public final void test3() throws Exception {
 		final TicToc timer = new TicToc();
-		final int trainingItems = 10000;
+		final int trainingItems = 80000;
 		final int validationItems = 10000;
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
@@ -530,7 +530,8 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		}
 		
 		this.hyperplanes = hyperplanes.toArray();
-		this.invertOutput = allowOutputInversion && codes.getCodes()[0].size() < codes.getCodes()[1].size();
+		this.invertOutput = !codes.getCodes()[0].isEmpty() && (codes.getCodes()[1].isEmpty() ||
+				allowOutputInversion && codes.getCodes()[0].size() < codes.getCodes()[1].size());
 		this.clusters = this.invertOutput ? codes.getCodes()[0].keySet() : codes.getCodes()[1].keySet();
 		
 		if (false) {
