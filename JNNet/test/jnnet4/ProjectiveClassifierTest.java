@@ -160,7 +160,7 @@ final class ProjectiveClassifier implements BinaryClassifier {
 	}
 	
 	@Override
-	public final SimpleConfusionMatrix evaluate(final CSVDataset dataset, final EvaluationMonitor monitor) {
+	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
 		return Default.defaultEvaluate(this, dataset, monitor);
 	}
 	

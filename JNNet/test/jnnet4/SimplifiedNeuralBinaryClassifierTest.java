@@ -271,16 +271,18 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final int validationItems = 10000;
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final CSVDataset trainingData = new CSVDataset("F:/icpr2014_mitos_atypia/A.data", -1, 0, trainingItems);
+//		final Dataset trainingData = new CSVDataset("F:/icpr2014_mitos_atypia/A.data", -1, 0, trainingItems);
+		final Dataset trainingData = new BinDataset("F:/icpr2014_mitos_atypia/A.bin", -1, 0, trainingItems);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final CSVDataset validationData = new CSVDataset("F:/icpr2014_mitos_atypia/A.data", -1, trainingItems, validationItems);
+//		final Dataset validationData = new CSVDataset("F:/icpr2014_mitos_atypia/A.data", -1, trainingItems, validationItems);
+		final Dataset validationData = new BinDataset("F:/icpr2014_mitos_atypia/A.bin", -1, trainingItems, validationItems);
 		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
 		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 80; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
-			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.8, maximumHyperplaneCount, true, true);
+			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
@@ -568,7 +570,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 	}
 	
 	@Override
-	public final SimpleConfusionMatrix evaluate(final CSVDataset dataset, final EvaluationMonitor monitor) {
+	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
 		return Default.defaultEvaluate(this, dataset, monitor);
 	}
 	

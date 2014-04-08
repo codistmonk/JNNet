@@ -113,6 +113,11 @@ public final class CSV2Bin {
 		BYTE {
 			
 			@Override
+			public final int getByteCount() {
+				return Byte.SIZE / Byte.SIZE;
+			}
+			
+			@Override
 			public final void write(final double value, final DataOutputStream out) throws IOException {
 				out.writeByte(((int) value) & 0x000000FF);
 			}
@@ -128,6 +133,11 @@ public final class CSV2Bin {
 			}
 			
 		}, SHORT {
+			
+			@Override
+			public final int getByteCount() {
+				return Short.SIZE / Byte.SIZE;
+			}
 			
 			@Override
 			public final void write(final double value, final DataOutputStream out) throws IOException {
@@ -147,6 +157,11 @@ public final class CSV2Bin {
 		}, INT {
 			
 			@Override
+			public final int getByteCount() {
+				return Integer.SIZE / Byte.SIZE;
+			}
+			
+			@Override
 			public final void write(final double value, final DataOutputStream out) throws IOException {
 				out.writeInt((int) value);
 			}
@@ -162,6 +177,11 @@ public final class CSV2Bin {
 			}
 			
 		}, LONG {
+			
+			@Override
+			public final int getByteCount() {
+				return Long.SIZE / Byte.SIZE;
+			}
 			
 			@Override
 			public final void write(final double value, final DataOutputStream out) throws IOException {
@@ -181,6 +201,11 @@ public final class CSV2Bin {
 		}, FLOAT {
 			
 			@Override
+			public final int getByteCount() {
+				return Float.SIZE / Byte.SIZE;
+			}
+			
+			@Override
 			public final void write(final double value, final DataOutputStream out) throws IOException {
 				out.writeFloat((float) value);
 			}
@@ -198,6 +223,11 @@ public final class CSV2Bin {
 		}, DOUBLE {
 			
 			@Override
+			public final int getByteCount() {
+				return Double.SIZE / Byte.SIZE;
+			}
+			
+			@Override
 			public final void write(final double value, final DataOutputStream out) throws IOException {
 				out.writeDouble(value);
 			}
@@ -213,6 +243,8 @@ public final class CSV2Bin {
 			}
 			
 		};
+		
+		public abstract int getByteCount();
 		
 		public abstract void write(double value, DataOutputStream out) throws IOException;
 		
