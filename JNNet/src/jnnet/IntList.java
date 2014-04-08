@@ -1,5 +1,7 @@
 package jnnet;
 
+import static java.lang.Math.min;
+import static java.util.Arrays.copyOf;
 import static java.util.Arrays.copyOfRange;
 
 import java.io.Serializable;
@@ -46,7 +48,7 @@ public final class IntList implements Serializable {
 				this.end -= this.first;
 				this.first = 0;
 			} else {
-				this.values = Arrays.copyOf(this.values, 2 * this.size());
+				this.values = copyOf(this.values, (int) min(Integer.MAX_VALUE, 2L * this.size()));
 			}
 		}
 		
