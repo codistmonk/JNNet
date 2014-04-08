@@ -16,7 +16,7 @@ public abstract interface BinaryClassifier extends Serializable {
 	
 	public abstract boolean accept(double... item);
 	
-	public abstract SimpleConfusionMatrix evaluate(CSVDataset dataset, EvaluationMonitor monitor);
+	public abstract SimpleConfusionMatrix evaluate(Dataset dataset, EvaluationMonitor monitor);
 	
 	/**
 	 * {@value}.
@@ -48,7 +48,7 @@ public abstract interface BinaryClassifier extends Serializable {
 		}
 		
 		public static final SimpleConfusionMatrix defaultEvaluate(final BinaryClassifier classifier,
-				final CSVDataset dataset, final EvaluationMonitor monitor) {
+				final Dataset dataset, final EvaluationMonitor monitor) {
 			final TicToc timer = new TicToc();
 			final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
 			
