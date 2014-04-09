@@ -1,24 +1,14 @@
 package jnnet4;
 
 import static java.util.Arrays.copyOfRange;
-import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
-import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import jnnet.DoubleList;
 import jnnet4.CSV2Bin.DataType;
 import jnnet4.MitosAtypiaImporter.ConsoleMonitor;
@@ -35,10 +25,10 @@ public final class BinDataset implements Dataset {
 	private int itemSize;
 	
 	public BinDataset(final String resourcePath) {
-		this(resourcePath, -1, 0, Integer.MAX_VALUE);
+		this(resourcePath, 0, Integer.MAX_VALUE);
 	}
 	
-	public BinDataset(final String resourcePath, final int labelIndex, final int offset, final int count) {
+	public BinDataset(final String resourcePath, final int offset, final int count) {
 		try {
 			final ConsoleMonitor monitor = new ConsoleMonitor(CSVDataset.LOGGING_MILLISECONDS);
 			final DataInputStream input = new DataInputStream(new BufferedInputStream(getResourceAsStream(resourcePath)));
@@ -50,7 +40,7 @@ public final class BinDataset implements Dataset {
 				this.itemSize = input.readInt();
 				final int inputDimension = this.itemSize - 1;
 				this.statistics = new DatasetStatistics(inputDimension);
-				this.data = new DoubleList(count < Integer.MAX_VALUE ? count * this.itemSize : 16);
+				this.data = new DoubleList(count < Integer.MAX_VALUE ? count * this.itemSize : input.available() / dataType.getByteCount());
 				final double[] buffer = new double[this.itemSize];
 				int lineId = 0;
 				
