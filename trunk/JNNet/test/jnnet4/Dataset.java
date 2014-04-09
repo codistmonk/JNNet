@@ -53,17 +53,17 @@ public abstract interface Dataset extends Serializable {
 		}
 		
 		public final void addItem(final double... item) {
-			final int labelOffset = this.getStatistics().length;
+			final int labelOffset = this.getInputDimension();
 			final int label = (int) item[labelOffset];
 			
-			this.statistics[label].addValues(item);
-			this.statistics[2].addValues(item);
+			this.getStatistics()[label].addValues(item);
+			this.getStatistics()[2].addValues(item);
 			
 			getOrCreate(this.getLabelCounts(), label, ATOMIC_INTEGER_FACTORY).incrementAndGet();
 		}
 		
 		public final void printTo(final PrintStream out) {
-			final int inputDimension = this.getStatistics().length;
+			final int inputDimension = this.getInputDimension();
 			
 			out.println("labelCounts: " + this.getLabelCounts());
 			out.println("inputDimension: " + inputDimension);
@@ -79,6 +79,10 @@ public abstract interface Dataset extends Serializable {
 			} else {
 				out.println("High-dimensional statistics not shown");
 			}
+		}
+		
+		public final int getInputDimension() {
+			return this.getStatistics()[0].getStatistics().length;
 		}
 		
 		/**

@@ -266,22 +266,23 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	@Test
 	public final void test3() throws Exception {
 		final TicToc timer = new TicToc();
-		final int trainingItems = 80000;
 		final int validationItems = 10000;
 		
+		debugPrint("Loading full dataset started", new Date(timer.tic()));
+		final ReorderingDataset all = new ReorderingDataset(new BinDataset("F:/icpr2014_mitos_atypia/A.bin")).shuffle();
+		debugPrint("Loading full dataset done in", timer.toc(), "ms");
+		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-//		final Dataset trainingData = new CSVDataset("F:/icpr2014_mitos_atypia/A.data", -1, 0, trainingItems);
-		final Dataset trainingData = new BinDataset("F:/icpr2014_mitos_atypia/A.bin", -1, 0, trainingItems);
+		final Dataset trainingData = all.subset(0, all.getItemCount() - validationItems);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-//		final Dataset validationData = new CSVDataset("F:/icpr2014_mitos_atypia/A.data", -1, trainingItems, validationItems);
-		final Dataset validationData = new BinDataset("F:/icpr2014_mitos_atypia/A.bin", -1, trainingItems, validationItems);
+		final Dataset validationData = all.subset(all.getItemCount() - validationItems, validationItems);
 		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
-		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 80; maximumHyperplaneCount += 2) {
+		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 70; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
-			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.1, maximumHyperplaneCount, true, true);
+			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
@@ -771,7 +772,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			
 			final int indexCount = ids.size();
 			final double[] neuronLocation;
-			final int algo = 1;
+			final int algo = 0;
 			
 			if (algo == 0) {
 //				neuronLocation = scaled(add(cluster1, cluster0), 0.5);
