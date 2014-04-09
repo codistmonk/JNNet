@@ -210,4 +210,20 @@ public final class JNNetTools {
 		return result;
 	}
 	
+	public static final int[] irange(final int n) {
+		final int[] result = new int[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = i;
+		}
+		
+		return result;
+	}
+	
+	public static final void swap(final int[] array, final int i, final int j) {
+		final int tmp = array[i];
+		array[i] = array[j];
+		array[j] = tmp;
+	}
+	
 }

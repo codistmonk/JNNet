@@ -281,7 +281,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 80; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
-			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
+			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.1, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
@@ -771,11 +771,11 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 			
 			final int indexCount = ids.size();
 			final double[] neuronLocation;
-			final int algo = 0;
+			final int algo = 1;
 			
 			if (algo == 0) {
 //				neuronLocation = scaled(add(cluster1, cluster0), 0.5);
-				neuronLocation = add(cluster1, k, cluster0, 1.0 - k);
+				neuronLocation = add(cluster0, k, cluster1, 1.0 - k);
 			} else {
 				for (int i = 0; i < indexCount; ++i) {
 					ids.get(i).setSortingKey(dot(neuronWeights, trainingData.getItemWeights(ids.get(i).getId())));
@@ -811,8 +811,8 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 					final int j = ids.get(bestScoreIndex + 1).getId();
 //					neuronLocation = scaled(add(copyOfRange(data, i, i + inputDimension), copyOfRange(data, j, j + inputDimension)), 0.5);
 					neuronLocation = add(
-							trainingData.getItemWeights(i), 15.0 / 16.0,
-							trainingData.getItemWeights(j), 1.0 / 16.0);
+							trainingData.getItemWeights(i), k,
+							trainingData.getItemWeights(j), 1.0 - k);
 				}
 			}
 			

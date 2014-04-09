@@ -11,13 +11,14 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
-
 import jnnet.DoubleList;
 import jnnet4.CSV2Bin.DataType;
 import jnnet4.MitosAtypiaImporter.ConsoleMonitor;
@@ -27,9 +28,7 @@ import jnnet4.MitosAtypiaImporter.ConsoleMonitor;
  */
 public final class BinDataset implements Dataset {
 	
-	private final Map<Integer, AtomicInteger> labelCounts;
-	
-	private final VectorStatistics[] statistics;
+	private final DatasetStatistics statistics;
 	
 	private final DoubleList data;
 	
@@ -40,8 +39,6 @@ public final class BinDataset implements Dataset {
 	}
 	
 	public BinDataset(final String resourcePath, final int labelIndex, final int offset, final int count) {
-		this.labelCounts = new TreeMap<Integer, AtomicInteger>();
-		
 		try {
 			final ConsoleMonitor monitor = new ConsoleMonitor(CSVDataset.LOGGING_MILLISECONDS);
 			final DataInputStream input = new DataInputStream(new BufferedInputStream(getResourceAsStream(resourcePath)));
@@ -52,8 +49,7 @@ public final class BinDataset implements Dataset {
 				final DataType dataType = DataType.values()[input.readByte()];
 				this.itemSize = input.readInt();
 				final int inputDimension = this.itemSize - 1;
-				final int labelOffset = inputDimension;
-				this.statistics = instances(3, DefaultFactory.forClass(VectorStatistics.class, inputDimension));
+				this.statistics = new DatasetStatistics(inputDimension);
 				this.data = new DoubleList(count < Integer.MAX_VALUE ? count * this.itemSize : 16);
 				final double[] buffer = new double[this.itemSize];
 				int lineId = 0;
@@ -65,42 +61,19 @@ public final class BinDataset implements Dataset {
 					
 					if (offset <= lineId) {
 						this.data.addAll(buffer);
-						
-						final int label = (int) buffer[labelOffset];
-						
-						this.statistics[label].addValues(buffer);
-						this.statistics[2].addValues(buffer);
-						
-						getOrCreate(this.labelCounts, label, ATOMIC_INTEGER_FACTORY).incrementAndGet();
+						this.statistics.addItem(buffer);
 					}
 					
 					++lineId;
 				}
 				
-				debugPrint("labelCounts:", this.getLabelCounts());
-				debugPrint("inputDimension:", this.itemSize - 1);
-				
-				if (this.itemSize < 100) {
-					for (int i = 0; i < 2; ++i) {
-						debugPrint(i + "-statistics");
-						debugPrint("means:", Arrays.toString(this.statistics[i].getMeans()));
-						debugPrint("minima:", Arrays.toString(this.statistics[i].getMinima()));
-						debugPrint("maxima:", Arrays.toString(this.statistics[i].getMaxima()));
-						debugPrint("stddev:", Arrays.toString(this.statistics[i].getStandardDeviations()));
-					}
-				} else {
-					debugPrint("High-dimensional statistics not shown");
-				}
+				this.statistics.printTo(System.out);
 			} finally {
 				input.close();
 			}
 		} catch (final IOException exception) {
 			throw unchecked(exception);
 		}
-	}
-	
-	public final Map<Integer, AtomicInteger> getLabelCounts() {
-		return this.labelCounts;
 	}
 	
 	@Override
