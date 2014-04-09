@@ -14,7 +14,6 @@ import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325.u
 import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
-import static jnnet4.VectorStatistics.scaled;
 import static jnnet4.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
@@ -290,7 +289,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-			debugPrint("training:", classifier.evaluate(validationData, null));
+			debugPrint("validation:", classifier.evaluate(validationData, null));
 			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		}
 	}
