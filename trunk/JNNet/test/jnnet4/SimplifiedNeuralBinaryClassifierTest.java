@@ -234,10 +234,6 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				SwingTools.show(mosaic, "Cluster representatives", false);
 			}
 			
-			debugPrint("Inverting classifier started", new Date(timer.tic()));
-			SwingTools.show(newImageRGB(invert(classifier.getHyperplanes(), classifier.getInputDimension(), classifier.getClusters().iterator().next()), 1, 64, 64), "Mitosis example", true);
-			debugPrint("Inverting classifier done in", timer.toc(), "ms");
-			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
 			debugPrint("training:", classifier.evaluate(trainingData, null));
 			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
@@ -258,7 +254,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final int w = (int) sqrt(inputDimension / channelCount);
 		final int h = w;
 		final double[] hyperplanes = classifier.getHyperplanes();
-		final ExecutorService executor = Executors.newFixedThreadPool(SystemProperties.getAvailableProcessorCount() - 1);
+		final ExecutorService executor = Executors.newFixedThreadPool(max(1, SystemProperties.getAvailableProcessorCount() / 2));
 		
 		try {
 			for (final BitSet code : classifier.getClusters()) {
