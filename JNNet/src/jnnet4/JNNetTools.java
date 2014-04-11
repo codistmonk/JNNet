@@ -129,6 +129,10 @@ public final class JNNetTools {
 		return 0xFF000000 | (0x00010101 * uint8(valueBetween0And1));
 	}
 	
+	public static final int rgb(final double redBetween0And1, final double greenBetween0And1, final double blueBetween0And1) {
+		return 0xFF000000 | (uint8(redBetween0And1) << 16) | (uint8(greenBetween0And1) << 8) | (uint8(blueBetween0And1) << 0);
+	}
+	
 	public static final Field getDeclaredField(final Class<?> cls, final String name) {
 		try {
 			return cls.getDeclaredField(name);

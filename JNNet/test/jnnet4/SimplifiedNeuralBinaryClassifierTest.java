@@ -51,6 +51,7 @@ import javax.imageio.ImageIO;
 import jnnet.DoubleList;
 import jnnet4.BinaryClassifier.EvaluationMonitor;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
+import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325;
 import jnnet4.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
 
 import net.sourceforge.aprog.swing.SwingTools;
@@ -168,74 +169,11 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			if (true) {
-				debugPrint("Inverting classifier started", new Date(timer.tic()));
+				final BufferedImage mosaic = invert(classifier, 1, 100).generateMosaic();
 				
-				final MosaicBuilder examples = new MosaicBuilder();
-				final int step = classifier.getInputDimension() + 1;
-				final int w = (int) sqrt(step - 1);
-				final int h = w;
-				final double[] hyperplanes = classifier.getHyperplanes();
-				final int n = hyperplanes.length;
+				ImageIO.write(mosaic, "png", new File("mnsit_" + digit + "_mosaic.png"));
 				
-				for (final BitSet code : classifier.getClusters()) {
-					debugPrint(code);
-					
-//					final LinearConstraintSystem system = new LinearConstraintSystem20140325(step);
-					final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(step);
-					
-					if (true) {
-						final double[] constraint = new double[step];
-						
-						for (int i = 0; i < step; ++i) {
-							constraint[i] = 1.0;
-							system.addConstraint(constraint);
-							constraint[i] = 0.0;
-						}
-						
-						constraint[0] = 255.0;
-						
-						for (int i = 1; i < step; ++i) {
-							constraint[i] = -1.0;
-							system.addConstraint(constraint);
-							constraint[i] = 0.0;
-						}
-					}
-					
-					for (int i = 0, bit = 0; i < n; i += step, ++bit) {
-						final double scale = code.get(bit) ? 1.0 : -1.0;
-						final double[] constraint = new double[step];
-						
-						for (int j = i; j < i + step; ++j) {
-							constraint[j - i] = scale * hyperplanes[j];
-						}
-						
-						system.addConstraint(constraint);
-					}
-					
-					if (false) {
-						Tools.writeObject(system, "test/jnnet4/mnist" + digit + "_system.jo");
-					}
-					
-					final double[] example = unscale(system.solve());
-					
-					debugPrint(system.accept(example));
-					
-					examples.getImages().add(newImage(example, 1, w, h));
-					
-					if (100 <= examples.getImages().size()) {
-						break;
-					}
-				}
-				
-				debugPrint("Inverting classifier done in", timer.toc(), "ms");
-				
-				{
-					final BufferedImage mosaic = examples.generateMosaic();
-					
-					ImageIO.write(mosaic, "png", new File("mnsit_" + digit + "_mosaic.png"));
-					
-					SwingTools.show(mosaic, "Cluster representatives", false);
-				}
+				SwingTools.show(mosaic, "Cluster representatives", false);
 			}
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
@@ -280,10 +218,22 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final Dataset validationData = all.subset(all.getItemCount() - validationItems, validationItems);
 		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
-		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 70; maximumHyperplaneCount += 2) {
+		for (int maximumHyperplaneCount = 34; maximumHyperplaneCount <= 34; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
-			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
+			final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
+			
+			if (true) {
+				final BufferedImage mosaic = invert(classifier, 3, 9).generateMosaic();
+				
+				ImageIO.write(mosaic, "png", new File("mitos2014_mosaic.png"));
+				
+				SwingTools.show(mosaic, "Cluster representatives", false);
+			}
+			
+			debugPrint("Inverting classifier started", new Date(timer.tic()));
+			SwingTools.show(newImageRGB(invert(classifier.getHyperplanes(), classifier.getInputDimension(), classifier.getClusters().iterator().next()), 1, 64, 64), "Mitosis example", true);
+			debugPrint("Inverting classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
 			debugPrint("training:", classifier.evaluate(trainingData, null));
@@ -293,6 +243,81 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("validation:", classifier.evaluate(validationData, null));
 			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 		}
+	}
+	
+	public static final MosaicBuilder invert(final SimplifiedNeuralBinaryClassifier classifier, final int channelCount, final int maximumClusterCount) {
+		final TicToc timer = new TicToc();
+		
+		debugPrint("Inverting classifier started", new Date(timer.tic()));
+		
+		final MosaicBuilder result = new MosaicBuilder();
+		final int inputDimension = classifier.getInputDimension();
+		final int w = (int) sqrt(inputDimension / channelCount);
+		final int h = w;
+		final double[] hyperplanes = classifier.getHyperplanes();
+		
+		for (final BitSet code : classifier.getClusters()) {
+			debugPrint(code);
+			
+			final double[] example = invert(hyperplanes, inputDimension, code);
+			
+			if (channelCount == 1) {
+				result.getImages().add(newImage(example, 1, w, h));
+			} else if (channelCount == 3) {
+				result.getImages().add(newImageRGB(example, 1, w, h));
+			}
+			
+			if (maximumClusterCount <= result.getImages().size()) {
+				break;
+			}
+		}
+		
+		debugPrint("Inverting classifier done in", timer.toc(), "ms");
+		
+		return result;
+	}
+	
+	public static final double[] invert(final double[] hyperplanes, final int inputDimension, final BitSet code) {
+		final int step = inputDimension + 1;
+		final int n = hyperplanes.length;
+		
+		final LinearConstraintSystem system = new LinearConstraintSystem20140325(step);
+//		final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(step);
+		
+		if (true) {
+			final double[] constraint = new double[step];
+			
+			for (int i = 0; i < step; ++i) {
+				constraint[i] = 1.0;
+				system.addConstraint(constraint);
+				constraint[i] = 0.0;
+			}
+			
+			constraint[0] = 255.0;
+			
+			for (int i = 1; i < step; ++i) {
+				constraint[i] = -1.0;
+				system.addConstraint(constraint);
+				constraint[i] = 0.0;
+			}
+		}
+		
+		for (int i = 0, bit = 0; i < n; i += step, ++bit) {
+			final double scale = code.get(bit) ? 1.0 : -1.0;
+			final double[] constraint = new double[step];
+			
+			for (int j = i; j < i + step; ++j) {
+				constraint[j - i] = scale * hyperplanes[j];
+			}
+			
+			system.addConstraint(constraint);
+		}
+		
+		final double[] example = unscale(system.solve());
+		
+		debugPrint(system.accept(example));
+		
+		return example;
 	}
 	
 	public static final BufferedImage newImage(final double[] example, final int offset, final int w, final int h) {
@@ -305,6 +330,25 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		}
 		
 		return image;
+	}
+	
+	public static final BufferedImage newImageRGB(final double[] example, final int offset, final int w, final int h) {
+		final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+		
+		for (int y = 0, p = offset; y < h; ++y) {
+			for (int x = 0; x < w; ++x, p += 3) {
+				image.setRGB(x, y, rgb(
+						unscale255To01(example, p + 0),
+						unscale255To01(example, p + 1),
+						unscale255To01(example, p + 2)));
+			}
+		}
+		
+		return image;
+	}
+	
+	public static final double unscale255To01(final double[] values, final int index) {
+		return values[index] / values[0] / 255.0;
 	}
 	
 	public static final void show(final MNISTErrorMonitor trainingMonitor,
