@@ -603,7 +603,7 @@ public final class LinearConstraintSystemTest {
 			
 			{
 				final TicToc timer = new TicToc();
-				int remainingIterations = 1000;
+				int remainingIterations = 2000;
 				
 				timer.tic();
 				
