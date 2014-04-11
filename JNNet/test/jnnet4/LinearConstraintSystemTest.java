@@ -608,7 +608,7 @@ public final class LinearConstraintSystemTest {
 				timer.tic();
 				
 				while (extendedPoint[extraDimension] <= -EPSILON &&
-						this.updateExtendedPoint(extendedPoint, extendedData) && 0 <= --remainingIterations) {
+						this.updateExtendedPoint(extendedPoint, extendedData) && 0 < remainingIterations--) {
 					if (5000L <= timer.toc()) {
 						debugPrint("remainingIterations:", remainingIterations);
 						debugPrint("extendedPoint[extraDimension]:", extendedPoint[extraDimension]);
