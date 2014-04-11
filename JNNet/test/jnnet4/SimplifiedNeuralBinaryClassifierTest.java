@@ -44,6 +44,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
@@ -53,10 +56,10 @@ import jnnet4.BinaryClassifier.EvaluationMonitor;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325;
 import jnnet4.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.Tools;
@@ -255,21 +258,42 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final int w = (int) sqrt(inputDimension / channelCount);
 		final int h = w;
 		final double[] hyperplanes = classifier.getHyperplanes();
+		final ExecutorService executor = Executors.newFixedThreadPool(SystemProperties.getAvailableProcessorCount() - 1);
 		
-		for (final BitSet code : classifier.getClusters()) {
-			debugPrint(code);
-			
-			final double[] example = invert(hyperplanes, inputDimension, code);
-			
-			if (channelCount == 1) {
-				result.getImages().add(newImage(example, 1, w, h));
-			} else if (channelCount == 3) {
-				result.getImages().add(newImageRGB(example, 1, w, h));
+		try {
+			for (final BitSet code : classifier.getClusters()) {
+				executor.submit(new Runnable() {
+					
+					@Override
+					public final void run() {
+						final double[] example = invert(hyperplanes, inputDimension, code);
+						final BufferedImage image;
+						
+						if (channelCount == 1) {
+							image = newImage(example, 1, w, h);
+						} else if (channelCount == 3) {
+							image = newImageRGB(example, 1, w, h);
+						} else {
+							throw new IllegalArgumentException();
+						}
+						
+						synchronized (result) {
+							result.getImages().add(image);
+						}
+					}
+					
+				});
+				
+				if (maximumClusterCount <= result.getImages().size()) {
+					break;
+				}
 			}
 			
-			if (maximumClusterCount <= result.getImages().size()) {
-				break;
-			}
+			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+		} catch (final InterruptedException exception) {
+			exception.printStackTrace();
+		} finally {
+			executor.shutdown();
 		}
 		
 		debugPrint("Inverting classifier done in", timer.toc(), "ms");
