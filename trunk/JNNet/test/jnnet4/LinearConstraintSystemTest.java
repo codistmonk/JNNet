@@ -404,8 +404,6 @@ public final class LinearConstraintSystemTest {
 		
 		@Override
 		public final double[] solve() {
-			debugPrint(Thread.currentThread());
-			
 			final int algo = 0;
 			
 			if (algo == 0) {
@@ -603,8 +601,6 @@ public final class LinearConstraintSystemTest {
 			}
 			
 			{
-				debugPrint(Thread.currentThread());
-				
 				final TicToc timer = new TicToc();
 				int remainingIterations = 5000;
 				
