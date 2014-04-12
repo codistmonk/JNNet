@@ -314,7 +314,6 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	}
 	
 	public static final double[] invert(final double[] hyperplanes, final int inputDimension, final BitSet code) {
-		debugPrint(Thread.currentThread());
 		final int step = inputDimension + 1;
 		final int n = hyperplanes.length;
 		
@@ -335,8 +334,6 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				}
 			}
 			
-			debugPrint(Thread.currentThread());
-			
 			constraint[0] = 255.0;
 			
 			for (int i = 1; i < step; ++i) {
@@ -345,8 +342,6 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				constraint[i] = 0.0;
 			}
 		}
-		
-		debugPrint(Thread.currentThread());
 		
 		for (int i = 0, bit = 0; i < n; i += step, ++bit) {
 			final double scale = code.get(bit) ? 1.0 : -1.0;
@@ -359,11 +354,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			system.addConstraint(constraint);
 		}
 		
-		debugPrint(Thread.currentThread());
-		
 		final double[] example = unscale(system.solve());
-		
-		debugPrint(Thread.currentThread());
 		
 		debugPrint(system.accept(example));
 		
