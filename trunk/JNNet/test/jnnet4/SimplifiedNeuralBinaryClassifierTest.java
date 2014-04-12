@@ -17,6 +17,7 @@ import static jnnet4.VectorStatistics.dot;
 import static jnnet4.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
+import static net.sourceforge.aprog.tools.SystemProperties.getAvailableProcessorCount;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -59,7 +60,6 @@ import jnnet4.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.Tools;
@@ -254,15 +254,33 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final int w = (int) sqrt(inputDimension / channelCount);
 		final int h = w;
 		final double[] hyperplanes = classifier.getHyperplanes();
-		final ExecutorService executor = Executors.newFixedThreadPool(max(1, SystemProperties.getAvailableProcessorCount() / 2));
+		final ExecutorService executor = Executors.newFixedThreadPool(min(2, getAvailableProcessorCount()));
 		
 		try {
+			int remaining = maximumClusterCount;
+			
+			final AtomicInteger i = new AtomicInteger();
+			
 			for (final BitSet code : classifier.getClusters()) {
+				if (--remaining < 0) {
+					break;
+				}
+				
 				executor.submit(new Runnable() {
 					
 					@Override
 					public final void run() {
-						final double[] example = invert(hyperplanes, inputDimension, code);
+						debugPrint(Thread.currentThread(), i.getAndIncrement());
+						
+						final double[] example;
+						
+						try {
+							example = invert(hyperplanes, inputDimension, code);
+						} catch (final Throwable exception) {
+							exception.printStackTrace();
+							return;
+						}
+						
 						final BufferedImage image;
 						
 						if (channelCount == 1) {
@@ -279,13 +297,11 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 					}
 					
 				});
-				
-				if (maximumClusterCount <= result.getImages().size()) {
-					break;
-				}
 			}
 			
-			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+			executor.shutdown();
+			
+			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 		} catch (final InterruptedException exception) {
 			exception.printStackTrace();
 		} finally {
@@ -298,20 +314,28 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	}
 	
 	public static final double[] invert(final double[] hyperplanes, final int inputDimension, final BitSet code) {
+		debugPrint(Thread.currentThread());
 		final int step = inputDimension + 1;
 		final int n = hyperplanes.length;
 		
 		final LinearConstraintSystem system = new LinearConstraintSystem20140325(step);
 //		final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(step);
 		
-		if (true) {
+		{
+			debugPrint(Thread.currentThread());
+			
 			final double[] constraint = new double[step];
 			
-			for (int i = 0; i < step; ++i) {
-				constraint[i] = 1.0;
-				system.addConstraint(constraint);
-				constraint[i] = 0.0;
+			if (!(system instanceof OjAlgoLinearConstraintSystem)) {
+				
+				for (int i = 0; i < step; ++i) {
+					constraint[i] = 1.0;
+					system.addConstraint(constraint);
+					constraint[i] = 0.0;
+				}
 			}
+			
+			debugPrint(Thread.currentThread());
 			
 			constraint[0] = 255.0;
 			
@@ -321,6 +345,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				constraint[i] = 0.0;
 			}
 		}
+		
+		debugPrint(Thread.currentThread());
 		
 		for (int i = 0, bit = 0; i < n; i += step, ++bit) {
 			final double scale = code.get(bit) ? 1.0 : -1.0;
@@ -333,7 +359,11 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			system.addConstraint(constraint);
 		}
 		
+		debugPrint(Thread.currentThread());
+		
 		final double[] example = unscale(system.solve());
+		
+		debugPrint(Thread.currentThread());
 		
 		debugPrint(system.accept(example));
 		

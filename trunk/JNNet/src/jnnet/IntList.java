@@ -3,6 +3,10 @@ package jnnet;
 import static java.lang.Math.min;
 import static java.util.Arrays.copyOf;
 import static java.util.Arrays.copyOfRange;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
+import static net.sourceforge.aprog.tools.Tools.debug;
+import static net.sourceforge.aprog.tools.Tools.gc;
+import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -48,7 +52,23 @@ public final class IntList implements Serializable {
 				this.end -= this.first;
 				this.first = 0;
 			} else {
-				this.values = copyOf(this.values, (int) min(Integer.MAX_VALUE, 2L * this.size()));
+				final int newBufferSize = (int) min(Integer.MAX_VALUE, 2L * this.size());
+				
+				try {
+					try {
+						this.values = copyOf(this.values, newBufferSize);
+					} catch (final OutOfMemoryError error) {
+						ignore(error);
+						
+						gc(10L);
+						
+						this.values = copyOf(this.values, newBufferSize);
+					}
+				} catch (final OutOfMemoryError error) {
+					System.err.println(debug(DEBUG_STACK_OFFSET, "Failed to allocate", newBufferSize, this.values.getClass().getComponentType().getSimpleName() + "s"));
+					
+					throw error;
+				}
 			}
 		}
 		
