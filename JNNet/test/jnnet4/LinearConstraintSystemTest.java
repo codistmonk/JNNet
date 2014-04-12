@@ -23,7 +23,6 @@ import java.util.List;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
-
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 
@@ -405,6 +404,8 @@ public final class LinearConstraintSystemTest {
 		
 		@Override
 		public final double[] solve() {
+			debugPrint(Thread.currentThread());
+			
 			final int algo = 0;
 			
 			if (algo == 0) {
@@ -602,22 +603,22 @@ public final class LinearConstraintSystemTest {
 			}
 			
 			{
+				debugPrint(Thread.currentThread());
+				
 				final TicToc timer = new TicToc();
-				int remainingIterations = 2000;
+				int remainingIterations = 5000;
 				
 				timer.tic();
 				
 				while (extendedPoint[extraDimension] <= -EPSILON &&
 						this.updateExtendedPoint(extendedPoint, extendedData) && 0 < remainingIterations--) {
-					if (5000L <= timer.toc()) {
-						debugPrint("remainingIterations:", remainingIterations);
-						debugPrint("extendedPoint[extraDimension]:", extendedPoint[extraDimension]);
+					if (10000L <= timer.toc()) {
+						debugPrint(Thread.currentThread(), "remainingIterations:", remainingIterations, "extendedPoint[extraDimension]:", extendedPoint[extraDimension]);
 						timer.tic();
 					}
 				}
 				
-				debugPrint("remainingIterations:", remainingIterations);
-				debugPrint("extendedPoint[extraDimension]:", extendedPoint[extraDimension]);
+				debugPrint(Thread.currentThread(), "remainingIterations:", remainingIterations, "extendedPoint[extraDimension]:", extendedPoint[extraDimension]);
 			}
 			
 			return copyOf(extendedPoint, order);
@@ -699,7 +700,7 @@ public final class LinearConstraintSystemTest {
 		/**
 		 * {@value}.
 		 */
-		public static final double EPSILON = 1E-7;
+		public static final double EPSILON = 1E-8;
 		
 		public static final int solveUsingLastDimension(final double[] data, final double[] point) {
 			int result = -1;

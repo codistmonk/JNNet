@@ -29,6 +29,8 @@ public final class BinDataset implements Dataset {
 	}
 	
 	public BinDataset(final String resourcePath, final int offset, final int count) {
+		System.out.println(this.getClass().getName());
+		
 		try {
 			final ConsoleMonitor monitor = new ConsoleMonitor(CSVDataset.LOGGING_MILLISECONDS);
 			final DataInputStream input = new DataInputStream(new BufferedInputStream(getResourceAsStream(resourcePath)));

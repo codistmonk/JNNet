@@ -3,6 +3,7 @@ package jnnet4;
 import static java.util.Arrays.copyOfRange;
 import static jnnet4.JNNetTools.irange;
 import static jnnet4.JNNetTools.swap;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.util.Random;
 
@@ -22,6 +23,8 @@ public final class ReorderingDataset implements Dataset {
 	}
 	
 	public ReorderingDataset(final Dataset source, final int[] indices) {
+		System.out.println(this.getClass().getName());
+		
 		this.source = source;
 		this.indices = indices;
 		this.statistics = new DatasetStatistics(source.getItemSize() - 1);
