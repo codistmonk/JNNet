@@ -27,6 +27,7 @@ import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static net.sourceforge.aprog.tools.Tools.writeObject;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -151,7 +152,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			
 			for (int i = 0, k = 500; i < n && 0 < --k; i += step) {
 				final int label = (int) data[i + step - 1];
-				ImageIO.write(newImage(data, i, 28, 28), "png", new File("mnist/" + (label == 0 ? "not" : "") + digit + "/mnist_" + digit + "_training_" + (i / step) + ".png"));
+				ImageIO.write(InvertClassifier.newImage(data, i, 28, 28), "png", new File("mnist/" + (label == 0 ? "not" : "") + digit + "/mnist_" + digit + "_training_" + (i / step) + ".png"));
 			}
 		}
 		
@@ -172,7 +173,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			if (true) {
-				final BufferedImage mosaic = invert(classifier, 1, 100).generateMosaic();
+				final BufferedImage mosaic = InvertClassifier.invert(classifier, 1, 100).generateMosaic();
 				
 				ImageIO.write(mosaic, "png", new File("mnsit_" + digit + "_mosaic.png"));
 				
@@ -221,175 +222,34 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final Dataset validationData = all.subset(all.getItemCount() - validationItems, validationItems);
 		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
 		
-		for (int maximumHyperplaneCount = 34; maximumHyperplaneCount <= 34; maximumHyperplaneCount += 2) {
+		BinaryClassifier bestClassifier = null;
+		double bestSensitivity = 0.0;
+		
+		for (int maximumHyperplaneCount = 38; maximumHyperplaneCount <= 38; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
 			final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
-			
-			if (true) {
-				final BufferedImage mosaic = invert(classifier, 3, 9).generateMosaic();
-				
-				ImageIO.write(mosaic, "png", new File("mitos2014_mosaic.png"));
-				
-				SwingTools.show(mosaic, "Cluster representatives", false);
-			}
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
 			debugPrint("training:", classifier.evaluate(trainingData, null));
 			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-			debugPrint("validation:", classifier.evaluate(validationData, null));
+			final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
+			debugPrint("validation:", validationResult);
 			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
-		}
-	}
-	
-	public static final MosaicBuilder invert(final SimplifiedNeuralBinaryClassifier classifier, final int channelCount, final int maximumClusterCount) {
-		final TicToc timer = new TicToc();
-		
-		debugPrint("Inverting classifier started", new Date(timer.tic()));
-		
-		final MosaicBuilder result = new MosaicBuilder();
-		final int inputDimension = classifier.getInputDimension();
-		final int w = (int) sqrt(inputDimension / channelCount);
-		final int h = w;
-		final double[] hyperplanes = classifier.getHyperplanes();
-		final ExecutorService executor = Executors.newFixedThreadPool(min(2, getAvailableProcessorCount()));
-		
-		try {
-			int remaining = maximumClusterCount;
 			
-			final AtomicInteger i = new AtomicInteger();
-			
-			for (final BitSet code : classifier.getClusters()) {
-				if (--remaining < 0) {
-					break;
-				}
-				
-				executor.submit(new Runnable() {
-					
-					@Override
-					public final void run() {
-						debugPrint(Thread.currentThread(), i.getAndIncrement());
-						
-						final double[] example;
-						
-						try {
-							example = invert(hyperplanes, inputDimension, code);
-						} catch (final Throwable exception) {
-							exception.printStackTrace();
-							return;
-						}
-						
-						final BufferedImage image;
-						
-						if (channelCount == 1) {
-							image = newImage(example, 1, w, h);
-						} else if (channelCount == 3) {
-							image = newImageRGB(example, 1, w, h);
-						} else {
-							throw new IllegalArgumentException();
-						}
-						
-						synchronized (result) {
-							result.getImages().add(image);
-						}
-					}
-					
-				});
-			}
-			
-			executor.shutdown();
-			
-			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-		} catch (final InterruptedException exception) {
-			exception.printStackTrace();
-		} finally {
-			executor.shutdown();
-		}
-		
-		debugPrint("Inverting classifier done in", timer.toc(), "ms");
-		
-		return result;
-	}
-	
-	public static final double[] invert(final double[] hyperplanes, final int inputDimension, final BitSet code) {
-		final int step = inputDimension + 1;
-		final int n = hyperplanes.length;
-		
-		final LinearConstraintSystem system = new LinearConstraintSystem20140325(step);
-//		final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(step);
-		
-		{
-			debugPrint(Thread.currentThread());
-			
-			final double[] constraint = new double[step];
-			
-			if (!(system instanceof OjAlgoLinearConstraintSystem)) {
-				
-				for (int i = 0; i < step; ++i) {
-					constraint[i] = 1.0;
-					system.addConstraint(constraint);
-					constraint[i] = 0.0;
-				}
-			}
-			
-			constraint[0] = 255.0;
-			
-			for (int i = 1; i < step; ++i) {
-				constraint[i] = -1.0;
-				system.addConstraint(constraint);
-				constraint[i] = 0.0;
+			if (bestSensitivity < validationResult.getSensitivity()) {
+				bestSensitivity = validationResult.getSensitivity();
+				bestClassifier = classifier;
 			}
 		}
 		
-		for (int i = 0, bit = 0; i < n; i += step, ++bit) {
-			final double scale = code.get(bit) ? 1.0 : -1.0;
-			final double[] constraint = new double[step];
-			
-			for (int j = i; j < i + step; ++j) {
-				constraint[j - i] = scale * hyperplanes[j];
-			}
-			
-			system.addConstraint(constraint);
+		if (bestClassifier != null) {
+			debugPrint("Serializing best classifier started", new Date(timer.tic()));
+			writeObject(bestClassifier, "bestclassifier.jo");
+			debugPrint("Serializing best classifier done in", timer.toc(), "ms");
 		}
-		
-		final double[] example = unscale(system.solve());
-		
-		debugPrint(system.accept(example));
-		
-		return example;
-	}
-	
-	public static final BufferedImage newImage(final double[] example, final int offset, final int w, final int h) {
-		final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
-		
-		for (int y = 0, p = offset; y < h; ++y) {
-			for (int x = 0; x < w; ++x, ++p) {
-				image.setRGB(x, y, rgb(max(0.0, min(example[p] / example[0] / 255.0, 1.0))));
-			}
-		}
-		
-		return image;
-	}
-	
-	public static final BufferedImage newImageRGB(final double[] example, final int offset, final int w, final int h) {
-		final BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
-		
-		for (int y = 0, p = offset; y < h; ++y) {
-			for (int x = 0; x < w; ++x, p += 3) {
-				image.setRGB(x, y, rgb(
-						unscale255To01(example, p + 0),
-						unscale255To01(example, p + 1),
-						unscale255To01(example, p + 2)));
-			}
-		}
-		
-		return image;
-	}
-	
-	public static final double unscale255To01(final double[] values, final int index) {
-		return values[index] / values[0] / 255.0;
 	}
 	
 	public static final void show(final MNISTErrorMonitor trainingMonitor,
@@ -619,7 +479,7 @@ final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier {
 		this.hyperplanes = hyperplanes.toArray();
 		this.invertOutput = !codes.getCodes()[0].isEmpty() && (codes.getCodes()[1].isEmpty() ||
 				allowOutputInversion && codes.getCodes()[0].size() < codes.getCodes()[1].size());
-		this.clusters = this.invertOutput ? codes.getCodes()[0].keySet() : codes.getCodes()[1].keySet();
+		this.clusters = new HashSet<BitSet>(this.invertOutput ? codes.getCodes()[0].keySet() : codes.getCodes()[1].keySet());
 		
 		if (false) {
 			debugPrint("Experimental section...");
