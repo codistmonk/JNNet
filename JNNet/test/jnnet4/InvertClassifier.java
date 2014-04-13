@@ -64,7 +64,7 @@ public final class InvertClassifier {
 		final int w = (int) sqrt(inputDimension / channelCount);
 		final int h = w;
 		final double[] hyperplanes = classifier.getHyperplanes();
-		final ExecutorService executor = Executors.newFixedThreadPool(min(2, getAvailableProcessorCount()));
+		final ExecutorService executor = Executors.newFixedThreadPool(min(3, getAvailableProcessorCount()));
 		
 		try {
 			int remaining = maximumClusterCount;
@@ -134,6 +134,7 @@ public final class InvertClassifier {
 			final double[] constraint = new double[step];
 			
 			if (!(system instanceof OjAlgoLinearConstraintSystem)) {
+				system.allocate(step + step - 1 + n / step);
 				
 				for (int i = 0; i < step; ++i) {
 					constraint[i] = 1.0;
