@@ -23,6 +23,7 @@ import java.util.List;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
+import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 
@@ -245,6 +246,8 @@ public final class LinearConstraintSystemTest {
 		
 		public abstract int getOrder();
 		
+		public abstract LinearConstraintSystem allocate(int constraintCount);
+		
 		public abstract LinearConstraintSystem addConstraint(double... constraint);
 		
 		public abstract int getConstraintCount();
@@ -349,13 +352,25 @@ public final class LinearConstraintSystemTest {
 			this.data = new DoubleList();
 		}
 		
+		public final DoubleList getData() {
+			return this.data;
+		}
+		
 		@Override
 		public final int getOrder() {
 			return this.order;
 		}
 		
-		public final DoubleList getData() {
-			return this.data;
+		@Override
+		public final LinearConstraintSystem20140325 allocate(final int constraintCount) {
+			final int n = this.getData().size();
+			final int needed = n + constraintCount * this.getOrder();
+			
+			debugPrint("Allocating", needed, "doubles");
+			
+			this.getData().resize(needed).resize(n);
+			
+			return this;
 		}
 		
 		@Override
@@ -874,6 +889,12 @@ public final class LinearConstraintSystemTest {
 		@Override
 		public final int getOrder() {
 			return this.objective.getVariables().size() - 1;
+		}
+		
+		@Override
+		public final LinearConstraintSystem allocate(final int constraintCount) {
+			// TODO
+			return this;
 		}
 		
 		@Override
