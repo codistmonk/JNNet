@@ -74,8 +74,7 @@ public final class MitosAtypiaImporter {
 				}
 			}
 		} else if (Operation.MAKE_DATA_FILE.equals(operation)) {
-//			final PrintStream out = new PrintStream(new File(root, "A.data"));
-			final PrintStream out = null;
+			final PrintStream out = new PrintStream(new File(root, "A.data"));
 			
 			try {
 				for (final String imageSetId : array("A03", "A04", "A05", "A07", "A10", "A11", "A12", "A14", "A15", "A17", "A18")) {
@@ -156,6 +155,7 @@ public final class MitosAtypiaImporter {
 	}
 	
 	public static final void convert(final VirtualImage40 image, final String tileId, final File csv, final int windowHalfSize, final PrintStream out) throws FileNotFoundException {
+		final boolean mitosis = !csv.getName().endsWith("_not_mitosis.csv");
 		final ConsoleMonitor monitor = new ConsoleMonitor(5000L);
 		final Collection<Point> positivePoints = new ArrayList<Point>();
 		final Scanner scanner = new Scanner(csv);
@@ -178,7 +178,7 @@ public final class MitosAtypiaImporter {
 				}
 			}
 			
-			if (!csv.getName().endsWith("_not_mitosis.csv")){
+			if (mitosis){
 				final BufferedImage tile = image.getTile(tileId);
 				final int w = tile.getWidth();
 				final int h = tile.getHeight();
@@ -210,114 +210,90 @@ public final class MitosAtypiaImporter {
 		}
 	}
 	
-	private static int debugLineId = 0;
-	
 	private static final BufferedImage convert(final VirtualImage40 image,
 			final String tileId, final int windowHalfSize, final int x0,
 			final int y0, final int label, final PrintStream out) {
 		final BufferedImage result = new BufferedImage(2 * windowHalfSize, 2 * windowHalfSize, BufferedImage.TYPE_3BYTE_BGR);
+		final int translation = label;
 		
-		for (int y = y0 - windowHalfSize; y < y0 + windowHalfSize; ++y) {
-			for (int x = x0 - windowHalfSize; x < x0 + windowHalfSize; ++x) {
-				final int rgb = image.getRGB(tileId, x, y);
+		for (int dy = -translation; dy <= translation; ++dy) {
+			for (int dx = -translation; dx <= translation; ++dx) {
+				for (int y = y0 - windowHalfSize; y < y0 + windowHalfSize; ++y) {
+					for (int x = x0 - windowHalfSize; x < x0 + windowHalfSize; ++x) {
+						final int rgb = image.getRGB(tileId, x + dx, y + dy);
+						
+						result.setRGB(x - (x0 - windowHalfSize), y - (y0 - windowHalfSize), rgb);
+					}
+				}
 				
-				result.setRGB(x - (x0 - windowHalfSize), y - (y0 - windowHalfSize), rgb);
-			}
-		}
-		
-		// 0°
-		{
-			for (int y = 0; y < 2 * windowHalfSize; ++y) {
-				for (int x = 0; x < 2 * windowHalfSize; ++x) {
-					final Color color = new Color(result.getRGB(x, y));
+				// 0°
+				{
+					for (int y = 0; y < 2 * windowHalfSize; ++y) {
+						for (int x = 0; x < 2 * windowHalfSize; ++x) {
+							final Color color = new Color(result.getRGB(x, y));
+							
+							if (out != null) {
+								out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+							}
+						}
+					}
 					
 					if (out != null) {
-						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+						out.println(label);
+					}
+				}
+				
+				// 90°
+				{
+					for (int x = 0; x < 2 * windowHalfSize; ++x) {
+						for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
+							final Color color = new Color(result.getRGB(x, y));
+							
+							if (out != null) {
+								out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+							}
+						}
+					}
+					
+					if (out != null) {
+						out.println(label);
+					}
+				}
+				
+				// 180°
+				{
+					for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
+						for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
+							final Color color = new Color(result.getRGB(x, y));
+							
+							if (out != null) {
+								out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+							}
+						}
+					}
+					
+					if (out != null) {
+						out.println(label);
+					}
+				}
+				
+				// 270°
+				{
+					for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
+						for (int y = 0; y < 2 * windowHalfSize; ++y) {
+							final Color color = new Color(result.getRGB(x, y));
+							
+							if (out != null) {
+								out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
+							}
+						}
+					}
+					
+					if (out != null) {
+						out.println(label);
 					}
 				}
 			}
-			
-			if (out != null) {
-				out.println(label);
-			}
-			
-			++debugLineId;
-		}
-		
-		// 90°
-		{
-			String line = "";
-			
-			for (int x = 0; x < 2 * windowHalfSize; ++x) {
-				for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
-					final Color color = new Color(result.getRGB(x, y));
-					
-					if (out != null) {
-						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
-					}
-					
-					if (debugLineId == 66641) {
-						line += (color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
-					}
-				}
-			}
-			
-			
-			if (out != null) {
-				out.println(label);
-			}
-			
-			if (debugLineId == 66641) {
-				line += (label);
-			}
-			
-			if (debugLineId == 66641) {
-//				debugPrint(line);
-				debugPrint(line.trim().split(" ").length);
-//				System.exit(0);
-			}
-			
-			++debugLineId;
-		}
-		
-		// 180°
-		{
-			for (int y = 2 * windowHalfSize - 1; 0 <= y; --y) {
-				for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
-					final Color color = new Color(result.getRGB(x, y));
-					
-					if (out != null) {
-						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
-					}
-				}
-			}
-			
-			
-			if (out != null) {
-				out.println(label);
-			}
-			
-			++debugLineId;
-		}
-		
-		// 270°
-		{
-			for (int x = 2 * windowHalfSize - 1; 0 <= x; --x) {
-				for (int y = 0; y < 2 * windowHalfSize; ++y) {
-					final Color color = new Color(result.getRGB(x, y));
-					
-					if (out != null) {
-						out.print(color.getRed() + " " + color.getGreen() + " " + color.getBlue() + " ");
-					}
-				}
-			}
-			
-			
-			if (out != null) {
-				out.println(label);
-			}
-			
-			++debugLineId;
 		}
 		
 		return result;
