@@ -22,9 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
 
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
-import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325;
+import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414;
 import jnnet4.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -64,7 +63,7 @@ public final class InvertClassifier {
 		final int w = (int) sqrt(inputDimension / channelCount);
 		final int h = w;
 		final double[] hyperplanes = classifier.getHyperplanes();
-		final ExecutorService executor = Executors.newFixedThreadPool(min(3, getAvailableProcessorCount()));
+		final ExecutorService executor = Executors.newFixedThreadPool(min(6, getAvailableProcessorCount()));
 		
 		try {
 			int remaining = maximumClusterCount;
@@ -127,7 +126,7 @@ public final class InvertClassifier {
 		final int step = inputDimension + 1;
 		final int n = hyperplanes.length;
 		
-		final LinearConstraintSystem system = new LinearConstraintSystem20140325(step);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140414(step);
 //		final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(step);
 		
 		{
