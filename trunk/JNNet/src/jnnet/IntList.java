@@ -1,5 +1,6 @@
 package jnnet;
 
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Arrays.copyOf;
 import static java.util.Arrays.copyOfRange;
@@ -52,7 +53,7 @@ public final class IntList implements Serializable {
 				this.end -= this.first;
 				this.first = 0;
 			} else {
-				final int newBufferSize = (int) min(Integer.MAX_VALUE, 2L * this.size());
+				final int newBufferSize = (int) min(Integer.MAX_VALUE, max(1, 2L * this.size()));
 				
 				try {
 					try {
