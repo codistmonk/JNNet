@@ -205,8 +205,9 @@ public final class Test20140415 {
 				this.solution[2] = event.getY();
 				
 				this.path.clear();
-				this.path.add(point(solution));
-				move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path);
+				this.path.add(point(this.solution));
+				debugPrint(move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path));
+				debugPrint(move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path));
 				
 				this.imageView.refreshBuffer();
 			}
@@ -265,7 +266,7 @@ public final class Test20140415 {
 					
 					final double v = dot(constraints, i, objective, 0, order);
 					
-					if ((solutionValue * v - value * objectiveValue) * (v < 0.0 ? -1.0 : 1.0) * (objectiveValue < 0.0 ? -1.0 : 1.0) < 0) {
+					if ((solutionValue * v - value * objectiveValue) * (v < 0.0 ? -1.0 : 1.0) * (objectiveValue < 0.0 ? -1.0 : 1.0) < 0.0) {
 						solutionValue = value;
 						objectiveValue = v;
 						offset = i;
@@ -276,11 +277,27 @@ public final class Test20140415 {
 			if (0 <= offset) {
 				System.arraycopy(constraints, offset + 1, objective, 1, order - 1);
 				
-				// (solution + k * objective) . constraint = 0
-				// <- solution . constraint + k * objective . constraint = 0
-				// <- k = - value / objectiveValue
-				add(objectiveValue, solution, 0, -solutionValue, objective, 0, solution, 0, order);
-				path.add(point(solution));
+				{
+					for (int i = 0; i < n; i += order) {
+						final double value = dot(constraints, i, solution, 0, order);
+						
+						if (value == 0.0) {
+							final double v = dot(constraints, i, objective, 0, order);
+							
+							if (v < 0.0) {
+								result.add(i);
+							}
+						}
+					}
+				}
+				
+				if (result.isEmpty()) {
+					// (solution + k * objective) . constraint = 0
+					// <- solution . constraint + k * objective . constraint = 0
+					// <- k = - value / objectiveValue
+					add(objectiveValue, solution, 0, -solutionValue, objective, 0, solution, 0, order);
+					path.add(point(solution));
+				}
 			}
 			
 			return result;
