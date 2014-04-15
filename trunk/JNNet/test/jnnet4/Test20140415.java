@@ -47,7 +47,7 @@ public final class Test20140415 {
 					2.0, 1.0, -7.0, -1.0,
 			};
 			
-			debugPrint(eliminate(objective, constraints, 0, 1));
+			debugPrint(eliminate(objective, constraints, irange(constraints.length / objective.length)));
 			
 			debugPrint("objective:", Arrays.toString(objective));
 			
@@ -331,33 +331,52 @@ public final class Test20140415 {
 		return a * d - b * c;
 	}
 	
-	public static final boolean eliminate(final double[] objective, final double[] constraints, final int... offsets) {
+//	public static final boolean eliminate(final double[] objective, final double[] constraints) {
+//		
+//	}
+	
+	public static final boolean eliminate(final double[] objective, final double[] constraints, final int[] ids) {
 		final int order = objective.length;
 		
-		if (objectiveIsCompatibleWithSelectedConstraints(objective, constraints, offsets)) {
-			return true;
-		}
+//		if (objectiveIsCompatibleWithSelectedConstraints(objective, constraints, offsets)) {
+//			return true;
+//		}
 		
-		final double[] constraint = copyOfRange(constraints, 0, order);
-		
-		for (int offset = order; offset < constraints.length; offset += order) {
-			final double d = dot(constraint, 1, constraint, 1, order - 1);
+		if (0 < ids.length) {
+			final double[] constraint = copyOfRange(constraints, ids[0] * order, order);
 			
-			eliminate(d, constraint, objective, 0, objective);
-			eliminate(d, constraint, constraints, offset, constraint);
+			for (int i = 1; i < ids.length; ++i) {
+				final int offset = ids[i] * order;
+				debugPrint(offset);
+				final double d = dot(constraint, 1, constraint, 1, order - 1);
+				
+				eliminate(d, constraint, objective, 0, objective);
+				eliminate(d, constraint, constraints, offset, constraint);
+			}
+			
+			eliminate(dot(constraint, 1, constraint, 1, order - 1), constraint, objective, 0, objective);
 		}
 		
-		eliminate(dot(constraint, 1, constraint, 1, order - 1), constraint, objective, 0, objective);
+//		final double[] constraint = copyOfRange(constraints, 0, order);
+//		
+//		for (int offset = order; offset < constraints.length; offset += order) {
+//			final double d = dot(constraint, 1, constraint, 1, order - 1);
+//			
+//			eliminate(d, constraint, objective, 0, objective);
+//			eliminate(d, constraint, constraints, offset, constraint);
+//		}
+//		
+//		eliminate(dot(constraint, 1, constraint, 1, order - 1), constraint, objective, 0, objective);
 		
-		return objectiveIsCompatibleWithSelectedConstraints(objective, constraints, offsets);
+		return objectiveIsCompatibleWithSelectedConstraints(objective, constraints, ids);
 	}
 
 	public static boolean objectiveIsCompatibleWithSelectedConstraints(final double[] objective,
-			final double[] constraints, final int... offsets) {
+			final double[] constraints, final int[] ids) {
 		final int order = objective.length;
 		
-		for (final int offset : offsets) {
-			if (dot(constraints, offset, objective, 0, order) < 0.0) {
+		for (final int id : ids) {
+			if (dot(constraints, id * order, objective, 0, order) < 0.0) {
 				return false;
 			}
 		}
