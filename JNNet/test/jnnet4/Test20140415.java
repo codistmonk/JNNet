@@ -2,9 +2,9 @@ package jnnet4;
 
 import static java.lang.Math.round;
 import static java.util.Arrays.copyOfRange;
+import static jnnet4.JNNetTools.irange;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -24,7 +24,6 @@ import java.util.List;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
-
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -57,7 +56,41 @@ public final class Test20140415 {
 			}
 		}
 		
+		{
+			final int n = 5;
+			final int k = 3;
+			final int[] combination = irange(k);
+			
+			debugPrint(Arrays.toString(combination));
+			
+			while (nextCombination(combination, n)) {
+				debugPrint(Arrays.toString(combination));
+			}
+		}
+		
 		new VisualConstraintBuilder();
+	}
+	
+	public static final boolean nextCombination(final int[] combination, final int n) {
+		int i = combination.length - 1;
+		
+		while (0 <= i) {
+			if (++combination[i] < n + 1 - (combination.length - i)) {
+				break;
+			}
+			
+			--i;
+		}
+		
+		if (i < 0) {
+			return false;
+		}
+		
+		for (int j = i + 1; j < combination.length; ++j) {
+			combination[j] = combination[j - 1] + 1;
+		}
+		
+		return true;
 	}
 	
 	/**
