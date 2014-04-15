@@ -118,8 +118,8 @@ public final class Test20140415 {
 			this.order = 3;
 			this.solution = new double[] { 1.0, 0.0, 0.0 };
 			this.objective = new double[] { 0.0, 0.0, -1.0 };
-			this.vertices = new ArrayList<>();
-			this.path = new ArrayList<>();
+			this.vertices = new ArrayList<Point>();
+			this.path = new ArrayList<Point>();
 			
 			this.imageView.getImageHolder().addMouseListener(this);
 			this.imageView.getImageHolder().addMouseMotionListener(this);
