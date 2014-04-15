@@ -48,7 +48,7 @@ public final class Test20140415 {
 					2.0, 1.0, -7.0, -1.0,
 			};
 			
-			eliminate(objective, constraints);
+			debugPrint(eliminate(objective, constraints, 0, 1));
 			
 			debugPrint("objective:", Arrays.toString(objective));
 			
@@ -58,26 +58,6 @@ public final class Test20140415 {
 		}
 		
 		new VisualConstraintBuilder();
-		
-		{
-			final double[] solution = { 1.0, 0.0, 0.0 };
-			final double[] objective = { 0.0, 0.0, 1.0 };
-			final DoubleList constraints = new DoubleList();
-			
-			constraints.addAll(-1068.0, 105.0, -81.0);
-			constraints.addAll(25936.0, -120.0, -38.0);
-			constraints.addAll(-19318.0, 34.0, 142.0);
-			
-			
-			
-			eliminate(objective, constraints.toArray());
-			
-			debugPrint("objective:", Arrays.toString(objective));
-			
-			for (int i = 0; i < constraints.size(); i += objective.length) {
-				debugPrint(dot(objective, 0, constraints.toArray(), i, objective.length));
-			}
-		}
 	}
 	
 	/**
@@ -318,18 +298,38 @@ public final class Test20140415 {
 		return a * d - b * c;
 	}
 	
-	public static final void eliminate(final double[] objective, final double[] constraints) {
-		final int dimension = objective.length;
-		final double[] constraint = copyOfRange(constraints, 0, dimension);
+	public static final boolean eliminate(final double[] objective, final double[] constraints, final int... offsets) {
+		final int order = objective.length;
 		
-		for (int i = dimension; i < constraints.length; i += dimension) {
-			final double d = dot(constraint, 1, constraint, 1, dimension - 1);
-			
-			eliminate(d, constraint, objective, 0, objective);
-			eliminate(d, constraint, constraints, i, constraint);
+		if (objectiveIsCompatibleWithSelectedConstraints(objective, constraints, offsets)) {
+			return true;
 		}
 		
-		eliminate(dot(constraint, 1, constraint, 1, dimension - 1), constraint, objective, 0, objective);
+		final double[] constraint = copyOfRange(constraints, 0, order);
+		
+		for (int offset = order; offset < constraints.length; offset += order) {
+			final double d = dot(constraint, 1, constraint, 1, order - 1);
+			
+			eliminate(d, constraint, objective, 0, objective);
+			eliminate(d, constraint, constraints, offset, constraint);
+		}
+		
+		eliminate(dot(constraint, 1, constraint, 1, order - 1), constraint, objective, 0, objective);
+		
+		return objectiveIsCompatibleWithSelectedConstraints(objective, constraints, offsets);
+	}
+
+	public static boolean objectiveIsCompatibleWithSelectedConstraints(final double[] objective,
+			final double[] constraints, final int... offsets) {
+		final int order = objective.length;
+		
+		for (final int offset : offsets) {
+			if (dot(constraints, offset, objective, 0, order) < 0.0) {
+				return false;
+			}
+		}
+		
+		return true;
 	}
 	
 	public static final void eliminate(final double d, final double[] constraint,
