@@ -49,7 +49,7 @@ public final class MosaicBuilder implements Serializable {
 		final int imageWidth = this.getImages().get(0).getWidth();
 		final int imageHeight = this.getImages().get(0).getHeight();
 		final int mosaicWidth = columnCount * imageWidth;
-		final int mosaicHeight = columnCount * imageHeight;
+		final int mosaicHeight = rowCount * imageHeight;
 		final BufferedImage result = new BufferedImage(mosaicWidth, mosaicHeight, BufferedImage.TYPE_3BYTE_BGR);
 		
 		{
