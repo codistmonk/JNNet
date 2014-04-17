@@ -93,238 +93,107 @@ public final class Test20140415 {
 		return true;
 	}
 	
-	/**
-	 * @author codistmonk (creation 2014-04-14)
-	 */
-	public static final class VisualConstraintBuilder extends MouseAdapter implements Serializable, Painter<SimpleImageView> {
+	public static final Point point(final double[] wxy) {
+		return new Point((int) round(wxy[1] / wxy[0]), (int) round(wxy[2] / wxy[0]));
+	}
+	
+	public static final void move(final double[] constraints, final double[] objective, final double[] solution) {
+		final int n = constraints.length;
+		final int order = solution.length;
+		double solutionValue = Double.NEGATIVE_INFINITY;
+		double objectiveValue = 0.0;
+		int offset = -1;
+		boolean offsetIsUnsatisfiedCodirectionalConstraint = true;
 		
-		private final SimpleImageView imageView;
-		
-		private final DoubleList constraints;
-		
-		private final int order;
-		
-		private final double[] solution;
-		
-		private final double[] objective;
-		
-		private final List<Point> vertices;
-		
-		private final List<Point> path;
-		
-		public VisualConstraintBuilder() {
-			this.imageView = new SimpleImageView();
-			this.constraints = new DoubleList();
-			this.order = 3;
-			this.solution = new double[] { 1.0, 0.0, 0.0 };
-			this.objective = new double[] { 0.0, 0.0, -1.0 };
-			this.vertices = new ArrayList<Point>();
-			this.path = new ArrayList<Point>();
+		for (int i = 0; i < n; i += order) {
+			final double value = dot(constraints, i, solution, 0, order);
+			final double v = dot(constraints, i, objective, 0, order);
 			
-			this.imageView.getImageHolder().addMouseListener(this);
-			this.imageView.getImageHolder().addMouseMotionListener(this);
-			this.imageView.getImageHolder().addMouseWheelListener(this);
-			
-			this.imageView.getPainters().add(this);
-			this.imageView.addComponentListener(new ComponentAdapter() {
-				
-				@Override
-				public final void componentResized(final ComponentEvent event) {
-					imageView.getBuffer().setFormat(imageView.getWidth(), imageView.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
-					imageView.refreshBuffer();
-					imageView.setImage(imageView.getBufferImage());
-				}
-				
-			});
-			
-			show(this.imageView, Test20140415.class.getName(), false);
-		}
-		
-		@Override
-		public final void paint(final Graphics2D g, final SimpleImageView component, final int width, final int height) {
-			this.imageView.getBuffer().clear(Color.BLACK);
-			
-			final int n = this.constraints.size() / this.order;
-			
-			if (0 < n) {
-				final BufferedImage buffer = this.imageView.getBufferImage();
-				final int w = buffer.getWidth();
-				final int h = buffer.getHeight();
-				
-				for (int y = 0; y < h; ++y) {
-					for (int x = 0; x < w; ++x) {
-						int score = 0;
-						
-						for (int i = 0; i < this.constraints.size(); i += this.order) {
-							// 1 * constraint[0] + x * constraint[1] + y * constraint[2] = 0
-							if (0.0 <= constraints.get(i + 0) + x * constraints.get(i + 1) + y * constraints.get(i + 2)) {
-								++score;
-							}
-						}
-						
-						final int rgb = 0xFF000000 | (0x00010101 * (score * 255 / n));
-						
-						buffer.setRGB(x, y, rgb);
-					}
-				}
+			if (0.0 == value && v < 0.0) {
+				offset = -1;
+				break;
 			}
 			
-			final Graphics2D bufferGraphics = this.imageView.getBufferGraphics();
+			final double d = (solutionValue * v - value * objectiveValue) * (v < 0.0 ? -1.0 : 1.0) * (objectiveValue < 0.0 ? -1.0 : 1.0);
 			
-			{
-				bufferGraphics.setColor(Color.RED);
-				
-				for (int i = 0; i < this.path.size() - 1; ++i) {
-					bufferGraphics.drawLine(this.path.get(i).x, this.path.get(i).y, this.path.get(i + 1).x, this.path.get(i + 1).y);
-				}
-				
-				final Point point = point(this.solution);
-				bufferGraphics.fillOval(point.x - 2, point.y - 2, 4, 4);
+			debugPrint(value, v, offsetIsUnsatisfiedCodirectionalConstraint, d);
+			
+			if (0.0 < value && v < 0.0 && d < 0.0) {
+				solutionValue = value;
+				objectiveValue = v;
+				offset = i;
+				offsetIsUnsatisfiedCodirectionalConstraint = false;
 			}
 			
-			for (final Point vertex : this.vertices) {
-				bufferGraphics.setColor(Color.GREEN);
-				bufferGraphics.drawOval(vertex.x - 3, vertex.y - 3, 6, 6);
+			if (value < 0.0 && 0.0 < v && offsetIsUnsatisfiedCodirectionalConstraint && 0.0 < -d) {
+				solutionValue = value;
+				objectiveValue = v;
+				offset = i;
 			}
 		}
 		
-		@Override
-		public final void mouseClicked(final MouseEvent event) {
-			if (event.getClickCount() == 2) {
-				this.vertices.add(event.getPoint());
-				
-				if (this.vertices.size() == 2) {
-					debugPrint();
-					
-					final Point p1 = this.vertices.remove(0);
-					final Point p0 = this.vertices.remove(0);
-					
-					this.constraints.add(det(p0.x, p0.y, p1.x, p1.y));
-					this.constraints.add(det(1, p1.y, 1, p0.y));
-					this.constraints.add(det(1, p0.x, 1, p1.x));
-					
-					for (int i = 0; i < this.constraints.size(); i += this.order) {
-						System.out.println("	constraints.addAll(" +
-								Arrays.toString(copyOfRange(this.constraints.toArray(), i, i + this.order)).replaceAll("\\[|\\]", "") + ");");
-					}
-					
-					move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path);
-				}
-				
-				this.imageView.refreshBuffer();
-			} else if (event.getButton() == MouseEvent.BUTTON3) {
-				this.solution[0] = 1.0;
-				this.solution[1] = event.getX();
-				this.solution[2] = event.getY();
-				
-				this.path.clear();
-				this.path.add(point(this.solution));
-				debugPrint(move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path));
-				debugPrint(move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path));
-				
-				this.imageView.refreshBuffer();
-			}
-		}
+		debugPrint(offset);
 		
-		public static final IntList move(final double[] constraints, final double[] objective, final double[] solution) {
-			final IntList result = new IntList();
-			final int n = constraints.length;
-			final int order = solution.length;
+		if (0 <= offset) {
+			// (solution + k * objective) . constraint = 0
+			// <- solution . constraint + k * objective . constraint = 0
+			// <- k = - value / objectiveValue
+			add(objectiveValue, solution, 0, -solutionValue, objective, 0, solution, 0, order);
+		}
+	}
+	
+	public static final IntList move(final double[] constraints, final double[] solution, final Collection<Point> path) {
+		final IntList result = new IntList();
+		final int n = constraints.length;
+		final int order = solution.length;
+		final double[] objective = new double[order];
+		double solutionValue = Double.NEGATIVE_INFINITY;
+		double objectiveValue = 0.0;
+		int offset = -1;
+		
+		for (int i = 0; i < n; i += order) {
+			final double value = dot(constraints, i, solution, 0, order);
 			
-			double solutionValue = Double.NEGATIVE_INFINITY;
-			double objectiveValue = 0.0;
-			int offset = -1;
-			
-			for (int i = 0; i < n; i += order) {
+			if (value < 0.0) {
+				System.arraycopy(constraints, i + 1, objective, 1, order - 1);
+				
 				final double v = dot(constraints, i, objective, 0, order);
 				
-				if (v < 0.0) {
+				if ((solutionValue * v - value * objectiveValue) * (v < 0.0 ? -1.0 : 1.0) * (objectiveValue < 0.0 ? -1.0 : 1.0) < 0.0) {
+					solutionValue = value;
+					objectiveValue = v;
+					offset = i;
+				}
+			}
+		}
+		
+		if (0 <= offset) {
+			System.arraycopy(constraints, offset + 1, objective, 1, order - 1);
+			
+			{
+				for (int i = 0; i < n; i += order) {
 					final double value = dot(constraints, i, solution, 0, order);
 					
-					if (0.0 == value) {
-						result.add(i);
-					} else if (result.isEmpty() && 0.0 < value &&
-							(solutionValue * v - value * objectiveValue) * (v < 0.0 ? -1.0 : 1.0) * (objectiveValue < 0.0 ? -1.0 : 1.0) < 0) {
-						solutionValue = value;
-						objectiveValue = v;
-						offset = i;
+					if (value == 0.0) {
+						final double v = dot(constraints, i, objective, 0, order);
+						
+						if (v < 0.0) {
+							result.add(i);
+						}
 					}
 				}
 			}
 			
-			if (0 <= offset) {
+			if (result.isEmpty()) {
 				// (solution + k * objective) . constraint = 0
 				// <- solution . constraint + k * objective . constraint = 0
 				// <- k = - value / objectiveValue
 				add(objectiveValue, solution, 0, -solutionValue, objective, 0, solution, 0, order);
+				path.add(point(solution));
 			}
-			
-			return result;
 		}
 		
-		public static final IntList move(final double[] constraints, final double[] solution, final Collection<Point> path) {
-			final IntList result = new IntList();
-			final int n = constraints.length;
-			final int order = solution.length;
-			final double[] objective = new double[order];
-			double solutionValue = Double.NEGATIVE_INFINITY;
-			double objectiveValue = 0.0;
-			int offset = -1;
-			
-			for (int i = 0; i < n; i += order) {
-				final double value = dot(constraints, i, solution, 0, order);
-				
-				if (value < 0.0) {
-					System.arraycopy(constraints, i + 1, objective, 1, order - 1);
-					
-					final double v = dot(constraints, i, objective, 0, order);
-					
-					if ((solutionValue * v - value * objectiveValue) * (v < 0.0 ? -1.0 : 1.0) * (objectiveValue < 0.0 ? -1.0 : 1.0) < 0.0) {
-						solutionValue = value;
-						objectiveValue = v;
-						offset = i;
-					}
-				}
-			}
-			
-			if (0 <= offset) {
-				System.arraycopy(constraints, offset + 1, objective, 1, order - 1);
-				
-				{
-					for (int i = 0; i < n; i += order) {
-						final double value = dot(constraints, i, solution, 0, order);
-						
-						if (value == 0.0) {
-							final double v = dot(constraints, i, objective, 0, order);
-							
-							if (v < 0.0) {
-								result.add(i);
-							}
-						}
-					}
-				}
-				
-				if (result.isEmpty()) {
-					// (solution + k * objective) . constraint = 0
-					// <- solution . constraint + k * objective . constraint = 0
-					// <- k = - value / objectiveValue
-					add(objectiveValue, solution, 0, -solutionValue, objective, 0, solution, 0, order);
-					path.add(point(solution));
-				}
-			}
-			
-			return result;
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -3122077265997975111L;
-		
-		public static final Point point(final double[] wxy) {
-			return new Point((int) round(wxy[1] / wxy[0]), (int) round(wxy[2] / wxy[0]));
-		}
-		
+		return result;
 	}
 	
 	public static final int det(final int a, final int b, final int c, final int d) {
@@ -434,6 +303,245 @@ public final class Test20140415 {
 	
 	public static final double dot(final double[] data1, final double[] data2) {
 		return dot(data1, data2, data1.length);
+	}
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int ALL_CONSTRAINTS_OK = 0;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int MORE_PROCESSING_NEEDED = 1;
+	
+	/**
+	 * {@value}.
+	 */
+	public static final int SYSTEM_KO = 2;
+	
+	public static final double[] maximize(final double[] constraints, final double[] objective) {
+		final double[] result = new double[objective.length];
+		
+		if (findLaxSolution(constraints, result)) {
+			// TODO
+		}
+		
+		return result;
+	}
+	
+	public static final boolean findLaxSolution(final double[] constraints, final double[] solution) {
+		int status;
+		
+		do {
+			status = improveSolution(constraints, solution);
+			debugPrint(status);
+		} while (status == MORE_PROCESSING_NEEDED);
+		
+		return status == ALL_CONSTRAINTS_OK;
+	}
+	
+	public static final int improveSolution(final double[] constraints, final double[] solution) {
+		final int constraintId = findUnsatisfiedConstraintId(constraints, solution);
+		
+		if (constraintId < 0) {
+			return ALL_CONSTRAINTS_OK;
+		}
+		
+		final int dimension = solution.length;
+		final double[] objective = new double[dimension];
+		
+		System.arraycopy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
+		
+		debugPrint(Arrays.toString(objective));
+		
+		move(constraints, objective, solution);
+		
+		if (0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension)) {
+			return MORE_PROCESSING_NEEDED;
+		}
+		
+		if (!eliminate(objective, constraints, listLimits(constraints, solution))) {
+			return SYSTEM_KO;
+		}
+		
+		move(constraints, objective, solution);
+		
+		return 0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension) ? MORE_PROCESSING_NEEDED : SYSTEM_KO;
+	}
+	
+	public static final int[] listLimits(final double[] constraints, final double[] solution) {
+		final int n = constraints.length;
+		final int dimension = solution.length;
+		final IntList result = new IntList();
+		
+		for (int i = 0, j = 0; i < n; i += dimension, ++j) {
+			if (dot(constraints, i, solution, 0, dimension) == 0.0) {
+				result.add(j);
+			}
+		}
+		
+		return result.toArray();
+	}
+	
+	public static final int findUnsatisfiedConstraintId(final double[] constraints, final double[] point) {
+		final int n = constraints.length;
+		final int dimension = point.length;
+		
+		for (int i = 0, j = 0; i < n; i += dimension, ++j) {
+			if (dot(constraints, i, point, 0, dimension) < 0.0) {
+				return j;
+			}
+		}
+		
+		return -1;
+	}
+	
+	public static final void optimizeOnce(final double[] objective, final double[] constraints, final double[] solution) {
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-14)
+	 */
+	public static final class VisualConstraintBuilder extends MouseAdapter implements Serializable, Painter<SimpleImageView> {
+		
+		private final SimpleImageView imageView;
+		
+		private final DoubleList constraints;
+		
+		private final int order;
+		
+		private final double[] solution;
+		
+		private final double[] objective;
+		
+		private final List<Point> vertices;
+		
+		private final List<Point> path;
+		
+		public VisualConstraintBuilder() {
+			this.imageView = new SimpleImageView();
+			this.constraints = new DoubleList();
+			this.order = 3;
+			this.solution = new double[] { 1.0, 0.0, 0.0 };
+			this.objective = new double[] { 0.0, 0.0, -1.0 };
+			this.vertices = new ArrayList<Point>();
+			this.path = new ArrayList<Point>();
+			
+			this.imageView.getImageHolder().addMouseListener(this);
+			this.imageView.getImageHolder().addMouseMotionListener(this);
+			this.imageView.getImageHolder().addMouseWheelListener(this);
+			
+			this.imageView.getPainters().add(this);
+			this.imageView.addComponentListener(new ComponentAdapter() {
+				
+				@Override
+				public final void componentResized(final ComponentEvent event) {
+					imageView.getBuffer().setFormat(imageView.getWidth(), imageView.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+					imageView.refreshBuffer();
+					imageView.setImage(imageView.getBufferImage());
+				}
+				
+			});
+			
+			show(this.imageView, Test20140415.class.getName(), false);
+		}
+		
+		@Override
+		public final void paint(final Graphics2D g, final SimpleImageView component, final int width, final int height) {
+			this.imageView.getBuffer().clear(Color.BLACK);
+			
+			final int n = this.constraints.size() / this.order;
+			
+			if (0 < n) {
+				final BufferedImage buffer = this.imageView.getBufferImage();
+				final int w = buffer.getWidth();
+				final int h = buffer.getHeight();
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						int score = 0;
+						
+						for (int i = 0; i < this.constraints.size(); i += this.order) {
+							// 1 * constraint[0] + x * constraint[1] + y * constraint[2] = 0
+							if (0.0 <= constraints.get(i + 0) + x * constraints.get(i + 1) + y * constraints.get(i + 2)) {
+								++score;
+							}
+						}
+						
+						final int rgb = 0xFF000000 | (0x00010101 * (score * 255 / n));
+						
+						buffer.setRGB(x, y, rgb);
+					}
+				}
+			}
+			
+			final Graphics2D bufferGraphics = this.imageView.getBufferGraphics();
+			
+			{
+				bufferGraphics.setColor(Color.RED);
+				
+				for (int i = 0; i < this.path.size() - 1; ++i) {
+					bufferGraphics.drawLine(this.path.get(i).x, this.path.get(i).y, this.path.get(i + 1).x, this.path.get(i + 1).y);
+				}
+				
+				final Point point = point(this.solution);
+				bufferGraphics.fillOval(point.x - 2, point.y - 2, 4, 4);
+			}
+			
+			for (final Point vertex : this.vertices) {
+				bufferGraphics.setColor(Color.GREEN);
+				bufferGraphics.drawOval(vertex.x - 3, vertex.y - 3, 6, 6);
+			}
+		}
+		
+		@Override
+		public final void mouseClicked(final MouseEvent event) {
+			if (event.getButton() == MouseEvent.BUTTON1) {
+				this.vertices.add(event.getPoint());
+				
+				if (this.vertices.size() == 2) {
+					debugPrint();
+					
+					final Point p1 = this.vertices.remove(0);
+					final Point p0 = this.vertices.remove(0);
+					
+					this.constraints.add(det(p0.x, p0.y, p1.x, p1.y));
+					this.constraints.add(det(1, p1.y, 1, p0.y));
+					this.constraints.add(det(1, p0.x, 1, p1.x));
+					
+					for (int i = 0; i < this.constraints.size(); i += this.order) {
+						System.out.println("	constraints.addAll(" +
+								Arrays.toString(copyOfRange(this.constraints.toArray(), i, i + this.order)).replaceAll("\\[|\\]", "") + ");");
+					}
+					
+//					move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path);
+					
+					debugPrint(findLaxSolution(this.constraints.toArray(), this.solution));
+				}
+				
+				this.imageView.refreshBuffer();
+			} else if (event.getButton() == MouseEvent.BUTTON3) {
+				this.solution[0] = 1.0;
+				this.solution[1] = event.getX();
+				this.solution[2] = event.getY();
+				
+				this.path.clear();
+//				this.path.add(point(this.solution));
+//				debugPrint(move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path));
+				
+				debugPrint(findLaxSolution(this.constraints.toArray(), this.solution));
+				
+				this.imageView.refreshBuffer();
+			}
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -3122077265997975111L;
+		
 	}
 	
 }
