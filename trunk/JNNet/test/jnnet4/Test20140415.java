@@ -25,6 +25,7 @@ import java.util.List;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
+import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -349,10 +350,6 @@ public final class Test20140415 {
 		return -1;
 	}
 	
-	public static final void optimizeOnce(final double[] objective, final double[] constraints, final double[] solution) {
-		
-	}
-	
 	/**
 	 * @author codistmonk (creation 2014-04-14)
 	 */
@@ -360,9 +357,7 @@ public final class Test20140415 {
 		
 		private final SimpleImageView imageView;
 		
-		private final DoubleList constraints;
-		
-		private final int order;
+		private final LinearConstraintSystem system;
 		
 		private final double[] solution;
 		
@@ -372,8 +367,7 @@ public final class Test20140415 {
 		
 		public VisualConstraintBuilder() {
 			this.imageView = new SimpleImageView();
-			this.constraints = new DoubleList();
-			this.order = 3;
+			this.system = new LinearConstraintSystem20140418(3);
 			this.solution = new double[] { 1.0, 0.0, 0.0 };
 			this.objective = new double[] { 0.0, 0.0, -1.0 };
 			this.vertices = new ArrayList<Point>();
@@ -401,9 +395,11 @@ public final class Test20140415 {
 		public final void paint(final Graphics2D g, final SimpleImageView component, final int width, final int height) {
 			this.imageView.getBuffer().clear(Color.BLACK);
 			
-			final int n = this.constraints.size() / this.order;
+			final int n = this.system.getConstraintCount();
 			
 			if (0 < n) {
+				final int order = this.system.getOrder();
+				final double[] constraints = this.system.getConstraints();
 				final BufferedImage buffer = this.imageView.getBufferImage();
 				final int w = buffer.getWidth();
 				final int h = buffer.getHeight();
@@ -412,9 +408,9 @@ public final class Test20140415 {
 					for (int x = 0; x < w; ++x) {
 						int score = 0;
 						
-						for (int i = 0; i < this.constraints.size(); i += this.order) {
+						for (int i = 0; i < constraints.length; i += order) {
 							// 1 * constraint[0] + x * constraint[1] + y * constraint[2] = 0
-							if (0.0 <= constraints.get(i + 0) + x * constraints.get(i + 1) + y * constraints.get(i + 2)) {
+							if (0.0 <= constraints[i + 0] + x * constraints[i + 1] + y * constraints[i + 2]) {
 								++score;
 							}
 						}
@@ -456,16 +452,17 @@ public final class Test20140415 {
 					final Point p1 = this.vertices.remove(0);
 					final Point p0 = this.vertices.remove(0);
 					
-					this.constraints.add(det(p0.x, p0.y, p1.x, p1.y));
-					this.constraints.add(det(1, p1.y, 1, p0.y));
-					this.constraints.add(det(1, p0.x, 1, p1.x));
+					this.system.addConstraint(
+							det(p0.x, p0.y, p1.x, p1.y),
+							det(1,    p1.y, 1,    p0.y),
+							det(1,    p0.x, 1,    p1.x));
 					
-					for (int i = 0; i < this.constraints.size(); i += this.order) {
+					for (int i = 0; i < this.system.getConstraintCount(); ++i) {
 						System.out.println("	constraints.addAll(" +
-								Arrays.toString(copyOfRange(this.constraints.toArray(), i, i + this.order)).replaceAll("\\[|\\]", "") + ");");
+								Arrays.toString(this.system.getConstraint(i)).replaceAll("\\[|\\]", "") + ");");
 					}
 					
-					debugPrint(findLaxSolution(this.constraints.toArray(), this.solution));
+					debugPrint(findLaxSolution(this.system.getConstraints(), this.solution));
 				}
 				
 				this.imageView.refreshBuffer();
@@ -477,7 +474,7 @@ public final class Test20140415 {
 				path.clear();
 				path.add(point(this.solution));
 				
-				debugPrint(findLaxSolution(this.constraints.toArray(), this.solution));
+				debugPrint(findLaxSolution(this.system.getConstraints(), this.solution));
 				
 				this.imageView.refreshBuffer();
 			}
@@ -487,6 +484,31 @@ public final class Test20140415 {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -3122077265997975111L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-04-18)
+	 */
+	public static final class LinearConstraintSystem20140418 extends LinearConstraintSystem.Abstract {
+		
+		public LinearConstraintSystem20140418(final int order) {
+			super(order);
+		}
+		
+		@Override
+		public final double[] solve() {
+			final double[] result = new double[this.getOrder()];
+			
+			findLaxSolution(this.getConstraints(), result);
+			
+			return result;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 7481388639595747533L;
 		
 	}
 	

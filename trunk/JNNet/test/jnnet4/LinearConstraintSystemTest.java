@@ -254,9 +254,119 @@ public final class LinearConstraintSystemTest {
 		
 		public abstract double[] getConstraint(int constraintId);
 		
+		public abstract double[] getConstraints();
+		
 		public abstract boolean accept(double... point);
 		
 		public abstract double[] solve();
+		
+		/**
+		 * @author codistmonk (creation 2014-04-18)
+		 */
+		public static abstract class Abstract implements LinearConstraintSystem {
+			
+			private final int order;
+			
+			private final DoubleList data;
+			
+			protected Abstract(final int order) {
+				this.order = order;
+				this.data = new DoubleList();
+			}
+			
+			@Override
+			public final int getOrder() {
+				return this.order;
+			}
+			
+			@Override
+			public final double[] getConstraints() {
+				return this.getData().toArray();
+			}
+			
+			@Override
+			public final Abstract allocate(final int constraintCount) {
+				final int n = this.getData().size();
+				final int needed = n + constraintCount * this.getOrder();
+				
+				debugPrint("Allocating", needed, "doubles");
+				
+				this.getData().resize(needed).resize(n);
+				
+				return this;
+			}
+			
+			@Override
+			public final Abstract addConstraint(final double... constraint) {
+				this.getData().addAll(constraint);
+				
+				return this;
+			}
+			
+			@Override
+			public final int getConstraintCount() {
+				return this.getData().size() / this.getOrder();
+			}
+			
+			@Override
+			public final double[] getConstraint(final int constraintId) {
+				final int order = this.getOrder();
+				final double[] result = new double[order];
+				
+				System.arraycopy(this.getData().toArray(), constraintId * order, result, 0, order);
+				
+				return result;
+			}
+			
+			@Override
+			public final boolean accept(final double... point) {
+				final double[] data = this.getData().toArray();
+				final int n = data.length / this.getOrder();
+				
+				for (int i = 0; i < n; ++i) {
+					final double value = this.evaluate(i, point);
+					
+					if (value + EPSILON < 0.0) {
+						debugPrint(i, value);
+						
+						return false;
+					}
+				}
+				
+				return true;
+			}
+			
+			public final double evaluate(final int constraintId, final double... point) {
+				return evaluate(this.getData().toArray(),  this.getOrder(), constraintId, point);
+			}
+			
+			private final DoubleList getData() {
+				return this.data;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -4102583885017172499L;
+			
+			/**
+			 * {@value}.
+			 */
+			public static final double EPSILON = 1E-8;
+			
+			public static final double evaluate(final double[] data, final int order, final int constraintIndex, final double... point) {
+				final int begin = constraintIndex * order;
+				final int end = begin + order;
+				double result = 0.0;
+				
+				for (int i = begin; i < end; ++i) {
+					result += data[i] * point[i - begin];
+				}
+				
+				return result;
+			}
+			
+		}
 		
 		/**
 		 * @author codistmonk (creation 2014-04-05)
@@ -341,80 +451,10 @@ public final class LinearConstraintSystemTest {
 	/**
 	 * @author codistmonk (creation 2014-03-25)
 	 */
-	public static final class LinearConstraintSystem20140325 implements LinearConstraintSystem {
-		
-		private final DoubleList data;
-		
-		private final int order;
+	public static final class LinearConstraintSystem20140325 extends LinearConstraintSystem.Abstract {
 		
 		public LinearConstraintSystem20140325(final int order) {
-			this.order = order;
-			this.data = new DoubleList();
-		}
-		
-		public final DoubleList getData() {
-			return this.data;
-		}
-		
-		@Override
-		public final int getOrder() {
-			return this.order;
-		}
-		
-		@Override
-		public final LinearConstraintSystem20140325 allocate(final int constraintCount) {
-			final int n = this.getData().size();
-			final int needed = n + constraintCount * this.getOrder();
-			
-			debugPrint("Allocating", needed, "doubles");
-			
-			this.getData().resize(needed).resize(n);
-			
-			return this;
-		}
-		
-		@Override
-		public final LinearConstraintSystem20140325 addConstraint(final double... constraint) {
-			this.getData().addAll(constraint);
-			
-			return this;
-		}
-		
-		@Override
-		public final int getConstraintCount() {
-			return this.getData().size() / this.getOrder();
-		}
-		
-		@Override
-		public final double[] getConstraint(final int constraintId) {
-			final int order = this.getOrder();
-			final double[] result = new double[order];
-			
-			System.arraycopy(this.getData().toArray(), constraintId * order, result, 0, order);
-			
-			return result;
-		}
-		
-		@Override
-		public final boolean accept(final double... point) {
-			final double[] data = this.getData().toArray();
-			final int n = data.length / this.getOrder();
-			
-			for (int i = 0; i < n; ++i) {
-				final double value = this.evaluate(i, point);
-				
-				if (value + EPSILON < 0.0) {
-					debugPrint(i, value);
-					
-					return false;
-				}
-			}
-			
-			return true;
-		}
-		
-		public final double evaluate(final int constraintId, final double... point) {
-			return evaluate(this.getData().toArray(),  this.getOrder(), constraintId, point);
+			super(order);
 		}
 		
 		@Override
@@ -425,7 +465,7 @@ public final class LinearConstraintSystemTest {
 				return this.solve0();
 			}
 			
-			final double[] data = this.getData().toArray();
+			final double[] data = this.getConstraints();
 			final int order = this.getOrder();
 			final double[] result = copyOf(data, order);
 			final TicToc timer = new TicToc();
@@ -581,7 +621,7 @@ public final class LinearConstraintSystemTest {
 		}
 		
 		public final double[] solve0() {
-			final double[] data = this.getData().toArray();
+			final double[] data = this.getConstraints();
 			final int order = this.getOrder();
 			final int extendedOrder = order + 1;
 			final int extraDimension = order;
@@ -707,11 +747,6 @@ public final class LinearConstraintSystemTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 7450111830241146851L;
-		
-		/**
-		 * {@value}.
-		 */
-		public static final double EPSILON = 1E-8;
 		
 		public static final int solveUsingLastDimension(final double[] data, final double[] point) {
 			int result = -1;
@@ -858,18 +893,6 @@ public final class LinearConstraintSystemTest {
 			return sqrt(sumOfSquares);
 		}
 		
-		public static final double evaluate(final double[] data, final int order, final int constraintIndex, final double... point) {
-			final int begin = constraintIndex * order;
-			final int end = begin + order;
-			double result = 0.0;
-			
-			for (int i = begin; i < end; ++i) {
-				result += data[i] * point[i - begin];
-			}
-			
-			return result;
-		}
-		
 	}
 	
 	/**
@@ -929,6 +952,17 @@ public final class LinearConstraintSystemTest {
 			System.arraycopy(this.extendedData.toArray(), constraintId * (order + 1), result, 0, order);
 			
 			return result;
+		}
+		
+		@Override
+		public final double[] getConstraints() {
+			final DoubleList result = new DoubleList(this.getConstraintCount() * this.getOrder());
+			
+			for (int i = 0; i < this.getConstraintCount(); ++i) {
+				result.addAll(this.getConstraint(i));
+			}
+			
+			return result.toArray();
 		}
 		
 		@Override
@@ -1232,6 +1266,17 @@ public final class LinearConstraintSystemTest {
 		@Override
 		public final double[] getConstraint(final int constraintId) {
 			return copyOf(this.constraints.get(constraintId).getFactors(), this.getOrder());
+		}
+		
+		@Override
+		public final double[] getConstraints() {
+			final DoubleList result = new DoubleList(this.getConstraintCount() * this.getOrder());
+			
+			for (int i = 0; i < this.getConstraintCount(); ++i) {
+				result.addAll(this.getConstraint(i));
+			}
+			
+			return result.toArray();
 		}
 		
 		@Override
