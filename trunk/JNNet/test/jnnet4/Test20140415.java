@@ -1,5 +1,6 @@
 package jnnet4;
 
+import static java.lang.Math.abs;
 import static java.lang.Math.round;
 import static java.util.Arrays.copyOfRange;
 import static jnnet4.JNNetTools.irange;
@@ -52,7 +53,12 @@ public final class Test20140415 {
 			debugPrint("objective:", Arrays.toString(objective));
 			
 			for (int i = 0; i < constraints.length; i += objective.length) {
-				debugPrint(dot(objective, 0, constraints, i, objective.length));
+				final double d = dot(objective, 0, constraints, i, objective.length);
+				
+				if (d != 0.0) {
+					debugPrint(d);
+					throw new IllegalStateException();
+				}
 			}
 		}
 		
@@ -114,9 +120,7 @@ public final class Test20140415 {
 				break;
 			}
 			
-			final double d = (solutionValue * v - value * objectiveValue) * (v < 0.0 ? -1.0 : 1.0) * (objectiveValue < 0.0 ? -1.0 : 1.0);
-			
-			debugPrint(value, v, offsetIsUnsatisfiedCodirectionalConstraint, d);
+			final double d = (solutionValue * v - value * objectiveValue) * signum(v) * signum(objectiveValue);
 			
 			if (0.0 < value && v < 0.0 && d < 0.0) {
 				solutionValue = value;
@@ -132,14 +136,16 @@ public final class Test20140415 {
 			}
 		}
 		
-		debugPrint(offset);
-		
 		if (0 <= offset) {
 			// (solution + k * objective) . constraint = 0
 			// <- solution . constraint + k * objective . constraint = 0
 			// <- k = - value / objectiveValue
-			add(objectiveValue, solution, 0, -solutionValue, objective, 0, solution, 0, order);
+			add(abs(objectiveValue), solution, 0, -signum(objectiveValue) * solutionValue, objective, 0, solution, 0, order);
 		}
+	}
+	
+	public static final double signum(final double value) {
+		return value < 0.0 ? -1.0 : 1.0;
 	}
 	
 	public static final IntList move(final double[] constraints, final double[] solution, final Collection<Point> path) {
@@ -213,20 +219,14 @@ public final class Test20140415 {
 				ids[j] = limits[combination[j]];
 			}
 			
-			debugPrint(Arrays.toString(ids));
-			
 			if (eliminate(objective, constraints, ids, limits)) {
 				return true;
 			}
-			
-			debugPrint();
 			
 			while (nextCombination(combination, limits.length)) {
 				for (int j = 0; j < i; ++j) {
 					ids[j] = limits[combination[j]];
 				}
-				
-				debugPrint(Arrays.toString(ids));
 				
 				if (eliminate(objective, constraints, ids, limits)) {
 					return true;
@@ -245,14 +245,13 @@ public final class Test20140415 {
 			
 			for (int i = 1; i < ids.length; ++i) {
 				final int offset = ids[i] * order;
-				debugPrint(offset);
-				final double d = dot(constraint, 1, constraint, 1, order - 1);
+				final double d = dot(constraint, SKIP, constraint, SKIP, order - SKIP);
 				
 				eliminate(d, constraint, objective, 0, objective);
 				eliminate(d, constraint, constraints, offset, constraint);
 			}
 			
-			eliminate(dot(constraint, 1, constraint, 1, order - 1), constraint, objective, 0, objective);
+			eliminate(dot(constraint, SKIP, constraint, SKIP, order - SKIP), constraint, objective, 0, objective);
 		}
 		
 		return objectiveIsCompatibleWithSelectedConstraints(objective, constraints, limits);
@@ -276,9 +275,9 @@ public final class Test20140415 {
 			final double[] destination) {
 		final int dimension = constraint.length;
 		
-		add(d, target, targetOffset + 1,
-				-dot(target, targetOffset + 1, constraint, 1, dimension - 1), constraint, 1,
-				destination, 1, dimension - 1);
+		add(d, target, targetOffset + SKIP,
+				-dot(target, targetOffset + SKIP, constraint, SKIP, dimension - SKIP), constraint, SKIP,
+				destination, SKIP, dimension - SKIP);
 	}
 	
 	public static final void add(final double scale1, final double[] data1, final int offset1,
@@ -337,11 +336,12 @@ public final class Test20140415 {
 		
 		do {
 			status = improveSolution(constraints, solution);
-			debugPrint(status);
 		} while (status == MORE_PROCESSING_NEEDED);
 		
 		return status == ALL_CONSTRAINTS_OK;
 	}
+	
+	private static final int SKIP = 1;
 	
 	public static final int improveSolution(final double[] constraints, final double[] solution) {
 		final int constraintId = findUnsatisfiedConstraintId(constraints, solution);
@@ -353,9 +353,7 @@ public final class Test20140415 {
 		final int dimension = solution.length;
 		final double[] objective = new double[dimension];
 		
-		System.arraycopy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
-		
-		debugPrint(Arrays.toString(objective));
+		System.arraycopy(constraints, constraintId * dimension + SKIP, objective, SKIP, dimension - SKIP);
 		
 		move(constraints, objective, solution);
 		
@@ -363,10 +361,7 @@ public final class Test20140415 {
 			return MORE_PROCESSING_NEEDED;
 		}
 		
-		debugPrint(Arrays.toString(objective));
-		
 		if (!eliminate(objective, constraints, listLimits(constraints, solution))) {
-			debugPrint(Arrays.toString(objective));
 			return SYSTEM_KO;
 		}
 		
@@ -386,8 +381,6 @@ public final class Test20140415 {
 			}
 		}
 		
-		debugPrint(result);
-		
 		return result.toArray();
 	}
 	
@@ -396,14 +389,10 @@ public final class Test20140415 {
 		final int dimension = point.length;
 		
 		for (int i = 0, j = 0; i < n; i += dimension, ++j) {
-			debugPrint(dot(constraints, i, point, 0, dimension));
-			
 			if (dot(constraints, i, point, 0, dimension) < 0.0) {
 				return j;
 			}
 		}
-		
-		debugPrint(Arrays.toString(point));
 		
 		return -1;
 	}
@@ -439,8 +428,6 @@ public final class Test20140415 {
 			this.objective = new double[] { 0.0, 0.0, -1.0 };
 			this.vertices = new ArrayList<Point>();
 			this.path = new ArrayList<Point>();
-			
-			this.constraints.addAll(1.0, 0.0, 0.0);
 			
 			this.imageView.getImageHolder().addMouseListener(this);
 			this.imageView.getImageHolder().addMouseMotionListener(this);
