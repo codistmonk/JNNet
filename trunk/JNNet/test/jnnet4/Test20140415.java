@@ -205,7 +205,7 @@ public final class Test20140415 {
 	}
 	
 	public static final boolean eliminate(final double[] objective, final double[] constraints, final int... limits) {
-		for (int i = 0; i < limits.length; ++i) {
+		for (int i = 0; i <= limits.length; ++i) {
 			final int[] combination = irange(i);
 			final int[] ids = new int[i];
 			
@@ -218,6 +218,8 @@ public final class Test20140415 {
 			if (eliminate(objective, constraints, ids, limits)) {
 				return true;
 			}
+			
+			debugPrint();
 			
 			while (nextCombination(combination, limits.length)) {
 				for (int j = 0; j < i; ++j) {
@@ -361,7 +363,10 @@ public final class Test20140415 {
 			return MORE_PROCESSING_NEEDED;
 		}
 		
+		debugPrint(Arrays.toString(objective));
+		
 		if (!eliminate(objective, constraints, listLimits(constraints, solution))) {
+			debugPrint(Arrays.toString(objective));
 			return SYSTEM_KO;
 		}
 		
@@ -381,6 +386,8 @@ public final class Test20140415 {
 			}
 		}
 		
+		debugPrint(result);
+		
 		return result.toArray();
 	}
 	
@@ -389,10 +396,14 @@ public final class Test20140415 {
 		final int dimension = point.length;
 		
 		for (int i = 0, j = 0; i < n; i += dimension, ++j) {
+			debugPrint(dot(constraints, i, point, 0, dimension));
+			
 			if (dot(constraints, i, point, 0, dimension) < 0.0) {
 				return j;
 			}
 		}
+		
+		debugPrint(Arrays.toString(point));
 		
 		return -1;
 	}
@@ -428,6 +439,8 @@ public final class Test20140415 {
 			this.objective = new double[] { 0.0, 0.0, -1.0 };
 			this.vertices = new ArrayList<Point>();
 			this.path = new ArrayList<Point>();
+			
+			this.constraints.addAll(1.0, 0.0, 0.0);
 			
 			this.imageView.getImageHolder().addMouseListener(this);
 			this.imageView.getImageHolder().addMouseMotionListener(this);
