@@ -36,6 +36,10 @@ public final class Test20140415 {
 		throw new IllegalInstantiationException();
 	}
 	
+	static final boolean debug = true;
+	
+	static final List<Point> path = new ArrayList<Point>();
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Unused
@@ -141,65 +145,15 @@ public final class Test20140415 {
 			// <- solution . constraint + k * objective . constraint = 0
 			// <- k = - value / objectiveValue
 			add(abs(objectiveValue), solution, 0, -signum(objectiveValue) * solutionValue, objective, 0, solution, 0, order);
+			
+			if (debug) {
+				path.add(point(solution));
+			}
 		}
 	}
 	
 	public static final double signum(final double value) {
 		return value < 0.0 ? -1.0 : 1.0;
-	}
-	
-	public static final IntList move(final double[] constraints, final double[] solution, final Collection<Point> path) {
-		final IntList result = new IntList();
-		final int n = constraints.length;
-		final int order = solution.length;
-		final double[] objective = new double[order];
-		double solutionValue = Double.NEGATIVE_INFINITY;
-		double objectiveValue = 0.0;
-		int offset = -1;
-		
-		for (int i = 0; i < n; i += order) {
-			final double value = dot(constraints, i, solution, 0, order);
-			
-			if (value < 0.0) {
-				System.arraycopy(constraints, i + 1, objective, 1, order - 1);
-				
-				final double v = dot(constraints, i, objective, 0, order);
-				
-				if ((solutionValue * v - value * objectiveValue) * (v < 0.0 ? -1.0 : 1.0) * (objectiveValue < 0.0 ? -1.0 : 1.0) < 0.0) {
-					solutionValue = value;
-					objectiveValue = v;
-					offset = i;
-				}
-			}
-		}
-		
-		if (0 <= offset) {
-			System.arraycopy(constraints, offset + 1, objective, 1, order - 1);
-			
-			{
-				for (int i = 0; i < n; i += order) {
-					final double value = dot(constraints, i, solution, 0, order);
-					
-					if (value == 0.0) {
-						final double v = dot(constraints, i, objective, 0, order);
-						
-						if (v < 0.0) {
-							result.add(i);
-						}
-					}
-				}
-			}
-			
-			if (result.isEmpty()) {
-				// (solution + k * objective) . constraint = 0
-				// <- solution . constraint + k * objective . constraint = 0
-				// <- k = - value / objectiveValue
-				add(objectiveValue, solution, 0, -solutionValue, objective, 0, solution, 0, order);
-				path.add(point(solution));
-			}
-		}
-		
-		return result;
 	}
 	
 	public static final int det(final int a, final int b, final int c, final int d) {
@@ -245,13 +199,13 @@ public final class Test20140415 {
 			
 			for (int i = 1; i < ids.length; ++i) {
 				final int offset = ids[i] * order;
-				final double d = dot(constraint, SKIP, constraint, SKIP, order - SKIP);
+				final double d = dot(constraint, 1, constraint, 1, order - 1);
 				
 				eliminate(d, constraint, objective, 0, objective);
 				eliminate(d, constraint, constraints, offset, constraint);
 			}
 			
-			eliminate(dot(constraint, SKIP, constraint, SKIP, order - SKIP), constraint, objective, 0, objective);
+			eliminate(dot(constraint, 1, constraint, 1, order - 1), constraint, objective, 0, objective);
 		}
 		
 		return objectiveIsCompatibleWithSelectedConstraints(objective, constraints, limits);
@@ -275,9 +229,9 @@ public final class Test20140415 {
 			final double[] destination) {
 		final int dimension = constraint.length;
 		
-		add(d, target, targetOffset + SKIP,
-				-dot(target, targetOffset + SKIP, constraint, SKIP, dimension - SKIP), constraint, SKIP,
-				destination, SKIP, dimension - SKIP);
+		add(d, target, targetOffset + 1,
+				-dot(target, targetOffset + 1, constraint, 1, dimension - 1), constraint, 1,
+				destination, 1, dimension - 1);
 	}
 	
 	public static final void add(final double scale1, final double[] data1, final int offset1,
@@ -341,8 +295,6 @@ public final class Test20140415 {
 		return status == ALL_CONSTRAINTS_OK;
 	}
 	
-	private static final int SKIP = 1;
-	
 	public static final int improveSolution(final double[] constraints, final double[] solution) {
 		final int constraintId = findUnsatisfiedConstraintId(constraints, solution);
 		
@@ -353,7 +305,7 @@ public final class Test20140415 {
 		final int dimension = solution.length;
 		final double[] objective = new double[dimension];
 		
-		System.arraycopy(constraints, constraintId * dimension + SKIP, objective, SKIP, dimension - SKIP);
+		System.arraycopy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
 		
 		move(constraints, objective, solution);
 		
@@ -418,8 +370,6 @@ public final class Test20140415 {
 		
 		private final List<Point> vertices;
 		
-		private final List<Point> path;
-		
 		public VisualConstraintBuilder() {
 			this.imageView = new SimpleImageView();
 			this.constraints = new DoubleList();
@@ -427,7 +377,6 @@ public final class Test20140415 {
 			this.solution = new double[] { 1.0, 0.0, 0.0 };
 			this.objective = new double[] { 0.0, 0.0, -1.0 };
 			this.vertices = new ArrayList<Point>();
-			this.path = new ArrayList<Point>();
 			
 			this.imageView.getImageHolder().addMouseListener(this);
 			this.imageView.getImageHolder().addMouseMotionListener(this);
@@ -482,8 +431,8 @@ public final class Test20140415 {
 			{
 				bufferGraphics.setColor(Color.RED);
 				
-				for (int i = 0; i < this.path.size() - 1; ++i) {
-					bufferGraphics.drawLine(this.path.get(i).x, this.path.get(i).y, this.path.get(i + 1).x, this.path.get(i + 1).y);
+				for (int i = 0; i < path.size() - 1; ++i) {
+					bufferGraphics.drawLine(path.get(i).x, path.get(i).y, path.get(i + 1).x, path.get(i + 1).y);
 				}
 				
 				final Point point = point(this.solution);
@@ -516,8 +465,6 @@ public final class Test20140415 {
 								Arrays.toString(copyOfRange(this.constraints.toArray(), i, i + this.order)).replaceAll("\\[|\\]", "") + ");");
 					}
 					
-//					move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path);
-					
 					debugPrint(findLaxSolution(this.constraints.toArray(), this.solution));
 				}
 				
@@ -527,9 +474,8 @@ public final class Test20140415 {
 				this.solution[1] = event.getX();
 				this.solution[2] = event.getY();
 				
-				this.path.clear();
-//				this.path.add(point(this.solution));
-//				debugPrint(move(this.constraints.toArray()/*, this.objective*/, this.solution, this.path));
+				path.clear();
+				path.add(point(this.solution));
 				
 				debugPrint(findLaxSolution(this.constraints.toArray(), this.solution));
 				
