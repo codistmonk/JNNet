@@ -357,7 +357,7 @@ public final class Test20140415 {
 		
 		private final SimpleImageView imageView;
 		
-		private final LinearConstraintSystem system;
+		private final LinearConstraintSystem20140418 system;
 		
 		private final double[] solution;
 		
@@ -462,7 +462,7 @@ public final class Test20140415 {
 								Arrays.toString(this.system.getConstraint(i)).replaceAll("\\[|\\]", "") + ");");
 					}
 					
-					debugPrint(findLaxSolution(this.system.getConstraints(), this.solution));
+					debugPrint(this.system.accept(this.system.solve(this.solution)));
 				}
 				
 				this.imageView.refreshBuffer();
@@ -474,7 +474,7 @@ public final class Test20140415 {
 				path.clear();
 				path.add(point(this.solution));
 				
-				debugPrint(findLaxSolution(this.system.getConstraints(), this.solution));
+				debugPrint(this.system.accept(this.system.solve(this.solution)));
 				
 				this.imageView.refreshBuffer();
 			}
@@ -498,11 +498,13 @@ public final class Test20140415 {
 		
 		@Override
 		public final double[] solve() {
-			final double[] result = new double[this.getOrder()];
+			return this.solve(new double[this.getOrder()]);
+		}
+		
+		public final double[] solve(final double[] solution) {
+			findLaxSolution(this.getConstraints(), solution);
 			
-			findLaxSolution(this.getConstraints(), result);
-			
-			return result;
+			return solution;
 		}
 		
 		/**
