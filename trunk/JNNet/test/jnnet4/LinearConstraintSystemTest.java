@@ -1,32 +1,16 @@
 package jnnet4;
 
-import static java.lang.Double.isNaN;
-import static java.lang.Math.abs;
-import static java.lang.Math.min;
-import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
-import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static org.junit.Assert.*;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import jnnet.DoubleList;
-import jnnet.IntList;
-import jnnet4.Test20140415.LinearConstraintSystem20140418;
+
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
-import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 import org.ojalgo.optimisation.linear.CommonsMathSimplexSolverTest.GoalType;
