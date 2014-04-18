@@ -117,7 +117,9 @@ public abstract interface LinearConstraintSystem extends Serializable {
 		}
 		
 		public final double evaluate(final int constraintId, final double... point) {
-			return evaluate(this.getData().toArray(),  this.getOrder(), constraintId, point);
+			final int order = this.getOrder();
+			
+			return dot(this.getData().toArray(), constraintId * order, point, 0, order);
 		}
 		
 		private final DoubleList getData() {
@@ -134,17 +136,27 @@ public abstract interface LinearConstraintSystem extends Serializable {
 		 */
 		public static final double EPSILON = 1E-9;
 		
-		public static final double evaluate(final double[] data, final int order, final int constraintIndex, final double... point) {
-			final int begin = constraintIndex * order;
-			final int end = begin + order;
+		public static final double dot(final double[] data1, final int offset1, final double[] data2, final int offset2, final int n) {
 			double result = 0.0;
 			
-			for (int i = begin; i < end; ++i) {
-				result += data[i] * point[i - begin];
+			for (int i = 0; i < n; ++i) {
+				result += data1[offset1 + i] * data2[offset2 + i];
 			}
 			
 			return result;
 		}
+		
+//		public static final double evaluate(final double[] data, final int order, final int constraintIndex, final double... point) {
+//			final int begin = constraintIndex * order;
+//			final int end = begin + order;
+//			double result = 0.0;
+//			
+//			for (int i = begin; i < end; ++i) {
+//				result += data[i] * point[i - begin];
+//			}
+//			
+//			return result;
+//		}
 		
 		public static final double[] unscale(final double[] v) {
 			final double scale = v[0];
