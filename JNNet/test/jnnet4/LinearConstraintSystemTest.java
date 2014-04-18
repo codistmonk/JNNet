@@ -348,7 +348,7 @@ public final class LinearConstraintSystemTest {
 			/**
 			 * {@value}.
 			 */
-			public static final double EPSILON = 1E-9;
+			public static final double EPSILON = 1E-7;
 			
 			public static final double evaluate(final double[] data, final int order, final int constraintIndex, final double... point) {
 				final int begin = constraintIndex * order;
