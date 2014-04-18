@@ -471,6 +471,8 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 		}
 		
 		do {
+			System.arraycopy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
+			
 			if (!eliminate(objective, constraints, listLimits(constraints, solution)) || invalid(objective)) {
 				return SYSTEM_KO;
 			}

@@ -1,16 +1,16 @@
 package jnnet4;
 
-import static java.lang.Double.isNaN;
-import static java.lang.Math.abs;
 import static jnnet4.LinearConstraintSystem20140418.ALL_CONSTRAINTS_OK;
 import static jnnet4.LinearConstraintSystem20140418.MORE_PROCESSING_NEEDED;
+import static jnnet4.LinearConstraintSystem20140418.SYSTEM_KO;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import net.sourceforge.aprog.tools.Tools;
+import jnnet.IntList;
 
 /**
  * @author codistmonk (creation 2014-04-18)
@@ -123,16 +123,45 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 		}
 		
 		final int dimension = solution.size();
-		final List<BigDecimal> objective = extractObjective(constraints, constraintId * dimension, dimension);
+		final List<BigDecimal> objective = new ArrayList<BigDecimal>(solution);
+		objective.set(0, BigDecimal.ZERO);
 		
-		if (move(constraints, objective, solution) &&
-				!isNegative(dot(constraints, constraintId * dimension, solution, 0, dimension))) {
-			return MORE_PROCESSING_NEEDED;
+		do {
+			copy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
+			
+			if (!eliminate(constraints, listLimitIds(constraints, objective, solution), objective)
+					|| !move(constraints, objective, solution)) {
+				return SYSTEM_KO;
+			}
+		} while (isNegative(dot(constraints, constraintId * dimension, solution, 0, dimension)));
+		
+		return MORE_PROCESSING_NEEDED;
+	}
+	
+	public static final boolean eliminate(final List<BigDecimal> constraints, final int[] limitIds, final List<BigDecimal> objective) {
+		if (limitIds.length == 0) {
+			return true;
 		}
 		
 		// TODO
+		debugPrint("TODO:", Arrays.toString(limitIds));
 		
-		return MORE_PROCESSING_NEEDED;
+		return false;
+	}
+	
+	public static final int[] listLimitIds(final List<BigDecimal> constraints, final List<BigDecimal> objective, final List<BigDecimal> solution) {
+		final int n = constraints.size();
+		final int dimension = solution.size();
+		final IntList result = new IntList();
+		
+		for (int offset = 0, id = 0; offset < n; offset += dimension, ++id) {
+			if (isZero(dot(constraints, offset, solution, 0, dimension))
+					&& isNegative(dot(constraints, offset, objective, 0, dimension))) {
+				result.add(id);
+			}
+		}
+		
+		return result.toArray();
 	}
 	
 	public static final boolean move(final List<BigDecimal> constraints, final List<BigDecimal> objective,
@@ -199,16 +228,11 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 		return isNegative(value) ? BigDecimal.valueOf(-1.0) : BigDecimal.ONE;
 	}
 	
-	public static final List<BigDecimal> extractObjective(final List<BigDecimal> data, final int offset, final int order) {
-		final List<BigDecimal> result = new ArrayList<BigDecimal>(order);
-		
-		result.add(BigDecimal.ZERO);
-		
-		for (int i = 1; i < order; ++i) {
-			result.add(data.get(offset + i));
+	public static final <T> void copy(final List<T> source, final int sourceOffset,
+			final List<T> destination, final int destinationOffset, final int count) {
+		for (int i = 0; i < count; ++i) {
+			destination.set(destinationOffset + i, source.get(sourceOffset + i));
 		}
-		
-		return result;
 	}
 	
 	public static final int findUnsatisfiedConstraintId(final List<BigDecimal> constraints, final List<BigDecimal> point) {
