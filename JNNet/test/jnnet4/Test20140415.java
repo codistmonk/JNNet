@@ -165,19 +165,24 @@ public final class Test20140415 {
 			return false;
 		}
 		
+		final boolean solutionOkBeforeUpdate = isSolution(constraints, solution);
+		
 		// (solution + k * objective) . constraint = 0
 		// <- solution . constraint + k * objective . constraint = 0
 		// <- k = - value / objectiveValue
 		add(abs(objectiveValue), solution, 0, -signum(objectiveValue) * solutionValue, objective, 0, solution, 0, order);
 		
-		final boolean stateBeforeCondensation = isSolution(constraints, solution);
+		final boolean solutionOkBeforeCondensation = isSolution(constraints, solution);
+		
+		if (solutionOkBeforeUpdate && !solutionOkBeforeCondensation) {
+			System.err.println(debug(DEBUG_STACK_OFFSET, "WARNING: Update destroyed solution"));
+		}
 		
 		condense(solution);
 		
-		if (isSolution(constraints, solution) != stateBeforeCondensation) {
+		if (solutionOkBeforeCondensation && !isSolution(constraints, solution)) {
 			System.err.println(debug(DEBUG_STACK_OFFSET, "WARNING: Condensation destroyed solution"));
 		}
-		
 		
 		if (debug) {
 			path.add(point(solution));
@@ -399,12 +404,24 @@ public final class Test20140415 {
 	public static final double[] maximize(final double[] constraints, final double[] objective, final double[] solution) {
 		debugPrint();
 		
+		final boolean solutionOkBeforeOptimization = isSolution(constraints, solution);
+		
+		if (!solutionOkBeforeOptimization) {
+			System.err.println(debug(DEBUG_STACK_OFFSET, "WARNING: Optimizing from invalid state"));
+			
+			return solution;
+		}
+		
 		final int dimension = objective.length;
 		final double[] tmp = objective.clone();
 		
 		while (eliminate(tmp, constraints, listLimits(constraints, solution)) &&
 				!allZeros(tmp) && move(constraints, tmp, solution)) {
 			System.arraycopy(objective, 0, tmp, 0, dimension);
+		}
+		
+		if (solutionOkBeforeOptimization && !isSolution(constraints, solution)) {
+			System.err.println(debug(DEBUG_STACK_OFFSET, "WARNING: Optimization destroyed solution"));
 		}
 		
 		return solution;
@@ -460,7 +477,7 @@ public final class Test20140415 {
 	
 	public static final boolean allZeros(final double... values) {
 		for (final double value : values) {
-			if (value != 0.0) {
+			if (!isZero(value)) {
 				return false;
 			}
 		}
