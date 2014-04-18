@@ -4,7 +4,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static jnnet4.JNNetTools.rgb;
-import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325.unscale;
+import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414.unscale;
 import static net.sourceforge.aprog.tools.SystemProperties.getAvailableProcessorCount;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.readObject;
@@ -24,7 +24,7 @@ import javax.imageio.ImageIO;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414;
 import jnnet4.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
-import jnnet4.Test20140415.LinearConstraintSystem20140418;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;

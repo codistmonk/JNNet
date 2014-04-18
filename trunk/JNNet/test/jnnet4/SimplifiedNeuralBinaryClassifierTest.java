@@ -1,7 +1,5 @@
 package jnnet4;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
@@ -10,14 +8,12 @@ import static jnnet4.FeedforwardNeuralNetworkTest.intersection;
 import static jnnet4.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static jnnet4.JNNetTools.RANDOM;
 import static jnnet4.JNNetTools.rgb;
-import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325.unscale;
 import static jnnet4.ProjectiveClassifier.preview;
 import static jnnet4.VectorStatistics.add;
 import static jnnet4.VectorStatistics.dot;
 import static jnnet4.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
-import static net.sourceforge.aprog.tools.SystemProperties.getAvailableProcessorCount;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -46,18 +42,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
 import jnnet.DoubleList;
+
 import jnnet4.BinaryClassifier.EvaluationMonitor;
-import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
-import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140325;
-import jnnet4.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
