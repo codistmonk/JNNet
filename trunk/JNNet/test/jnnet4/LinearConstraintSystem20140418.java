@@ -50,7 +50,7 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 	 */
 	private static final long serialVersionUID = 7481388639595747533L;
 	
-	static final boolean debug = false;
+	static boolean debug = true;
 	
 	static final List<Point> path = new ArrayList<Point>();
 	
@@ -203,9 +203,9 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 			System.err.println(debug(DEBUG_STACK_OFFSET, "WARNING: Condensation destroyed solution"));
 		}
 		
-//		if (debug) {
-//			path.add(point(solution));
-//		}
+		if (debug) {
+			path.add(point(solution));
+		}
 		
 		return true;
 	}

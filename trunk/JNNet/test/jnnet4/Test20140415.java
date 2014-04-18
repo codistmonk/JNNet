@@ -125,6 +125,7 @@ public final class Test20140415 {
 				
 			});
 			
+			LinearConstraintSystem20140418.debug = true;
 			path.clear();
 			
 			show(this.imageView, Test20140415.class.getName(), false);

@@ -4,14 +4,12 @@ import static java.lang.Math.abs;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
-import static jnnet4.LinearConstraintSystem.Abstract.dot;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
-import java.util.Arrays;
-
 import jnnet.DoubleList;
 import jnnet.IntList;
+
 import net.sourceforge.aprog.tools.TicToc;
 	
 /**
