@@ -8,6 +8,8 @@ import static jnnet4.JNNetTools.irange;
 import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem.Abstract.EPSILON;
 import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414.unscale;
 import static net.sourceforge.aprog.swing.SwingTools.show;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import imj2.tools.Image2DComponent.Painter;
@@ -29,7 +31,6 @@ import java.util.List;
 import jnnet.IntList;
 
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
-import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414;
 import jnnet4.SortingTools.IndexComparator;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -169,7 +170,14 @@ public final class Test20140415 {
 		// <- k = - value / objectiveValue
 		add(abs(objectiveValue), solution, 0, -signum(objectiveValue) * solutionValue, objective, 0, solution, 0, order);
 		
+		final boolean stateBeforeCondensation = isSolution(constraints, solution);
+		
 		condense(solution);
+		
+		if (isSolution(constraints, solution) != stateBeforeCondensation) {
+			System.err.println(debug(DEBUG_STACK_OFFSET, "WARNING: Condensation destroyed solution"));
+		}
+		
 		
 		if (debug) {
 			path.add(point(solution));
