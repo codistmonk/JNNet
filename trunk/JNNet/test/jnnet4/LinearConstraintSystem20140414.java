@@ -282,20 +282,6 @@ public final class LinearConstraintSystem20140414 implements LinearConstraintSys
 		debugPrint("satisfied:", constraintOffset / order);
 	}
 	
-	public static final double[] unscale(final double[] v) {
-		final double scale = v[0];
-		
-		if (scale != 0.0) {
-			final int n = v.length;
-			
-			for (int i = 0; i < n; ++i) {
-				v[i] /= scale;
-			}
-		}
-		
-		return v;
-	}
-	
 	public static final double dot(final double[] data1, final int offset1, final double[] data2, final int offset2, final int n) {
 		double result = 0.0;
 		

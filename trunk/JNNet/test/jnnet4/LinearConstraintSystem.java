@@ -146,6 +146,20 @@ public abstract interface LinearConstraintSystem extends Serializable {
 			return result;
 		}
 		
+		public static final double[] unscale(final double[] v) {
+			final double scale = v[0];
+			
+			if (scale != 0.0) {
+				final int n = v.length;
+				
+				for (int i = 0; i < n; ++i) {
+					v[i] /= scale;
+				}
+			}
+			
+			return v;
+		}
+		
 	}
 	
 	/**

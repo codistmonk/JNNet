@@ -1,7 +1,7 @@
 package jnnet4;
 
 import static jnnet4.JNNetTools.irange;
-import static jnnet4.LinearConstraintSystem20140414.unscale;
+import static jnnet4.LinearConstraintSystem.Abstract.unscale;
 import static jnnet4.LinearConstraintSystem20140418.det;
 import static jnnet4.LinearConstraintSystem20140418.dot;
 import static jnnet4.LinearConstraintSystem20140418.eliminate;
