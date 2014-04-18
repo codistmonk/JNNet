@@ -24,6 +24,7 @@ import java.util.List;
 import jnnet.DoubleList;
 import jnnet.IntList;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
+import jnnet4.Test20140415.LinearConstraintSystem20140418;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 
@@ -41,9 +42,9 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test1() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140414(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
 		
-//		system.addConstraint(1.0, 0.0, 0.0);
+		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
 		system.addConstraint(0.0, 0.0, 1.0);
 		system.addConstraint(2.0, -1.0, -1.0);
@@ -70,9 +71,9 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test1b() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140414(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
 		
-//		system.addConstraint(1.0, 0.0, 0.0);
+		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
 		system.addConstraint(0.0, 0.0, 1.0);
 		system.addConstraint(2.0, -1.0, -1.0);
@@ -99,7 +100,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test2() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140414(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
@@ -116,7 +117,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test3() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140414(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, -1.0, 0.0);
@@ -133,7 +134,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test4() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140414(4);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140418(4);
 		
 		system.addConstraint(1.0, 0.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0, 0.0);
@@ -151,7 +152,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test5() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140414(3);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
 		final double k = 1.0 / 1000.0;
 		
 		system.addConstraint(1.0, 0.0, 0.0);
@@ -175,7 +176,7 @@ public final class LinearConstraintSystemTest {
 	@Test
 	public final void test6() {
 		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin",
-				LinearConstraintSystem20140414.class, true);
+				LinearConstraintSystem20140418.class, true);
 		
 //		{
 //			final double[] constraint = new double[system.getOrder()];
@@ -197,7 +198,7 @@ public final class LinearConstraintSystemTest {
 	@Test
 	public final void test7() {
 		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin",
-				LinearConstraintSystem20140325.class, true);
+				LinearConstraintSystem20140418.class, true);
 		
 //		debugPrint(system.getData().size(), system.getOrder());
 		
@@ -320,8 +321,11 @@ public final class LinearConstraintSystemTest {
 			
 			@Override
 			public final boolean accept(final double... point) {
-				final double[] data = this.getData().toArray();
-				final int n = data.length / this.getOrder();
+				if (0.0 == point[0]) {
+					return false;
+				}
+				
+				final int n = this.getConstraintCount();
 				
 				for (int i = 0; i < n; ++i) {
 					final double value = this.evaluate(i, point);
@@ -352,7 +356,7 @@ public final class LinearConstraintSystemTest {
 			/**
 			 * {@value}.
 			 */
-			public static final double EPSILON = 1E-8;
+			public static final double EPSILON = 1E-5;
 			
 			public static final double evaluate(final double[] data, final int order, final int constraintIndex, final double... point) {
 				final int begin = constraintIndex * order;
