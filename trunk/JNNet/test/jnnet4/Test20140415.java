@@ -5,6 +5,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.round;
 import static java.util.Arrays.copyOfRange;
 import static jnnet4.JNNetTools.irange;
+import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem.Abstract.EPSILON;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import imj2.tools.Image2DComponent.Painter;
@@ -25,6 +26,7 @@ import java.util.List;
 
 import jnnet.IntList;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
+import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem.Abstract;
 import jnnet4.SortingTools.IndexComparator;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -129,6 +131,12 @@ public final class Test20140415 {
 		
 		for (int i = 0; i < n; i += order) {
 			final double value = dot(constraints, i, solution, 0, order);
+			
+			if (Double.isInfinite(value)) {
+				debugPrint(constraints[i], solution[0]);
+				throw new IllegalStateException();
+			}
+			
 			final double v = dot(constraints, i, objective, 0, order);
 			
 			if (0.0 == value && v < 0.0) {
@@ -153,14 +161,55 @@ public final class Test20140415 {
 		}
 		
 		if (0 <= offset) {
+			if (isNaN(solutionValue) || isNaN(objectiveValue)) {
+				throw new IllegalStateException();
+			}
+			
+			if (isNaN(solution[0])) {
+				throw new IllegalStateException();
+			}
+			
+			if (isNaN(objective[0])) {
+				throw new IllegalStateException();
+			}
+			
 			// (solution + k * objective) . constraint = 0
 			// <- solution . constraint + k * objective . constraint = 0
 			// <- k = - value / objectiveValue
 			add(abs(objectiveValue), solution, 0, -signum(objectiveValue) * solutionValue, objective, 0, solution, 0, order);
 			
+			condense(solution);
+			
+			if (isNaN(solution[0])) {
+				debugPrint(objectiveValue, solutionValue, objective[0], solution[0]);
+				throw new IllegalStateException();
+			}
+			
 			if (debug) {
 				path.add(point(solution));
 			}
+		}
+	}
+	
+	public static final void condense(final double... values) {
+		double largestMagnitude = 0.0;
+		
+		for (final double value : values) {
+			final double magnitude = abs(value);
+			
+			if (largestMagnitude < magnitude) {
+				largestMagnitude = magnitude;
+			}
+		}
+		
+		if (largestMagnitude * EPSILON < 1.0) {
+			return;
+		}
+		
+		final int n = values.length;
+		
+		for (int i = 0; i < n; ++i) {
+			values[i] /= largestMagnitude;
 		}
 	}
 	
@@ -202,7 +251,7 @@ public final class Test20140415 {
 		final TicToc timer = new TicToc();
 		
 		for (int i = 0; i <= limits.length; ++i) {
-			debugPrint(i, "/", limits.length);
+//			debugPrint(i, "/", limits.length);
 			
 			final int[] combination = irange(i);
 			final int[] ids = new int[i];
@@ -357,6 +406,10 @@ public final class Test20140415 {
 		
 		move(constraints, objective, solution);
 		
+		if (isNaN(solution[0])) {
+			throw new IllegalStateException();
+		}
+		
 		if (0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension)) {
 			return MORE_PROCESSING_NEEDED;
 		}
@@ -366,7 +419,19 @@ public final class Test20140415 {
 				return SYSTEM_KO;
 			}
 			
+			if (isNaN(objective[0])) {
+				throw new IllegalStateException();
+			}
+			
+			if (isNaN(solution[0])) {
+				throw new IllegalStateException();
+			}
+			
 			move(constraints, objective, solution);
+			
+			if (isNaN(solution[0])) {
+				throw new IllegalStateException();
+			}
 		} while (dot(constraints, constraintId * dimension, solution, 0, dimension) < 0.0);
 		
 		return MORE_PROCESSING_NEEDED;
