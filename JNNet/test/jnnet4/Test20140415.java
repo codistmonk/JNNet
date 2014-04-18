@@ -350,14 +350,16 @@ public final class Test20140415 {
 	 */
 	public static final int SYSTEM_KO = 2;
 	
-	public static final double[] maximize(final double[] constraints, final double[] objective) {
-		final double[] result = new double[objective.length];
+	public static final double[] maximize(final double[] constraints, final double[] objective, final double[] solution) {
+		final int dimension = objective.length;
+		final double[] tmp = objective.clone();
 		
-		if (findLaxSolution(constraints, result)) {
-			// TODO
+		while (eliminate(tmp, constraints, listLimits(constraints, solution)) && !allZeros(tmp)) {
+			move(constraints, tmp, solution);
+			System.arraycopy(objective, 0, tmp, 0, dimension);
 		}
 		
-		return result;
+		return solution;
 	}
 	
 	public static final boolean findLaxSolution(final double[] constraints, final double[] solution) {
@@ -467,6 +469,9 @@ public final class Test20140415 {
 			this.objective = new double[] { 0.0, 0.0, -1.0 };
 			this.vertices = new ArrayList<Point>();
 			
+			this.system.addConstraint(0.0, 1.0, 0.0);
+			this.system.addConstraint(0.0, 0.0, 1.0);
+			
 			this.imageView.getImageHolder().addMouseListener(this);
 			this.imageView.getImageHolder().addMouseMotionListener(this);
 			this.imageView.getImageHolder().addMouseWheelListener(this);
@@ -559,7 +564,12 @@ public final class Test20140415 {
 								Arrays.toString(this.system.getConstraint(i)).replaceAll("\\[|\\]", "") + ");");
 					}
 					
-					debugPrint(this.system.accept(this.system.solve(this.solution)));
+					if (this.system.accept(this.system.solve(this.solution))) {
+						debugPrint("Solution found:", Arrays.toString(this.solution));
+						maximize(this.system.getConstraints(), this.objective, this.solution);
+					} else {
+						debugPrint("No Solution found");
+					}
 				}
 				
 				this.imageView.refreshBuffer();
@@ -574,7 +584,12 @@ public final class Test20140415 {
 				System.out.println("	system.solve(" +
 						Arrays.toString(this.solution).replaceAll("\\[|\\]", "") + ");");
 				
-				debugPrint(this.system.accept(this.system.solve(this.solution)));
+				if (this.system.accept(this.system.solve(this.solution))) {
+					debugPrint("Solution found:", Arrays.toString(this.solution));
+					maximize(this.system.getConstraints(), this.objective, this.solution);
+				} else {
+					debugPrint("No Solution found");
+				}
 				
 				this.imageView.refreshBuffer();
 			}
