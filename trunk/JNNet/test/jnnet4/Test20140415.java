@@ -6,6 +6,7 @@ import static java.lang.Math.round;
 import static java.util.Arrays.copyOfRange;
 import static jnnet4.JNNetTools.irange;
 import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem.Abstract.EPSILON;
+import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414.unscale;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
@@ -28,6 +29,7 @@ import java.util.List;
 import jnnet.IntList;
 
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
+import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414;
 import jnnet4.SortingTools.IndexComparator;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -117,11 +119,11 @@ public final class Test20140415 {
 		return new Point((int) round(wxy[1] / wxy[0]), (int) round(wxy[2] / wxy[0]));
 	}
 	
-	public static final void move(final double[] constraints, final double[] objective, final double[] solution) {
+	public static final boolean move(final double[] constraints, final double[] objective, final double[] solution) {
 		final int n = constraints.length;
 		
 		if (n == 0) {
-			return;
+			return false;
 		}
 		
 		final int order = solution.length;
@@ -134,7 +136,9 @@ public final class Test20140415 {
 			final double value = dot(constraints, i, solution, 0, order);
 			final double v = dot(constraints, i, objective, 0, order);
 			
-			if (0.0 == value && v < 0.0) {
+//			debugPrint(i, value, v, offsetIsUnsatisfiedCodirectionalConstraint);
+			
+			if (isZero(value) && isNegative(v)) {
 				offset = -1;
 				break;
 			}
@@ -143,30 +147,64 @@ public final class Test20140415 {
 			// <- d < 0.0
 			final double d = solutionValue * abs(v) * signum(objectiveValue) - value * abs(objectiveValue) * signum(v);
 			
-			if (0.0 < value && v < 0.0 && (d < 0.0 || isNaN(d))) {
+			if (isPositive(value) && isNegative(v) && (isNegative(d) || isNaN(d))) {
 				solutionValue = value;
 				objectiveValue = v;
 				offset = i;
 				offsetIsUnsatisfiedCodirectionalConstraint = false;
-			} else if (value < 0.0 && 0.0 < v && offsetIsUnsatisfiedCodirectionalConstraint && (0.0 < d || isNaN(d))) {
+			} else if (isNegative(value) && isPositive(v) && offsetIsUnsatisfiedCodirectionalConstraint &&
+					(isPositive(d) || isNaN(d))) {
 				solutionValue = value;
 				objectiveValue = v;
 				offset = i;
 			}
 		}
 		
-		if (0 <= offset) {
-			// (solution + k * objective) . constraint = 0
-			// <- solution . constraint + k * objective . constraint = 0
-			// <- k = - value / objectiveValue
-			add(abs(objectiveValue), solution, 0, -signum(objectiveValue) * solutionValue, objective, 0, solution, 0, order);
+		if (offset < 0) {
+			return false;
+		}
+		
+		// (solution + k * objective) . constraint = 0
+		// <- solution . constraint + k * objective . constraint = 0
+		// <- k = - value / objectiveValue
+		add(abs(objectiveValue), solution, 0, -signum(objectiveValue) * solutionValue, objective, 0, solution, 0, order);
+		
+		condense(solution);
+		
+		if (debug) {
+			path.add(point(solution));
+		}
+		
+		return true;
+	}
+	
+	public static final boolean isZero(final double value) {
+		return abs(value) <= EPSILON;
+	}
+	
+	public static final boolean isNegative(final double value) {
+		return value < -EPSILON;
+	}
+	
+	public static final boolean isPositive(final double value) {
+		return EPSILON < value;
+	}
+	
+	public static final boolean isSolution(final double[] constraints, final double[] point) {
+		final int n = constraints.length;
+		final int dimension = point.length;
+		
+		for (int i = 0; i < n; i += dimension) {
+			final double value = dot(constraints, i, point, 0, dimension);
 			
-			condense(solution);
-			
-			if (debug) {
-				path.add(point(solution));
+			if (isNegative(value)) {
+				debugPrint(i, value);
+				
+				return false;
 			}
 		}
+		
+		return true;
 	}
 	
 	public static final void condense(final double... values) {
@@ -351,11 +389,13 @@ public final class Test20140415 {
 	public static final int SYSTEM_KO = 2;
 	
 	public static final double[] maximize(final double[] constraints, final double[] objective, final double[] solution) {
+		debugPrint();
+		
 		final int dimension = objective.length;
 		final double[] tmp = objective.clone();
 		
-		while (eliminate(tmp, constraints, listLimits(constraints, solution)) && !allZeros(tmp)) {
-			move(constraints, tmp, solution);
+		while (eliminate(tmp, constraints, listLimits(constraints, solution)) &&
+				!allZeros(tmp) && move(constraints, tmp, solution)) {
 			System.arraycopy(objective, 0, tmp, 0, dimension);
 		}
 		
@@ -426,7 +466,7 @@ public final class Test20140415 {
 		final IntList result = new IntList();
 		
 		for (int i = 0, j = 0; i < n; i += dimension, ++j) {
-			if (dot(constraints, i, solution, 0, dimension) == 0.0) {
+			if (isZero(dot(constraints, i, solution, 0, dimension))) {
 				result.add(j);
 			}
 		}
@@ -565,8 +605,9 @@ public final class Test20140415 {
 					}
 					
 					if (this.system.accept(this.system.solve(this.solution))) {
-						debugPrint("Solution found:", Arrays.toString(this.solution));
+						debugPrint("Solution found:", Arrays.toString(unscale(this.solution)));
 						maximize(this.system.getConstraints(), this.objective, this.solution);
+						debugPrint("Optimum:", Arrays.toString(unscale(this.solution)));
 					} else {
 						debugPrint("No Solution found");
 					}
@@ -585,8 +626,9 @@ public final class Test20140415 {
 						Arrays.toString(this.solution).replaceAll("\\[|\\]", "") + ");");
 				
 				if (this.system.accept(this.system.solve(this.solution))) {
-					debugPrint("Solution found:", Arrays.toString(this.solution));
+					debugPrint("Solution found:", Arrays.toString(unscale(this.solution)));
 					maximize(this.system.getConstraints(), this.objective, this.solution);
+					debugPrint("Optimum:", Arrays.toString(unscale(this.solution)), Arrays.toString(this.objective));
 				} else {
 					debugPrint("No Solution found");
 				}
@@ -632,11 +674,62 @@ public final class Test20140415 {
 		private static final long serialVersionUID = 7481388639595747533L;
 		
 		static final void test() {
-			final LinearConstraintSystem20140418 system = new LinearConstraintSystem20140418(3);
-			system.addConstraint(8446.0, -12.0, -98.0);
-			system.addConstraint(13861.0, -5.0, -109.0);
-			system.addConstraint(14841.0, -8.0, -73.0);
-			debugPrint(system.accept(system.solve(1.0, 154.0, 208.0)));
+			if (true) {
+				final LinearConstraintSystem20140418 system = new LinearConstraintSystem20140418(3);
+				system.addConstraint(8446.0, -12.0, -98.0);
+				system.addConstraint(13861.0, -5.0, -109.0);
+				system.addConstraint(14841.0, -8.0, -73.0);
+				
+				if (!system.accept(system.solve(1.0, 154.0, 208.0))) {
+					throw new IllegalStateException();
+				}
+			}
+			if (true) {
+				final LinearConstraintSystem20140418 system = new LinearConstraintSystem20140418(3);
+				system.addConstraint(0.0, 1.0, 0.0);
+				system.addConstraint(0.0, 0.0, 1.0);
+				system.addConstraint(482.0, -16.0, 30.0);
+				system.addConstraint(-5020.0, 15.0, 55.0);
+				
+				final double[] solution = system.solve(1.0, 48.0, 69.0);
+				
+				if (!system.accept(solution)) {
+					throw new IllegalStateException();
+				}
+				
+				maximize(system.getConstraints(), new double[] { 0.0, 0.0, -1.0 }, solution);
+				
+				if (!system.accept(solution)) {
+					throw new IllegalStateException();
+				}
+			}
+			if (true) {
+				final LinearConstraintSystem20140418 system = new LinearConstraintSystem20140418(3);
+				system.addConstraint(0.0, 1.0, 0.0);
+				system.addConstraint(0.0, 0.0, 1.0);
+				system.addConstraint(-9493.0, 35.0, 94.0);
+				
+				final double[] solution = unscale(system.solve(1.0, 57.0, 47.0));
+				
+				debugPrint("expected:", "[1.0, 67.71464069178015, 75.77646357220952]");
+				debugPrint("actual:", Arrays.toString(solution));
+				
+				if (!system.accept(solution)) {
+					throw new IllegalStateException();
+				}
+				
+				maximize(system.getConstraints(), new double[] { 0.0, 0.0, -1.0 }, solution);
+				
+				debugPrint("optimimum:", Arrays.toString(unscale(solution)));
+				
+				if (!system.accept(solution)) {
+					throw new IllegalStateException();
+				}
+				
+				if (!isZero(solution[2])) {
+					throw new IllegalStateException();
+				}
+			}
 		}
 		
 	}
