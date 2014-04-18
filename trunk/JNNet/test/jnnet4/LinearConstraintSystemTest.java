@@ -26,6 +26,8 @@ import jnnet.DoubleList;
 import jnnet.IntList;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import jnnet4.Test20140415.LinearConstraintSystem20140418;
+import net.sourceforge.aprog.tools.Factory;
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 
@@ -43,7 +45,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test1() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
+		final LinearConstraintSystem system = DefaultFactory.forClass(CLASS, 3).newInstance();
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
@@ -72,7 +74,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test1b() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
+		final LinearConstraintSystem system = DefaultFactory.forClass(CLASS, 3).newInstance();
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
@@ -101,7 +103,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test2() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
+		final LinearConstraintSystem system = DefaultFactory.forClass(CLASS, 3).newInstance();
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0);
@@ -118,7 +120,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test3() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
+		final LinearConstraintSystem system = DefaultFactory.forClass(CLASS, 3).newInstance();
 		
 		system.addConstraint(1.0, 0.0, 0.0);
 		system.addConstraint(0.0, -1.0, 0.0);
@@ -135,7 +137,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test4() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140418(4);
+		final LinearConstraintSystem system = DefaultFactory.forClass(CLASS, 4).newInstance();
 		
 		system.addConstraint(1.0, 0.0, 0.0, 0.0);
 		system.addConstraint(0.0, 1.0, 0.0, 0.0);
@@ -153,7 +155,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test5() {
-		final LinearConstraintSystem system = new LinearConstraintSystem20140418(3);
+		final LinearConstraintSystem system = DefaultFactory.forClass(CLASS, 3).newInstance();
 		final double k = 1.0 / 1000.0;
 		
 		system.addConstraint(1.0, 0.0, 0.0);
@@ -177,16 +179,7 @@ public final class LinearConstraintSystemTest {
 	@Test
 	public final void test6() {
 		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin",
-				LinearConstraintSystem20140418.class, true);
-		
-//		{
-//			final double[] constraint = new double[system.getOrder()];
-//			
-//			constraint[0] = 1.0;
-//			
-//			system.addConstraint(constraint);
-//		}
-		
+				CLASS, true);
 //		debugPrint(system.getData().size(), system.getOrder());
 		
 		final double[] solution = system.solve();
@@ -199,8 +192,7 @@ public final class LinearConstraintSystemTest {
 	@Test
 	public final void test7() {
 		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin",
-				LinearConstraintSystem20140418.class, true);
-		
+				CLASS, true);
 //		debugPrint(system.getData().size(), system.getOrder());
 		
 		final double[] solution = system.solve();
@@ -224,6 +216,8 @@ public final class LinearConstraintSystemTest {
 	 * {@value}.
 	 */
 	public static final int Z = 2;
+	
+	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystem20140414.class;
 	
 	public static final double[] v(final double... v) {
 		return v;
