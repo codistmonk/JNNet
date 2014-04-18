@@ -130,6 +130,8 @@ public final class Test20140415 {
 			final double value = dot(constraints, i, solution, 0, order);
 			final double v = dot(constraints, i, objective, 0, order);
 			
+			debugPrint(i, i / order, value, v);
+			
 			if (0.0 == value && v < 0.0) {
 				offset = -1;
 				break;
@@ -150,6 +152,8 @@ public final class Test20140415 {
 				offset = i;
 			}
 		}
+		
+		debugPrint(offset);
 		
 		if (0 <= offset) {
 			// (solution + k * objective) . constraint = 0
@@ -176,7 +180,14 @@ public final class Test20140415 {
 	}
 	
 	public static final boolean eliminate(final double[] objective, final double[] constraints, final int... limits) {
+		final int dimension = objective.length;
+		final double[] tmp = new double[dimension];
+		
+		debugPrint(limits.length);
+		
 		for (int i = 0; i <= limits.length; ++i) {
+			debugPrint(i, "/", limits.length);
+			
 			final int[] combination = irange(i);
 			final int[] ids = new int[i];
 			
@@ -184,7 +195,11 @@ public final class Test20140415 {
 				ids[j] = limits[combination[j]];
 			}
 			
-			if (eliminate(objective, constraints, ids, limits)) {
+			System.arraycopy(objective, 0, tmp, 0, dimension);
+			
+			if (eliminate(tmp, constraints, ids, limits)) {
+				System.arraycopy(tmp, 0, objective, 0, dimension);
+				
 				return true;
 			}
 			
@@ -193,7 +208,11 @@ public final class Test20140415 {
 					ids[j] = limits[combination[j]];
 				}
 				
-				if (eliminate(objective, constraints, ids, limits)) {
+				System.arraycopy(objective, 0, tmp, 0, dimension);
+				
+				if (eliminate(tmp, constraints, ids, limits)) {
+					System.arraycopy(tmp, 0, objective, 0, dimension);
+					
 					return true;
 				}
 			}
@@ -309,6 +328,8 @@ public final class Test20140415 {
 	public static final int improveSolution(final double[] constraints, final double[] solution) {
 		final int constraintId = findUnsatisfiedConstraintId(constraints, solution);
 		
+		debugPrint(constraintId);
+		
 		if (constraintId < 0) {
 			return ALL_CONSTRAINTS_OK;
 		}
@@ -318,15 +339,22 @@ public final class Test20140415 {
 		
 		System.arraycopy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
 		
+		debugPrint(Arrays.toString(objective));
+		
 		move(constraints, objective, solution);
 		
 		if (0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension)) {
 			return MORE_PROCESSING_NEEDED;
 		}
 		
+		debugPrint();
+		
 		if (!eliminate(objective, constraints, listLimits(constraints, solution))) {
+			debugPrint();
 			return SYSTEM_KO;
 		}
+		
+		debugPrint(Arrays.toString(objective));
 		
 		move(constraints, objective, solution);
 		
@@ -513,7 +541,11 @@ public final class Test20140415 {
 		
 		@Override
 		public final double[] solve() {
-			return this.solve(new double[this.getOrder()]);
+			final double[] solution = new double[this.getOrder()];
+			
+			solution[0] = 1.0;
+			
+			return this.solve(solution);
 		}
 		
 		public final double[] solve(final double... solution) {
@@ -532,7 +564,7 @@ public final class Test20140415 {
 			system.addConstraint(8446.0, -12.0, -98.0);
 			system.addConstraint(13861.0, -5.0, -109.0);
 			system.addConstraint(14841.0, -8.0, -73.0);
-			debugPrint(system.accept(system.solve(1.0, 154.0, 208.0)));			
+			debugPrint(system.accept(system.solve(1.0, 154.0, 208.0)));
 		}
 		
 	}
