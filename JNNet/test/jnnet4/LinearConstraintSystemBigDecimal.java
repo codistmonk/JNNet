@@ -2,6 +2,7 @@ package jnnet4;
 
 import static jnnet4.LinearConstraintSystem20140418.ALL_CONSTRAINTS_OK;
 import static jnnet4.LinearConstraintSystem20140418.MORE_PROCESSING_NEEDED;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -87,6 +88,8 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 		result[0] = 1.0;
 		final List<BigDecimal> solution = v(result);
 		
+		debugPrint(solution);
+		
 		findLaxSolution(this.constraints, solution);
 		
 		for (int i = 0; i < order; ++i) {
@@ -119,11 +122,44 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 			return ALL_CONSTRAINTS_OK;
 		}
 		
-		Tools.debugPrint(constraintId);
+		debugPrint(constraintId);
+		
+		final int dimension = solution.size();
+		final List<BigDecimal> objective = extractObjective(constraints, constraintId * dimension, dimension);
+		
+		debugPrint(objective);
+		
+		if (move(constraints, objective, solution) &&
+				!isNegative(dot(constraints, constraintId * dimension, solution, 0, dimension))) {
+			return MORE_PROCESSING_NEEDED;
+		}
 		
 		// TODO
 		
 		return MORE_PROCESSING_NEEDED;
+	}
+	
+	public static final boolean move(final List<BigDecimal> constraints, final List<BigDecimal> objective,
+			final List<BigDecimal> solution) {
+		final int n = constraints.size();
+		
+		if (n == 0) {
+			return false;
+		}
+		
+		return false;
+	}
+	
+	public static final List<BigDecimal> extractObjective(final List<BigDecimal> data, final int offset, final int order) {
+		final List<BigDecimal> result = new ArrayList<BigDecimal>(order);
+		
+		result.add(BigDecimal.ZERO);
+		
+		for (int i = 1; i < order; ++i) {
+			result.add(data.get(offset + i));
+		}
+		
+		return result;
 	}
 	
 	public static final int findUnsatisfiedConstraintId(final List<BigDecimal> constraints, final List<BigDecimal> point) {

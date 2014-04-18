@@ -466,7 +466,7 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 		System.arraycopy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
 		
 		if (move(constraints, objective, solution) &&
-				0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension)) {
+				!isNegative(dot(constraints, constraintId * dimension, solution, 0, dimension))) {
 			return MORE_PROCESSING_NEEDED;
 		}
 		
@@ -475,7 +475,7 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 				return SYSTEM_KO;
 			}
 		} while (move(constraints, objective, solution) &&
-				dot(constraints, constraintId * dimension, solution, 0, dimension) < 0.0);
+				isNegative(dot(constraints, constraintId * dimension, solution, 0, dimension)));
 		
 		return MORE_PROCESSING_NEEDED;
 	}
