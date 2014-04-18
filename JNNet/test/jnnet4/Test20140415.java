@@ -21,13 +21,14 @@ import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
-import jnnet.DoubleList;
 import jnnet.IntList;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
+import jnnet4.SortingTools.IndexComparator;
+
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2014-04-12)
@@ -130,8 +131,6 @@ public final class Test20140415 {
 			final double value = dot(constraints, i, solution, 0, order);
 			final double v = dot(constraints, i, objective, 0, order);
 			
-			debugPrint(i, i / order, value, v);
-			
 			if (0.0 == value && v < 0.0) {
 				offset = -1;
 				break;
@@ -185,6 +184,27 @@ public final class Test20140415 {
 		
 		debugPrint(limits.length);
 		
+		SortingTools.sort(limits, new IndexComparator() {
+			
+			@Override
+			public final int compare(final int index1, final int index2) {
+				final double d01 = dot(objective, 0, constraints, index1 * dimension, dimension);
+				final double d02 = dot(objective, 0, constraints, index2 * dimension, dimension);
+				final double d11 = dot(constraints, index1 * dimension, constraints, index1 * dimension, dimension);
+				final double d22 = dot(constraints, index2 * dimension, constraints, index2 * dimension, dimension);
+				
+				return Double.compare(d01 / d11, d02 / d22);
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 6277762603619224047L;
+			
+		});
+		
+		final TicToc timer = new TicToc();
+		
 		for (int i = 0; i <= limits.length; ++i) {
 			debugPrint(i, "/", limits.length);
 			
@@ -203,7 +223,9 @@ public final class Test20140415 {
 				return true;
 			}
 			
-			while (nextCombination(combination, limits.length)) {
+			timer.tic();
+			
+			while (nextCombination(combination, limits.length) && timer.toc() < 100L) {
 				for (int j = 0; j < i; ++j) {
 					ids[j] = limits[combination[j]];
 				}
