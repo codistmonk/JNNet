@@ -6,7 +6,6 @@ import static java.lang.Math.abs;
 import static java.lang.Math.round;
 import static java.util.Arrays.copyOfRange;
 import static jnnet4.JNNetTools.irange;
-import static jnnet4.LinearConstraintSystem20140414.unscale;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -327,14 +326,10 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 				if (eliminate(tmp, constraints, ids, limits)) {
 					System.arraycopy(tmp, 0, objective, 0, dimension);
 					
-					debugPrint();
-					
 					return true;
 				}
 			}
 		}
-		
-		debugPrint();
 		
 		return false;
 	}
@@ -364,7 +359,9 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 		final int order = objective.length;
 		
 		for (final int id : ids) {
-			if (dot(constraints, id * order, objective, 0, order) < 0.0) {
+			final double d = dot(constraints, id * order, objective, 0, order);
+			
+			if (isNaN(d) || isNegative(d)) {
 				return false;
 			}
 		}

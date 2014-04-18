@@ -4,7 +4,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static jnnet4.JNNetTools.rgb;
-import static jnnet4.LinearConstraintSystem20140414.unscale;
+import static jnnet4.LinearConstraintSystem.Abstract.unscale;
 import static net.sourceforge.aprog.tools.SystemProperties.getAvailableProcessorCount;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.readObject;

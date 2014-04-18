@@ -1,6 +1,7 @@
 package jnnet4;
 
 import static java.util.Arrays.copyOf;
+import static jnnet4.LinearConstraintSystem.Abstract.unscale;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
@@ -9,7 +10,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import jnnet.DoubleList;
-
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 import org.junit.Test;
@@ -178,7 +178,7 @@ public final class LinearConstraintSystemTest {
 		
 		final double[] solution = system.solve();
 		
-		debugPrint(Arrays.toString(solution));
+		debugPrint(Arrays.toString(unscale(solution)));
 		
 		assertTrue(system.accept(solution));
 	}
