@@ -1,5 +1,7 @@
 package jnnet4;
 
+import static java.lang.Double.isNaN;
+import static java.lang.Math.abs;
 import static jnnet4.LinearConstraintSystem20140418.ALL_CONSTRAINTS_OK;
 import static jnnet4.LinearConstraintSystem20140418.MORE_PROCESSING_NEEDED;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -88,8 +90,6 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 		result[0] = 1.0;
 		final List<BigDecimal> solution = v(result);
 		
-		debugPrint(solution);
-		
 		findLaxSolution(this.constraints, solution);
 		
 		for (int i = 0; i < order; ++i) {
@@ -122,12 +122,8 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 			return ALL_CONSTRAINTS_OK;
 		}
 		
-		debugPrint(constraintId);
-		
 		final int dimension = solution.size();
 		final List<BigDecimal> objective = extractObjective(constraints, constraintId * dimension, dimension);
-		
-		debugPrint(objective);
 		
 		if (move(constraints, objective, solution) &&
 				!isNegative(dot(constraints, constraintId * dimension, solution, 0, dimension))) {
@@ -142,12 +138,65 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 	public static final boolean move(final List<BigDecimal> constraints, final List<BigDecimal> objective,
 			final List<BigDecimal> solution) {
 		final int n = constraints.size();
+		final int order = solution.size();
+		BigDecimal selectedSolutionValue = BigDecimal.ZERO;
+		BigDecimal selectedObjectiveValue = BigDecimal.ZERO;
+		int offset = -1;
+		boolean offsetIsUnsatisfiedCodirectionalConstraint = true;
 		
-		if (n == 0) {
+		for (int i = 0; i < n; i += order) {
+			final BigDecimal solutionValue = dot(constraints, i, solution, 0, order);
+			final BigDecimal objectiveValue = dot(constraints, i, objective, 0, order);
+			
+//			debugPrint(i, value, v, offsetIsUnsatisfiedCodirectionalConstraint);
+			
+			if (isZero(solutionValue) && isNegative(objectiveValue)) {
+				return false;
+			}
+			
+			// -value/v < -solutionValue/objectiveValue 
+			// <- d < 0.0
+			final BigDecimal d = selectedSolutionValue.multiply(objectiveValue.abs()).multiply(signum(selectedObjectiveValue))
+					.subtract(solutionValue.multiply(selectedObjectiveValue.abs()).multiply(signum(objectiveValue)));
+			
+			if (isPositive(solutionValue) && isNegative(objectiveValue) && (offset < 0 || isNegative(d))) {
+				selectedSolutionValue = solutionValue;
+				selectedObjectiveValue = objectiveValue;
+				offset = i;
+				offsetIsUnsatisfiedCodirectionalConstraint = false;
+			} else if (isNegative(solutionValue) && isPositive(objectiveValue) && offsetIsUnsatisfiedCodirectionalConstraint &&
+					(offset < 0 || isPositive(d))) {
+				selectedSolutionValue = solutionValue;
+				selectedObjectiveValue = objectiveValue;
+				offset = i;
+			}
+		}
+		
+		if (offset < 0) {
 			return false;
 		}
 		
-		return false;
+		// (solution + k * objective) . constraint = 0
+		// <- solution . constraint + k * objective . constraint = 0
+		// <- k = - value / objectiveValue
+		add(selectedObjectiveValue.abs(), solution, 0,
+				signum(selectedObjectiveValue).negate().multiply(selectedSolutionValue), objective, 0,
+				solution, 0, order);
+		
+		return true;
+	}
+	
+	public static final void add(final BigDecimal scale1, final List<BigDecimal> data1, final int offset1,
+			final BigDecimal scale2, final List<BigDecimal> data2, final int offset2,
+			final List<BigDecimal> result, final int resultOffset, final int dimension) {
+		for (int i = 0; i < dimension; ++i) {
+			result.set(resultOffset + i,
+					scale1.multiply(data1.get(offset1 + i)).add(scale2.multiply(data2.get(offset2 + i))));
+		}
+	}
+	
+	public static final BigDecimal signum(final BigDecimal value) {
+		return isNegative(value) ? BigDecimal.valueOf(-1.0) : BigDecimal.ONE;
 	}
 	
 	public static final List<BigDecimal> extractObjective(final List<BigDecimal> data, final int offset, final int order) {
