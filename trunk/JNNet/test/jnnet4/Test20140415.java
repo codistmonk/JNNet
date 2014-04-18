@@ -1,5 +1,6 @@
 package jnnet4;
 
+import static java.lang.Double.isNaN;
 import static java.lang.Math.abs;
 import static java.lang.Math.round;
 import static java.util.Arrays.copyOfRange;
@@ -46,6 +47,10 @@ public final class Test20140415 {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
+		{
+			LinearConstraintSystem20140418.test();
+		}
+		
 		{
 			final double[] objective = { 0.0, 0.0, 0.0, 1.0 };
 			final double[] constraints = {
@@ -110,9 +115,14 @@ public final class Test20140415 {
 	
 	public static final void move(final double[] constraints, final double[] objective, final double[] solution) {
 		final int n = constraints.length;
+		
+		if (n == 0) {
+			return;
+		}
+		
 		final int order = solution.length;
-		double solutionValue = Double.NEGATIVE_INFINITY;
-		double objectiveValue = 0.0;
+		double solutionValue = Double.NaN;
+		double objectiveValue = Double.NaN;
 		int offset = -1;
 		boolean offsetIsUnsatisfiedCodirectionalConstraint = true;
 		
@@ -125,16 +135,16 @@ public final class Test20140415 {
 				break;
 			}
 			
-			final double d = (solutionValue * v - value * objectiveValue) * signum(v) * signum(objectiveValue);
+			// -value/v < -solutionValue/objectiveValue 
+			// <- d < 0.0
+			final double d = solutionValue * abs(v) * signum(objectiveValue) - value * abs(objectiveValue) * signum(v);
 			
-			if (0.0 < value && v < 0.0 && d < 0.0) {
+			if (0.0 < value && v < 0.0 && (d < 0.0 || isNaN(d))) {
 				solutionValue = value;
 				objectiveValue = v;
 				offset = i;
 				offsetIsUnsatisfiedCodirectionalConstraint = false;
-			}
-			
-			if (value < 0.0 && 0.0 < v && offsetIsUnsatisfiedCodirectionalConstraint && 0.0 < -d) {
+			} else if (value < 0.0 && 0.0 < v && offsetIsUnsatisfiedCodirectionalConstraint && (0.0 < d || isNaN(d))) {
 				solutionValue = value;
 				objectiveValue = v;
 				offset = i;
@@ -388,6 +398,8 @@ public final class Test20140415 {
 				
 			});
 			
+			path.clear();
+			
 			show(this.imageView, Test20140415.class.getName(), false);
 		}
 		
@@ -458,7 +470,7 @@ public final class Test20140415 {
 							det(1,    p0.x, 1,    p1.x));
 					
 					for (int i = 0; i < this.system.getConstraintCount(); ++i) {
-						System.out.println("	constraints.addAll(" +
+						System.out.println("	system.addConstraint(" +
 								Arrays.toString(this.system.getConstraint(i)).replaceAll("\\[|\\]", "") + ");");
 					}
 					
@@ -473,6 +485,9 @@ public final class Test20140415 {
 				
 				path.clear();
 				path.add(point(this.solution));
+				
+				System.out.println("	system.solve(" +
+						Arrays.toString(this.solution).replaceAll("\\[|\\]", "") + ");");
 				
 				debugPrint(this.system.accept(this.system.solve(this.solution)));
 				
@@ -501,7 +516,7 @@ public final class Test20140415 {
 			return this.solve(new double[this.getOrder()]);
 		}
 		
-		public final double[] solve(final double[] solution) {
+		public final double[] solve(final double... solution) {
 			findLaxSolution(this.getConstraints(), solution);
 			
 			return solution;
@@ -511,6 +526,14 @@ public final class Test20140415 {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 7481388639595747533L;
+		
+		static final void test() {
+			final LinearConstraintSystem20140418 system = new LinearConstraintSystem20140418(3);
+			system.addConstraint(8446.0, -12.0, -98.0);
+			system.addConstraint(13861.0, -5.0, -109.0);
+			system.addConstraint(14841.0, -8.0, -73.0);
+			debugPrint(system.accept(system.solve(1.0, 154.0, 208.0)));			
+		}
 		
 	}
 	
