@@ -1,5 +1,6 @@
 package jnnet4;
 
+import static java.lang.Double.isNaN;
 import static java.lang.Math.abs;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
@@ -330,7 +331,7 @@ public final class LinearConstraintSystemTest {
 				for (int i = 0; i < n; ++i) {
 					final double value = this.evaluate(i, point);
 					
-					if (value + EPSILON < 0.0) {
+					if (isNaN(value) || value + EPSILON < 0.0) {
 						debugPrint(i, value);
 						
 						return false;

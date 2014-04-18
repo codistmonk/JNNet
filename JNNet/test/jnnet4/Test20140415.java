@@ -152,8 +152,6 @@ public final class Test20140415 {
 			}
 		}
 		
-		debugPrint(offset);
-		
 		if (0 <= offset) {
 			// (solution + k * objective) . constraint = 0
 			// <- solution . constraint + k * objective . constraint = 0
@@ -181,8 +179,6 @@ public final class Test20140415 {
 	public static final boolean eliminate(final double[] objective, final double[] constraints, final int... limits) {
 		final int dimension = objective.length;
 		final double[] tmp = new double[dimension];
-		
-		debugPrint(limits.length);
 		
 		SortingTools.sort(limits, new IndexComparator() {
 			
@@ -225,7 +221,7 @@ public final class Test20140415 {
 			
 			timer.tic();
 			
-			while (nextCombination(combination, limits.length) && timer.toc() < 100L) {
+			while (nextCombination(combination, limits.length) && timer.toc() < 1L) {
 				for (int j = 0; j < i; ++j) {
 					ids[j] = limits[combination[j]];
 				}
@@ -350,8 +346,6 @@ public final class Test20140415 {
 	public static final int improveSolution(final double[] constraints, final double[] solution) {
 		final int constraintId = findUnsatisfiedConstraintId(constraints, solution);
 		
-		debugPrint(constraintId);
-		
 		if (constraintId < 0) {
 			return ALL_CONSTRAINTS_OK;
 		}
@@ -361,26 +355,31 @@ public final class Test20140415 {
 		
 		System.arraycopy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
 		
-		debugPrint(Arrays.toString(objective));
-		
 		move(constraints, objective, solution);
 		
 		if (0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension)) {
 			return MORE_PROCESSING_NEEDED;
 		}
 		
-		debugPrint();
+		do {
+			if (!eliminate(objective, constraints, listLimits(constraints, solution)) || allZeros(objective)) {
+				return SYSTEM_KO;
+			}
+			
+			move(constraints, objective, solution);
+		} while (dot(constraints, constraintId * dimension, solution, 0, dimension) < 0.0);
 		
-		if (!eliminate(objective, constraints, listLimits(constraints, solution))) {
-			debugPrint();
-			return SYSTEM_KO;
+		return MORE_PROCESSING_NEEDED;
+	}
+	
+	public static final boolean allZeros(final double... values) {
+		for (final double value : values) {
+			if (value != 0.0) {
+				return false;
+			}
 		}
 		
-		debugPrint(Arrays.toString(objective));
-		
-		move(constraints, objective, solution);
-		
-		return 0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension) ? MORE_PROCESSING_NEEDED : SYSTEM_KO;
+		return true;
 	}
 	
 	public static final int[] listLimits(final double[] constraints, final double[] solution) {
