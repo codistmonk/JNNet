@@ -223,65 +223,6 @@ public final class LinearConstraintSystem20140414 implements LinearConstraintSys
 	 */
 	public static final double EPSILON = 1E-8;
 	
-	public static final int solveUsingLastDimension(final double[] data, final double[] point) {
-		int result = -1;
-		final int n = data.length;
-		final int order = point.length;
-		final int last = order - 1;
-		
-		for (int i = 0; i < n; i += order) {
-			final double value = dot(data, i, point, 0, order);
-			
-			if (value < 0.0) {
-				// (point + k * (0 .. 0, 1)) . h = 0
-				// <- value + k * h[last] = 0
-				// <- k = -value / h[last]
-				point[last] -= value / data[i + last];
-				
-				debugPrint(Arrays.toString(point), dot(data, i, point, 0, order));
-				
-				result = i;
-			}
-		}
-		
-		debugPrint("lowest:", result / order);
-		
-		return result;
-	}
-	
-	public static final void moveAlongConstraintToLastDimension0(final double[] data, final int constraintOffset, final double[] point) {
-		final int order = point.length;
-		final int last = order - 1;
-		final double[] objective = new double[order];
-		
-		objective[last] = 1.0;
-		
-		// direction . h = 0
-		// (objective + k1 * h) . h = 0
-		// h[last] + k1 * h . h = 0
-		// k1 = -h[last] / h . h
-		final double k1 = -data[constraintOffset + last] / dot(data, constraintOffset, data, constraintOffset, order);
-		
-		// (point')[last] = 0
-		// (point + k2 * direction)[last] = 0
-		// point[last] + k2 * direction[last] = 0
-		// k2 = -point[last] / direction[last]
-		// k2 = -point[last] / (objective + k1 * h)[last]
-		// k2 = -point[last] / (1 + k1 * h[last])
-		final double k2 = -point[last] / (1.0 + k1 * data[constraintOffset + last]);
-		
-//			debugPrint(Arrays.toString(unscale(point)));
-//			debugPrint(constraintOffset / order);
-		
-		for (int i = 0; i < order; ++i) {
-			point[i] += k2 * (objective[i] + k1 * data[constraintOffset + i]);
-		}
-		
-//			debugPrint(Arrays.toString(unscale(point)));
-		debugPrint(point[last], dot(data, constraintOffset, point, 0, order));
-		debugPrint("satisfied:", constraintOffset / order);
-	}
-	
 	public static final void checkSolution(final double[] data, final double[] point) {
 		final int order = point.length;
 		
