@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2014-04-18)
  */
@@ -80,11 +82,16 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 	
 	@Override
 	public final double[] solve() {
-		final double[] result = new double[this.getOrder()];
+		final int order = this.getOrder();
+		final double[] result = new double[order];
 		result[0] = 1.0;
 		final List<BigDecimal> solution = v(result);
 		
-		// TODO
+		findLaxSolution(this.constraints, solution);
+		
+		for (int i = 0; i < order; ++i) {
+			result[i] = solution.get(i).doubleValue();
+		}
 		
 		return result;
 	}
@@ -112,6 +119,8 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 			return ALL_CONSTRAINTS_OK;
 		}
 		
+		Tools.debugPrint(constraintId);
+		
 		// TODO
 		
 		return MORE_PROCESSING_NEEDED;
@@ -121,9 +130,9 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 		final int n = constraints.size();
 		final int dimension = point.size();
 		
-		for (int i = 0, j = 0; i < n; i += dimension, ++j) {
-			if (isNegative(dot(constraints, i, point, 0, dimension))) {
-				return j;
+		for (int offset = 0, id = 0; offset < n; offset += dimension, ++id) {
+			if (isNegative(dot(constraints, offset, point, 0, dimension))) {
+				return id;
 			}
 		}
 		
