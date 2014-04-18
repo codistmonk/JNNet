@@ -24,6 +24,7 @@ import javax.imageio.ImageIO;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414;
 import jnnet4.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
+import jnnet4.Test20140415.LinearConstraintSystem20140418;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -126,6 +127,7 @@ public final class InvertClassifier {
 		final int step = inputDimension + 1;
 		final int n = hyperplanes.length;
 		
+//		final LinearConstraintSystem system = new LinearConstraintSystem20140418(step);
 		final LinearConstraintSystem system = new LinearConstraintSystem20140414(step);
 //		final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(step);
 		
