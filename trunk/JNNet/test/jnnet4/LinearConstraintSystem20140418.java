@@ -316,7 +316,7 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 			
 			timer.tic();
 			
-			while (nextCombination(combination, limits.length) && timer.toc() < 1L) {
+			while (nextCombination(combination, limits.length) && timer.toc() < 2L) {
 				for (int j = 0; j < i; ++j) {
 					ids[j] = limits[combination[j]];
 				}
@@ -385,16 +385,6 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 		for (int i = 0; i < dimension; ++i) {
 			result[resultOffset + i] = scale1 * data1[offset1 + i] + scale2 * data2[offset2 + i];
 		}
-	}
-	
-	public static final double dot(final double[] data1, final int offset1, final double[] data2, final int offset2, final int dimension) {
-		double result = 0.0;
-		
-		for (int i = 0; i < dimension; ++i) {
-			result += data1[offset1 + i] * data2[offset2 + i];
-		}
-		
-		return result;
 	}
 	
 	public static final double dot(final double[] data1, final double[] data2, final int dimension) {

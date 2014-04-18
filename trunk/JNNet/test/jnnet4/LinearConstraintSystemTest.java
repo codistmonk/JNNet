@@ -198,7 +198,7 @@ public final class LinearConstraintSystemTest {
 	 */
 	public static final int Z = 2;
 	
-	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystem20140418.class;
+	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystem20140414.class;
 	
 	public static final double[] v(final double... v) {
 		return v;
@@ -272,7 +272,7 @@ public final class LinearConstraintSystemTest {
 		@Override
 		public final boolean accept(final double... point) {
 			for (final LinearConstraint constraint : this.constraints) {
-				if (LinearConstraintSystem20140414.dot(constraint.getFactors(), 0, point, 0, point.length) < 0.0) {
+				if (LinearConstraintSystem.Abstract.dot(constraint.getFactors(), 0, point, 0, point.length) < 0.0) {
 					return false;
 				}
 			}

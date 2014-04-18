@@ -4,6 +4,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static java.util.Arrays.copyOf;
+import static jnnet4.LinearConstraintSystem.Abstract.dot;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
@@ -11,7 +12,6 @@ import java.util.Arrays;
 
 import jnnet.DoubleList;
 import jnnet.IntList;
-
 import net.sourceforge.aprog.tools.TicToc;
 	
 /**
@@ -280,16 +280,6 @@ public final class LinearConstraintSystem20140414 implements LinearConstraintSys
 //			debugPrint(Arrays.toString(unscale(point)));
 		debugPrint(point[last], dot(data, constraintOffset, point, 0, order));
 		debugPrint("satisfied:", constraintOffset / order);
-	}
-	
-	public static final double dot(final double[] data1, final int offset1, final double[] data2, final int offset2, final int n) {
-		double result = 0.0;
-		
-		for (int i = 0; i < n; ++i) {
-			result += data1[offset1 + i] * data2[offset2 + i];
-		}
-		
-		return result;
 	}
 	
 	public static final void checkSolution(final double[] data, final double[] point) {
