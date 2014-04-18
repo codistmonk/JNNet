@@ -1,12 +1,13 @@
 package jnnet4;
 
+import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
 import static java.lang.Math.abs;
 import static java.lang.Math.round;
 import static java.util.Arrays.copyOfRange;
 import static jnnet4.JNNetTools.irange;
-import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem.Abstract.EPSILON;
-import static jnnet4.LinearConstraintSystemTest.LinearConstraintSystem20140414.unscale;
+import static jnnet4.LinearConstraintSystem.Abstract.EPSILON;
+import static jnnet4.LinearConstraintSystem20140414.unscale;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
@@ -29,8 +30,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import jnnet.IntList;
-
-import jnnet4.LinearConstraintSystemTest.LinearConstraintSystem;
 import jnnet4.SortingTools.IndexComparator;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -45,7 +44,7 @@ public final class Test20140415 {
 		throw new IllegalInstantiationException();
 	}
 	
-	static final boolean debug = true;
+	static final boolean debug = false;
 	
 	static final List<Point> path = new ArrayList<Point>();
 	
@@ -184,9 +183,9 @@ public final class Test20140415 {
 			System.err.println(debug(DEBUG_STACK_OFFSET, "WARNING: Condensation destroyed solution"));
 		}
 		
-		if (debug) {
-			path.add(point(solution));
-		}
+//		if (debug) {
+//			path.add(point(solution));
+//		}
 		
 		return true;
 	}
@@ -211,8 +210,6 @@ public final class Test20140415 {
 			final double value = dot(constraints, i, point, 0, dimension);
 			
 			if (isNegative(value)) {
-				debugPrint(i, value);
-				
 				return false;
 			}
 		}
@@ -280,7 +277,7 @@ public final class Test20140415 {
 		final TicToc timer = new TicToc();
 		
 		for (int i = 0; i <= limits.length; ++i) {
-			debugPrint(i, "/", limits.length);
+//			debugPrint(i, "/", limits.length);
 			
 			final int[] combination = irange(i);
 			final int[] ids = new int[i];
@@ -309,10 +306,14 @@ public final class Test20140415 {
 				if (eliminate(tmp, constraints, ids, limits)) {
 					System.arraycopy(tmp, 0, objective, 0, dimension);
 					
+					debugPrint();
+					
 					return true;
 				}
 			}
 		}
+		
+		debugPrint();
 		
 		return false;
 	}
@@ -416,7 +417,8 @@ public final class Test20140415 {
 		final double[] tmp = objective.clone();
 		
 		while (eliminate(tmp, constraints, listLimits(constraints, solution)) &&
-				!allZeros(tmp) && move(constraints, tmp, solution)) {
+				!invalid(tmp) && move(constraints, tmp, solution)) {
+			debugPrint(Arrays.toString(tmp));
 			System.arraycopy(objective, 0, tmp, 0, dimension);
 		}
 		
@@ -458,31 +460,36 @@ public final class Test20140415 {
 		
 		System.arraycopy(constraints, constraintId * dimension + 1, objective, 1, dimension - 1);
 		
-		move(constraints, objective, solution);
-		
-		if (0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension)) {
+		if (move(constraints, objective, solution) &&
+				0.0 <= dot(constraints, constraintId * dimension, solution, 0, dimension)) {
 			return MORE_PROCESSING_NEEDED;
 		}
 		
 		do {
-			if (!eliminate(objective, constraints, listLimits(constraints, solution)) || allZeros(objective)) {
+			if (!eliminate(objective, constraints, listLimits(constraints, solution)) || invalid(objective)) {
 				return SYSTEM_KO;
 			}
-			
-			move(constraints, objective, solution);
-		} while (dot(constraints, constraintId * dimension, solution, 0, dimension) < 0.0);
+		} while (move(constraints, objective, solution) &&
+				dot(constraints, constraintId * dimension, solution, 0, dimension) < 0.0);
 		
 		return MORE_PROCESSING_NEEDED;
 	}
 	
-	public static final boolean allZeros(final double... values) {
+	public static final boolean invalid(final double... values) {
+		boolean result = true;
+		
 		for (final double value : values) {
+			if (isNaN(value) || isInfinite(value)) {
+				debugPrint(value);
+				return true;
+			}
+			
 			if (!isZero(value)) {
-				return false;
+				result = false;
 			}
 		}
 		
-		return true;
+		return result;
 	}
 	
 	public static final int[] listLimits(final double[] constraints, final double[] solution) {
