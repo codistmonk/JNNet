@@ -516,7 +516,7 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 		final int dimension = point.length;
 		
 		for (int i = 0, j = 0; i < n; i += dimension, ++j) {
-			if (dot(constraints, i, point, 0, dimension) < 0.0) {
+			if (isNegative(dot(constraints, i, point, 0, dimension))) {
 				return j;
 			}
 		}
