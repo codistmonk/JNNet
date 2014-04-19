@@ -1,6 +1,8 @@
 package jnnet4;
 
 import static java.lang.Double.isNaN;
+import static java.lang.Math.abs;
+import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
@@ -13,7 +15,6 @@ import java.io.IOException;
 import java.io.Serializable;
 
 import jnnet.DoubleList;
-
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -146,17 +147,21 @@ public abstract interface LinearConstraintSystem extends Serializable {
 			return result;
 		}
 		
-//		public static final double evaluate(final double[] data, final int order, final int constraintIndex, final double... point) {
-//			final int begin = constraintIndex * order;
-//			final int end = begin + order;
-//			double result = 0.0;
-//			
-//			for (int i = begin; i < end; ++i) {
-//				result += data[i] * point[i - begin];
-//			}
-//			
-//			return result;
-//		}
+		public static final void add(final double scale1, final double[] data1, final int offset1,
+				final double scale2, final double[] data2, final int offset2,
+				final double[] result, final int resultOffset, final int dimension) {
+			for (int i = 0; i < dimension; ++i) {
+				result[resultOffset + i] = scale1 * data1[offset1 + i] + scale2 * data2[offset2 + i];
+			}
+		}
+		
+		public static final double dot(final double[] data1, final double[] data2, final int dimension) {
+			return dot(data1, 0, data2, 0, dimension);
+		}
+		
+		public static final double dot(final double[] data1, final double[] data2) {
+			return dot(data1, data2, min(data1.length, data2.length));
+		}
 		
 		public static final double[] unscale(final double[] v) {
 			final double scale = v[0];
@@ -170,6 +175,18 @@ public abstract interface LinearConstraintSystem extends Serializable {
 			}
 			
 			return v;
+		}
+		
+		public static final boolean isZero(final double value) {
+			return abs(value) <= EPSILON;
+		}
+		
+		public static final boolean isNegative(final double value) {
+			return value < -EPSILON;
+		}
+		
+		public static final boolean isPositive(final double value) {
+			return EPSILON < value;
 		}
 		
 	}
