@@ -137,6 +137,23 @@ public final class LinearConstraintSystemTest {
 	@Test
 	public final void test5() {
 		final LinearConstraintSystem system = DefaultFactory.forClass(CLASS, 3).newInstance();
+		
+		system.addConstraint(1.0, 0.0, 0.0);
+		system.addConstraint(0.0, 1.0, 0.0);
+		system.addConstraint(0.0, 0.0, 1.0);
+		
+		assertTrue(system.accept(1.0, 1.0, 1.0));
+		
+		final double[] solution = system.solve();
+		
+		debugPrint(Arrays.toString(solution));
+		
+		assertTrue(system.accept(solution));
+	}
+	
+	@Test
+	public final void test6() {
+		final LinearConstraintSystem system = DefaultFactory.forClass(CLASS, 3).newInstance();
 		final double k = 1.0 / 1000.0;
 		
 		system.addConstraint(1.0, 0.0, 0.0);
@@ -158,7 +175,7 @@ public final class LinearConstraintSystemTest {
 	}
 	
 	@Test
-	public final void test6() {
+	public final void test7() {
 		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin",
 				CLASS, true);
 //		debugPrint(system.getData().size(), system.getOrder());
@@ -171,7 +188,7 @@ public final class LinearConstraintSystemTest {
 	}
 	
 	@Test
-	public final void test7() {
+	public final void test8() {
 		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin",
 				CLASS, true);
 //		debugPrint(system.getData().size(), system.getOrder());
@@ -198,7 +215,7 @@ public final class LinearConstraintSystemTest {
 	 */
 	public static final int Z = 2;
 	
-	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystemBigDecimal.class;
+	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystem20140414.class;
 	
 	public static final double[] v(final double... v) {
 		return v;

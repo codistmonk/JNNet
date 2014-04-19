@@ -210,18 +210,6 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 		return true;
 	}
 	
-	public static final boolean isZero(final double value) {
-		return abs(value) <= EPSILON;
-	}
-	
-	public static final boolean isNegative(final double value) {
-		return value < -EPSILON;
-	}
-	
-	public static final boolean isPositive(final double value) {
-		return EPSILON < value;
-	}
-	
 	public static final boolean isSolution(final double[] constraints, final double[] point) {
 		final int n = constraints.length;
 		final int dimension = point.length;
@@ -377,22 +365,6 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 		add(d, target, targetOffset + 1,
 				-dot(target, targetOffset + 1, constraint, 1, dimension - 1), constraint, 1,
 				destination, 1, dimension - 1);
-	}
-	
-	public static final void add(final double scale1, final double[] data1, final int offset1,
-			final double scale2, final double[] data2, final int offset2,
-			final double[] result, final int resultOffset, final int dimension) {
-		for (int i = 0; i < dimension; ++i) {
-			result[resultOffset + i] = scale1 * data1[offset1 + i] + scale2 * data2[offset2 + i];
-		}
-	}
-	
-	public static final double dot(final double[] data1, final double[] data2, final int dimension) {
-		return dot(data1, 0, data2, 0, dimension);
-	}
-	
-	public static final double dot(final double[] data1, final double[] data2) {
-		return dot(data1, data2, data1.length);
 	}
 	
 	/**

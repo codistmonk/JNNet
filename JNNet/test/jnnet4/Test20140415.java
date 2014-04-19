@@ -91,7 +91,7 @@ public final class Test20140415 {
 		
 		private final SimpleImageView imageView;
 		
-		private final LinearConstraintSystem20140418 system;
+		private final LinearConstraintSystem20140419 system;
 		
 		private final double[] solution;
 		
@@ -101,11 +101,12 @@ public final class Test20140415 {
 		
 		public VisualConstraintBuilder() {
 			this.imageView = new SimpleImageView();
-			this.system = new LinearConstraintSystem20140418(3);
+			this.system = new LinearConstraintSystem20140419(3);
 			this.solution = new double[] { 1.0, 0.0, 0.0 };
 			this.objective = new double[] { 0.0, 0.0, -1.0 };
 			this.vertices = new ArrayList<Point>();
 			
+			this.system.addConstraint(1.0, 0.0, 0.0);
 			this.system.addConstraint(0.0, 1.0, 0.0);
 			this.system.addConstraint(0.0, 0.0, 1.0);
 			
