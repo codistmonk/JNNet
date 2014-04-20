@@ -3,6 +3,9 @@ package jnnet4;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 
+import java.util.Arrays;
+
+import net.sourceforge.aprog.tools.Tools;
 import jnnet4.MitosAtypiaImporter.ConsoleMonitor;
 
 /**
@@ -26,25 +29,30 @@ public final class LinearConstraintSystem20140419 extends LinearConstraintSystem
 		final double[] constraints = this.getConstraints();
 		final int n = constraints.length;
 		
-		for (int i = 0; i < n; i += order) {
-			final double d = LinearConstraintSystem20140414.vectorNorm(constraints, i - 1, order + 1);
-			
-			if (0.0 < d) {
-				add(0.0, constraints, i, 1.0 / d, constraints, i, constraints, i, order);
-			}
-		}
+//		for (int i = 0; i < n; i += order) {
+//			final double d = LinearConstraintSystem20140414.vectorNorm(constraints, i - 1, order + 1);
+//			
+//			if (0.0 < d) {
+//				add(0.0, constraints, i, 1.0 / d, constraints, i, constraints, i, order);
+//			}
+//		}
 		
 		final double[] result = this.getConstraint(0);
-		int retry = 0;
-		int remaining = 20000;
+		
+		for (int i = order; i < n; i += order) {
+			add(1.0, result, 0, 1.0, constraints, i, result, 0, order);
+		}
+		
 		final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+		int retry = 0;
+		int remaining = 10000;
 		
 		do {
 			monitor.ping(retry + "/" + remaining + "\r");
 			
 			retry = 0;
 			
-			for (int i = order; i < n; i += order) {
+			for (int i = 0; i < n; i += order) {
 				final double constraintValue = dot(result, 0, constraints, i, order);
 				double alpha = 0.0;
 				
@@ -68,7 +76,7 @@ public final class LinearConstraintSystem20140419 extends LinearConstraintSystem
 						}
 					}
 					
-					alpha = (lowerBound + upperBound) / 2.0;
+					alpha = (lowerBound + 3.0 * upperBound) / 4.0;
 				}
 				
 				add(1.0, result, 0, alpha, constraints, i, result, 0, order);
@@ -83,6 +91,10 @@ public final class LinearConstraintSystem20140419 extends LinearConstraintSystem
 		
 		if (0 < retry) {
 			System.err.println(debug(DEBUG_STACK_OFFSET, "Failed to solve"));
+			
+			if (isZero(result[0])) {
+				result[0] = 1.0;
+			}
 		}
 		
 		return result;
