@@ -1,5 +1,8 @@
 package jnnet4;
 
+import static java.lang.Double.isNaN;
+import static java.util.Arrays.copyOfRange;
+import static jnnet4.JNNetTools.irange;
 import static jnnet4.LinearConstraintSystem20140418.ALL_CONSTRAINTS_OK;
 import static jnnet4.LinearConstraintSystem20140418.MORE_PROCESSING_NEEDED;
 import static jnnet4.LinearConstraintSystem20140418.SYSTEM_KO;
@@ -10,7 +13,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import net.sourceforge.aprog.tools.TicToc;
 import jnnet.IntList;
+import jnnet4.SortingTools.IndexComparator;
 
 /**
  * @author codistmonk (creation 2014-04-18)
@@ -143,10 +148,99 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 			return true;
 		}
 		
-		// TODO
-		debugPrint("TODO:", Arrays.toString(limitIds));
+		final int order = objective.size();
+		
+		SortingTools.sort(limitIds, new IndexComparator() {
+			
+			@Override
+			public final int compare(final int index1, final int index2) {
+				final BigDecimal d01 = dot(objective, 0, constraints, index1 * order, order);
+				final BigDecimal d02 = dot(objective, 0, constraints, index2 * order, order);
+				final BigDecimal d11 = dot(constraints, index1 * order, constraints, index1 * order, order);
+				final BigDecimal d22 = dot(constraints, index2 * order, constraints, index2 * order, order);
+				
+				return d01.multiply(d22).compareTo(d02.multiply(d11));
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 6277762603619224047L;
+			
+		});
+		
+		final TicToc timer = new TicToc();
+		final List<BigDecimal> tmp = new ArrayList<BigDecimal>(objective);
+		
+		for (int i = limitIds.length; 0 <= i; --i) {
+			debugPrint(i, "/", limitIds.length);
+			
+			final int[] combination = irange(i);
+			final int[] ids = new int[i];
+			
+			for (int k = 0; k < i; ++k) {
+				ids[k] = limitIds[combination[k]];
+			}
+			
+			copy(objective, 0, tmp, 0, order);
+			
+			if (eliminate(tmp, constraints, ids, limitIds)) {
+				copy(tmp, 0, objective, 0, order);
+				
+				return true;
+			}
+			
+			// TODO
+		}
 		
 		return false;
+	}
+	
+	public static final boolean eliminate(final List<BigDecimal> objective, final List<BigDecimal> constraints, final int[] ids, final int[] limits) {
+		final int order = objective.size();
+		
+		if (0 < ids.length) {
+			final List<BigDecimal> constraint = new ArrayList<BigDecimal>(constraints.subList(ids[0] * order, (ids[0] + 1) * order));
+			
+			for (int i = 1; i < ids.length; ++i) {
+				debugPrint(i, "/", ids.length);
+				
+				final int offset = ids[i] * order;
+				final BigDecimal d = dot(constraint, 1, constraint, 1, order - 1);
+				
+				eliminate(d, constraint, objective, 0, objective);
+				eliminate(d, constraint, constraints, offset, constraint);
+			}
+			
+			eliminate(dot(constraint, 1, constraint, 1, order - 1), constraint, objective, 0, objective);
+		}
+		
+		return objectiveIsCompatibleWithSelectedConstraints(objective, constraints, limits);
+	}
+	
+	public static final boolean objectiveIsCompatibleWithSelectedConstraints(final List<BigDecimal> objective,
+			final List<BigDecimal> constraints, final int[] ids) {
+		final int order = objective.size();
+		
+		for (final int id : ids) {
+			final BigDecimal d = dot(constraints, id * order, objective, 0, order);
+			
+			if (isNegative(d)) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	public static final void eliminate(final BigDecimal d, final List<BigDecimal> constraint,
+			final List<BigDecimal> target, final int targetOffset,
+			final List<BigDecimal> destination) {
+		final int order = constraint.size();
+		
+		add(d, target, targetOffset + 1,
+				dot(target, targetOffset + 1, constraint, 1, order - 1).negate(), constraint, 1,
+				destination, 1, order - 1);
 	}
 	
 	public static final int[] listLimitIds(final List<BigDecimal> constraints, final List<BigDecimal> objective, final List<BigDecimal> solution) {
@@ -225,7 +319,7 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 	}
 	
 	public static final BigDecimal signum(final BigDecimal value) {
-		return isNegative(value) ? BigDecimal.valueOf(-1.0) : BigDecimal.ONE;
+		return isNegative(value) ? BigDecimal.ONE.negate() : BigDecimal.ONE;
 	}
 	
 	public static final <T> void copy(final List<T> source, final int sourceOffset,
@@ -253,7 +347,7 @@ public final class LinearConstraintSystemBigDecimal implements LinearConstraintS
 	}
 	
 	public static final BigDecimal dot(final List<BigDecimal> data1, final int offset1, final List<BigDecimal> data2, final int offset2, final int dimension) {
-		BigDecimal result = new BigDecimal(0.0);
+		BigDecimal result = BigDecimal.ZERO;
 		
 		for (int i = 0; i < dimension; ++i) {
 			result = result.add(data1.get(offset1 + i).multiply(data2.get(offset2 + i)));

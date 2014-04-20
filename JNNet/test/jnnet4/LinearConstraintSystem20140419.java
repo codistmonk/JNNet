@@ -1,11 +1,9 @@
 package jnnet4;
 
-import static java.lang.Math.min;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
-import java.util.Arrays;
+import jnnet4.MitosAtypiaImporter.ConsoleMonitor;
 
 /**
  * @author codistmonk (creation 2014-04-19)
@@ -37,35 +35,54 @@ public final class LinearConstraintSystem20140419 extends LinearConstraintSystem
 		}
 		
 		final double[] result = this.getConstraint(0);
+		int retry = 0;
+		int remaining = 20000;
+		final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
 		
-		for (int i = order; i < n; i += order) {
-			final double constraintValue = dot(result, 0, constraints, i, order);
-			double alpha = 0.0;
+		do {
+			monitor.ping(retry + "/" + remaining + "\r");
 			
-			if (constraintValue <= 0.0) {
-				final double lowerBound = -constraintValue / dot(constraints, i, constraints, i, order);
-				double upperBound = lowerBound + 2.0;
+			retry = 0;
+			
+			for (int i = order; i < n; i += order) {
+				final double constraintValue = dot(result, 0, constraints, i, order);
+				double alpha = 0.0;
 				
-				for (int j = 0; j < i; j += order) {
-					final double d = dot(constraints, i, constraints, j, order);
+				if (constraintValue <= 0.0) {
+					final double lowerBound = -constraintValue / dot(constraints, i, constraints, i, order);
+					double upperBound = lowerBound + 2.0;
 					
-					if (d < 0.0) {
-						upperBound = min(upperBound, -dot(result, 0, constraints, j, order) / d);
+					for (int j = 0; j < i; j += order) {
+						final double d = dot(constraints, i, constraints, j, order);
+						
+						if (d < 0.0) {
+							final double upperBoundJ = -dot(result, 0, constraints, j, order) / d;
+							
+							if (lowerBound < upperBoundJ) {
+								if (upperBoundJ < upperBound) {
+									upperBound = upperBoundJ;
+								}
+							} else {
+								++retry;
+							}
+						}
 					}
+					
+					alpha = (lowerBound + upperBound) / 2.0;
 				}
 				
-				if (upperBound <= lowerBound) {
-					System.err.println(debug(DEBUG_STACK_OFFSET, lowerBound, upperBound));
-				}
+				add(1.0, result, 0, alpha, constraints, i, result, 0, order);
 				
-				alpha = (lowerBound + upperBound) / 2.0;
+				if (LinearConstraintSystem20140418.debug) {
+					LinearConstraintSystem20140418.path.add(LinearConstraintSystem20140418.point(result));
+				}
 			}
-			
-			add(1.0, result, 0, alpha, constraints, i, result, 0, order);
-			
-			if (LinearConstraintSystem20140418.debug) {
-				LinearConstraintSystem20140418.path.add(LinearConstraintSystem20140418.point(result));
-			}
+		} while(0 < retry && 0 < --remaining);
+		
+		monitor.pause();
+		
+		if (0 < retry) {
+			System.err.println(debug(DEBUG_STACK_OFFSET, "Failed to solve"));
 		}
 		
 		return result;

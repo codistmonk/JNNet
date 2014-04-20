@@ -342,7 +342,7 @@ public final class LinearConstraintSystem20140418 extends LinearConstraintSystem
 		return objectiveIsCompatibleWithSelectedConstraints(objective, constraints, limits);
 	}
 	
-	public static boolean objectiveIsCompatibleWithSelectedConstraints(final double[] objective,
+	public static final boolean objectiveIsCompatibleWithSelectedConstraints(final double[] objective,
 			final double[] constraints, final int[] ids) {
 		final int order = objective.length;
 		
