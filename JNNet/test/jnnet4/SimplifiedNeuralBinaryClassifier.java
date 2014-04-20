@@ -1,5 +1,7 @@
 package jnnet4;
 
+import static java.lang.Double.isInfinite;
+import static java.lang.Double.isNaN;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
 import static java.util.Collections.swap;
@@ -11,6 +13,7 @@ import static jnnet4.VectorStatistics.dot;
 import static jnnet4.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -98,6 +101,13 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 				System.err.println(debug(Tools.DEBUG_STACK_OFFSET, codes));
 				
 				Tools.gc(1L);
+			}
+		}
+		
+		for (final double value : hyperplanes.toArray()) {
+			if (isNaN(value) || isInfinite(value)) {
+				System.err.println(debug(DEBUG_STACK_OFFSET, "Invalid values detected"));
+				break;
 			}
 		}
 		
