@@ -122,20 +122,19 @@ public final class InvertClassifier {
 	}
 	
 	public static final double[] invert(final double[] hyperplanes, final int inputDimension, final BitSet code) {
-		final int step = inputDimension + 1;
+		final int order = inputDimension + 1;
 		final int n = hyperplanes.length;
 		
-//		final LinearConstraintSystem system = new LinearConstraintSystem20140418(step);
-		final LinearConstraintSystem system = new LinearConstraintSystem20140414(step);
-//		final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(step);
+		final LinearConstraintSystem system = new LinearConstraintSystem20140414(order);
+//		final LinearConstraintSystem system = new OjAlgoLinearConstraintSystem(order);
 		
 		{
-			final double[] constraint = new double[step];
+			final double[] constraint = new double[order];
 			
 			if (!(system instanceof OjAlgoLinearConstraintSystem)) {
-				system.allocate(step + step - 1 + n / step);
+				system.allocate(order + order - 1 + n / order);
 				
-				for (int i = 0; i < step; ++i) {
+				for (int i = 0; i < order; ++i) {
 					constraint[i] = 1.0;
 					system.addConstraint(constraint);
 					constraint[i] = 0.0;
@@ -144,18 +143,18 @@ public final class InvertClassifier {
 			
 			constraint[0] = 255.0;
 			
-			for (int i = 1; i < step; ++i) {
+			for (int i = 1; i < order; ++i) {
 				constraint[i] = -1.0;
 				system.addConstraint(constraint);
 				constraint[i] = 0.0;
 			}
 		}
 		
-		for (int i = 0, bit = 0; i < n; i += step, ++bit) {
+		for (int i = 0, bit = 0; i < n; i += order, ++bit) {
 			final double scale = code.get(bit) ? 1.0 : -1.0;
-			final double[] constraint = new double[step];
+			final double[] constraint = new double[order];
 			
-			for (int j = i; j < i + step; ++j) {
+			for (int j = i; j < i + order; ++j) {
 				constraint[j - i] = scale * hyperplanes[j];
 			}
 			
