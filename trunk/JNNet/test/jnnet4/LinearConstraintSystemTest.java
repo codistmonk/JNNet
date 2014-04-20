@@ -215,7 +215,7 @@ public final class LinearConstraintSystemTest {
 	 */
 	public static final int Z = 2;
 	
-	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystem20140414.class;
+	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystem20140419.class;
 	
 	public static final double[] v(final double... v) {
 		return v;

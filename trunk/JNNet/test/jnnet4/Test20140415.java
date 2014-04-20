@@ -10,8 +10,9 @@ import static jnnet4.LinearConstraintSystem20140418.nextCombination;
 import static jnnet4.LinearConstraintSystem20140418.path;
 import static jnnet4.LinearConstraintSystem20140418.point;
 import static net.sourceforge.aprog.swing.SwingTools.show;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-04-12)
@@ -207,8 +209,12 @@ public final class Test20140415 {
 						debugPrint("Solution found:", Arrays.toString(unscale(this.solution)));
 						maximize(this.system.getConstraints(), this.objective, this.solution);
 						debugPrint("Optimum:", Arrays.toString(unscale(this.solution)));
+						
+						if (!this.system.accept(this.solution)) {
+							System.err.println(debug(DEBUG_STACK_OFFSET, "Solution destroyed"));
+						}
 					} else {
-						debugPrint("No Solution found");
+						System.err.println(debug(DEBUG_STACK_OFFSET, "No Solution found"));
 					}
 				}
 				
@@ -228,8 +234,12 @@ public final class Test20140415 {
 					debugPrint("Solution found:", Arrays.toString(unscale(this.solution)));
 					maximize(this.system.getConstraints(), this.objective, this.solution);
 					debugPrint("Optimum:", Arrays.toString(unscale(this.solution)), Arrays.toString(this.objective));
+					
+					if (!this.system.accept(this.solution)) {
+						System.err.println(debug(DEBUG_STACK_OFFSET, "Solution destroyed"));
+					}
 				} else {
-					debugPrint("No Solution found");
+					System.err.println(debug(DEBUG_STACK_OFFSET, "No Solution found"));
 				}
 				
 				this.imageView.refreshBuffer();
