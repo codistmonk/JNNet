@@ -3,9 +3,6 @@ package jnnet4;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 
-import java.util.Arrays;
-
-import net.sourceforge.aprog.tools.Tools;
 import jnnet4.MitosAtypiaImporter.ConsoleMonitor;
 
 /**
@@ -48,11 +45,11 @@ public final class LinearConstraintSystem20140419 extends LinearConstraintSystem
 		int remaining = 10000;
 		
 		do {
-			monitor.ping(retry + "/" + remaining + "\r");
-			
 			retry = 0;
 			
 			for (int i = 0; i < n; i += order) {
+				monitor.ping(Thread.currentThread() + " " + retry + "/" + remaining + " " + (i / order) + "/" + (n / order) + "\r");
+				
 				final double constraintValue = dot(result, 0, constraints, i, order);
 				double alpha = 0.0;
 				
