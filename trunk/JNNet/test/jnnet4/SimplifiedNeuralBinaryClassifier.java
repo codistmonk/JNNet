@@ -32,7 +32,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.DoubleList;
-
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;
@@ -103,6 +102,10 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		}
 		
 		if (allowHyperplanePruning) {
+			if (hyperplanes.size() / step < codes.getCodeSize()) {
+				throw new IllegalStateException();
+			}
+			
 			removeHyperplanes(codes.prune(), hyperplanes, step);
 		}
 		
@@ -203,8 +206,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 	public static final Codeset cluster(final double[] hyperplanes, final Dataset data) {
 		debugPrint("Clustering...");
 		
-		final int step = data.getItemSize() - 1;
-		final Codeset result = new Codeset(hyperplanes.length / step);
+		final Codeset result = new Codeset(hyperplanes.length / data.getItemSize());
 		final TicToc timer = new TicToc();
 		
 		timer.tic();
@@ -279,8 +281,13 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 	}
 	
 	private static final void removeHyperplanes(final BitSet markedHyperplanes, final DoubleList hyperplanes, final int step) {
-		final double[] data = hyperplanes.toArray();
 		final int n = hyperplanes.size();
+		
+		if (n < markedHyperplanes.cardinality() * step) {
+			throw new IllegalArgumentException();
+		}
+		
+		final double[] data = hyperplanes.toArray();
 		
 		for (int i = 0, j = 0, bit = 0; i < n; i += step, ++bit) {
 			if (!markedHyperplanes.get(bit)) {
