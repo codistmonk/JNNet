@@ -12,6 +12,7 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 import java.io.Serializable;
 import java.util.Arrays;
 
+import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -101,6 +102,10 @@ public final class DoubleList implements Serializable {
 	}
 	
 	public final DoubleList resize(final int newSize) {
+		if (newSize < 0) {
+			throw new IllegalArgumentException();
+		}
+		
 		if (this.values.length < newSize) {
 			final double[] newValues = new double[newSize];
 			System.arraycopy(this.values, this.first, newValues, 0, this.size());

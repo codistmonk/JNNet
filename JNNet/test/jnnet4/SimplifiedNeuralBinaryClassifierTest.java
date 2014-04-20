@@ -34,17 +34,17 @@ import org.junit.Test;
  */
 public final class SimplifiedNeuralBinaryClassifierTest {
 	
-//	@Test
+	@Test
 	public final void test1() {
-		final boolean showClassifier = true;
+		final boolean showClassifier = false;
 		final boolean previewTrainingData = false;
 		final boolean previewValidationData = false;
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-//		final Dataset trainingData = new Dataset("jnnet/2spirals.txt");
+		final CSVDataset trainingData = new CSVDataset("jnnet/2spirals.txt");
 //		final Dataset trainingData = new Dataset("jnnet/iris_versicolor.txt");
-		final CSVDataset trainingData = new CSVDataset("../Libraries/datasets/gisette/gisette_train.data");
+//		final CSVDataset trainingData = new CSVDataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
@@ -53,13 +53,13 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			SwingTools.show(preview(trainingData, 8), "Training data", false);
 		}
 		
-		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final CSVDataset validationData = new CSVDataset("../Libraries/datasets/gisette/gisette_valid.data");
-		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
-		
-		if (previewValidationData) {
-			SwingTools.show(preview(validationData, 8), "Validation data", false);
-		}
+//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+//		final CSVDataset validationData = new CSVDataset("../Libraries/datasets/gisette/gisette_valid.data");
+//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+//		
+//		if (previewValidationData) {
+//			SwingTools.show(preview(validationData, 8), "Validation data", false);
+//		}
 		
 //		debugPrint("Loading test dataset started", new Date(timer.tic()));
 ////		final Dataset testData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 11000000-500000, 500000);
@@ -77,9 +77,9 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("training:", confusionMatrix);
 			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
 			
-			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-			debugPrint("test:", classifier.evaluate(validationData, null));
-			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+//			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
+//			debugPrint("test:", classifier.evaluate(validationData, null));
+//			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
 			
 //			debugPrint("Evaluating classifier on test set started", new Date(timer.tic()));
 //			debugPrint("test:", classifier.evaluate(testData));
@@ -167,7 +167,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
-	@Test
+//	@Test
 	public final void test3() throws Exception {
 		final TicToc timer = new TicToc();
 		final int validationItems = 10000;

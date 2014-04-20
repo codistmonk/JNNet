@@ -101,6 +101,10 @@ public final class IntList implements Serializable {
 	}
 	
 	public final IntList resize(final int newSize) {
+		if (newSize < 0) {
+			throw new IllegalArgumentException();
+		}
+		
 		if (this.values.length < newSize) {
 			final int[] newValues = new int[newSize];
 			System.arraycopy(this.values, this.first, newValues, 0, this.size());
