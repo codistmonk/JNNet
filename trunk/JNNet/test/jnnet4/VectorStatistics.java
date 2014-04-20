@@ -1,5 +1,6 @@
 package jnnet4;
 
+import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.instances;
 
@@ -131,7 +132,7 @@ public final class VectorStatistics implements Serializable {
 	}
 	
 	public static final double dot(final double[] v1, final double[] v2) {
-		final int n = v1.length;
+		final int n = min(v1.length, v2.length);
 		double result = 0.0;
 		
 		for (int i = 0; i < n; ++i) {
