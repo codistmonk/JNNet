@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet;
 
 import static java.util.Arrays.copyOfRange;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -9,10 +9,8 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
-import jnnet.Dataset;
-import jnnet.DoubleList;
+import jnnet.draft.CSV2Bin;
 import jnnet.draft.CSV2Bin.DataType;
-import jnnet.ConsoleMonitor;
 
 /**
  * @author codistmonk (creation 2014-04-09)

@@ -1,6 +1,6 @@
 package jnnet.draft;
 
-import static jnnet.draft.JNNetTools.irange;
+import static jnnet.JNNetTools.irange;
 import static jnnet.draft.LinearConstraintSystem.Abstract.unscale;
 import static jnnet.draft.LinearConstraintSystem20140418.det;
 import static jnnet.draft.LinearConstraintSystem20140418.dot;

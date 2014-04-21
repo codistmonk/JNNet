@@ -5,12 +5,12 @@ import static java.lang.Double.isNaN;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
 import static java.util.Collections.swap;
+import static jnnet.JNNetTools.ATOMIC_INTEGER_FACTORY;
+import static jnnet.JNNetTools.RANDOM;
+import static jnnet.VectorStatistics.add;
+import static jnnet.VectorStatistics.dot;
+import static jnnet.VectorStatistics.subtract;
 import static jnnet.draft.FeedforwardNeuralNetworkTest.intersection;
-import static jnnet.draft.JNNetTools.ATOMIC_INTEGER_FACTORY;
-import static jnnet.draft.JNNetTools.RANDOM;
-import static jnnet.draft.VectorStatistics.add;
-import static jnnet.draft.VectorStatistics.dot;
-import static jnnet.draft.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
@@ -33,8 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import jnnet.draft.VectorStatistics;
 
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;

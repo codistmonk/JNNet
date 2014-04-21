@@ -8,6 +8,7 @@ import static org.junit.Assert.*;
 import java.util.Date;
 
 import jnnet.BinaryClassifier;
+import jnnet.CSVDataset;
 import jnnet.Dataset;
 import jnnet.SimpleConfusionMatrix;
 import net.sourceforge.aprog.tools.TicToc;

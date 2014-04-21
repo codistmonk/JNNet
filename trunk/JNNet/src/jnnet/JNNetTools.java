@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet;
 
 import static java.lang.Math.exp;
 import static java.util.Arrays.copyOf;
@@ -36,90 +36,53 @@ public final class JNNetTools {
 		return values;
 	}
 	
-//	public static final void draw(final Training training, final BufferedImage image) {
-//		if (0 == training.getItems().length) {
-//			return;
-//		}
-//		
-//		final int inputCount = training.getItems()[0].getInputs().length;
-//		final int outputCount = training.getItems()[0].getOutputs().length;
-//		
-//		if (2 == inputCount) {
-//			for (final Item item : training.getItems()) {
-//				final int w = image.getWidth();
-//				final int h = image.getHeight();
-//				final int x = (int) item.getInputs()[0];
-//				final int y = h - 1 - (int) item.getInputs()[1];
-//				final int rgb;
-//				
-//				if (1 == outputCount) {
-//					rgb = 0x00010101 * uint8(item.getOutputs()[0]);
-//				} else if (3 == outputCount) {
-//					final int red = uint8(item.getOutputs()[0]);
-//					final int green = uint8(item.getOutputs()[1]);
-//					final int blue = uint8(item.getOutputs()[2]);
-//					rgb = (red << 16) | (green << 8) | blue;
-//				} else {
-//					throw new IllegalArgumentException();
-//				}
-//				
-//				final int reverseRGB = ~rgb;
-//				
-//				image.setRGB(x, y, 0xFF000000 | rgb);
-//				
-//				if (0 < y) {
-//					image.setRGB(x, y - 1, 0xFF000000 | reverseRGB);
-//				}
-//				
-//				if (0 < x) {
-//					image.setRGB(x - 1, y, 0xFF000000 | reverseRGB);
-//				}
-//				
-//				if (x + 1 < w) {
-//					image.setRGB(x + 1, y, 0xFF000000 | reverseRGB);
-//				}
-//				
-//				if (y+ 1 < h) {
-//					image.setRGB(x, y + 1, 0xFF000000 | reverseRGB);
-//				}
-//			}
-//		} else {
-//			throw new IllegalArgumentException();
-//		}
-//	}
+	public static final byte[] pack(final byte[] array, final int maximumLength) {
+		if (maximumLength < array.length) {
+			return copyOf(array, maximumLength);
+		}
+		
+		return array;
+	}
 	
-//	public static final void draw(final ArtificialNeuralNetwork ann, final BufferedImage image) {
-//		final int inputCount = ann.getInputCount();
-//		
-//		if (2 == inputCount) {
-//			final int w = image.getWidth();
-//			final int h = image.getHeight();
-//			final int outputCount = ann.getOutputNeurons().length;
-//			
-//			if (1 == outputCount) {
-//				for (int y = 0; y < h; ++y) {
-//					for (int x = 0; x < w; ++x) {
-//						ann.evaluate(x, h - 1 - y);
-//						image.setRGB(x, y, 0xFF000000 | (0x00010101 * uint8(ann.getOutputValue(0))));
-//					}
-//				}
-//			} else if (3 == outputCount) {
-//				for (int y = 0; y < h; ++y) {
-//					for (int x = 0; x < w; ++x) {
-//						ann.evaluate(x, h - 1 - y);
-//						final int red = uint8(ann.getOutputValue(0));
-//						final int green = uint8(ann.getOutputValue(1));
-//						final int blue = uint8(ann.getOutputValue(2));
-//						image.setRGB(x, y, 0xFF000000 | (red << 16) | (green << 8) | blue);
-//					}
-//				}
-//			} else {
-//				throw new IllegalArgumentException();
-//			}
-//		} else {
-//			throw new IllegalArgumentException();
-//		}
-//	}
+	public static final int[] pack(final int[] array, final int maximumLength) {
+		if (maximumLength < array.length) {
+			return copyOf(array, maximumLength);
+		}
+		
+		return array;
+	}
+	
+	public static final double[] pack(final double[] array, final int maximumLength) {
+		if (maximumLength < array.length) {
+			return copyOf(array, maximumLength);
+		}
+		
+		return array;
+	}
+	
+	public static final byte[] reserve(final byte[] array, final int minimumLength) {
+		if (array.length < minimumLength) {
+			return copyOf(array, Math.max(array.length * 2, minimumLength));
+		}
+		
+		return array;
+	}
+	
+	public static final int[] reserve(final int[] array, final int minimumLength) {
+		if (array.length < minimumLength) {
+			return copyOf(array, Math.max(array.length * 2, minimumLength));
+		}
+		
+		return array;
+	}
+	
+	public static final double[] reserve(final double[] array, final int minimumLength) {
+		if (array.length < minimumLength) {
+			return copyOf(array, Math.max(array.length * 2, minimumLength));
+		}
+		
+		return array;
+	}
 	
 	public static final int uint8(final double valueBetween0And1) {
 		return (int) (255.0 * valueBetween0And1);

@@ -2,7 +2,7 @@ package jnnet.draft;
 
 import static java.lang.Double.isNaN;
 import static java.util.Arrays.copyOfRange;
-import static jnnet.draft.JNNetTools.irange;
+import static jnnet.JNNetTools.irange;
 import static jnnet.draft.LinearConstraintSystem20140418.ALL_CONSTRAINTS_OK;
 import static jnnet.draft.LinearConstraintSystem20140418.MORE_PROCESSING_NEEDED;
 import static jnnet.draft.LinearConstraintSystem20140418.SYSTEM_KO;

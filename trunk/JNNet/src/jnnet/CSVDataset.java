@@ -1,9 +1,9 @@
-package jnnet.draft;
+package jnnet;
 
 import static java.lang.Double.parseDouble;
 import static java.util.Arrays.copyOfRange;
-import static jnnet.draft.FeedforwardNeuralNetwork.reserve;
-import static jnnet.draft.JNNetTools.ATOMIC_INTEGER_FACTORY;
+import static jnnet.JNNetTools.ATOMIC_INTEGER_FACTORY;
+import static jnnet.JNNetTools.reserve;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -20,8 +20,6 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import jnnet.Dataset;
-import jnnet.DoubleList;
 import net.sourceforge.aprog.tools.TicToc;
 
 /**

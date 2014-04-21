@@ -5,7 +5,7 @@ import static java.lang.Double.isNaN;
 import static java.lang.Math.abs;
 import static java.lang.Math.round;
 import static java.util.Arrays.copyOfRange;
-import static jnnet.draft.JNNetTools.irange;
+import static jnnet.JNNetTools.irange;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;

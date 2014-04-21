@@ -1,6 +1,6 @@
 package jnnet;
 
-import static jnnet.draft.JNNetTools.ATOMIC_INTEGER_FACTORY;
+import static jnnet.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.instances;
 
@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import jnnet.draft.VectorStatistics;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
