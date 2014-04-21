@@ -14,9 +14,7 @@
         <file path="/JNNetWekaPlugin/.project"/>
         <javaElement handleIdentifier="=JNNetWekaPlugin/src"/>
         <javaElement handleIdentifier="=Aprog/src"/>
-        <javaElement handleIdentifier="=JNNet/test&lt;jnnet4"/>
         <file path="/JNNetWekaPlugin/.classpath"/>
         <javaElement handleIdentifier="=JNNet/src&lt;jnnet"/>
-        <javaElement handleIdentifier="=JNNet/src&lt;jnnet4"/>
     </selectedElements>
 </jardesc>

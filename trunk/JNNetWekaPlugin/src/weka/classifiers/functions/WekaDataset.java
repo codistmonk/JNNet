@@ -1,9 +1,7 @@
 package weka.classifiers.functions;
 
 import static java.util.Arrays.copyOf;
-
-import jnnet4.Dataset;
-
+import jnnet.Dataset;
 import weka.core.Instances;
 
 /**

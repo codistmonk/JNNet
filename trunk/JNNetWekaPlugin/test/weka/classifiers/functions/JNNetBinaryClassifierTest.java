@@ -1,18 +1,18 @@
 package weka.classifiers.functions;
 
-import static jnnet4.JNNetTools.doubles;
+import static jnnet.draft.JNNetTools.doubles;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
 import java.io.FileReader;
 import java.util.Arrays;
 
-import jnnet4.JNNetTools;
+import jnnet.draft.JNNetTools;
 import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
-import weka.classifiers.functions.JNNetWekaPlugin;
+import weka.classifiers.functions.JNNetBinaryClassifier;
 import weka.core.Attribute;
 import weka.core.FastVector;
 import weka.core.Instance;
@@ -21,11 +21,11 @@ import weka.core.Instances;
 /**
  * @author codistmonk (creation 2014-04-20)
  */
-public final class JNNetWekaPluginTest {
+public final class JNNetBinaryClassifierTest {
 	
 	@Test
 	public final void testBuildClassifierInstances() throws Exception {
-		final JNNetWekaPlugin plugin = new JNNetWekaPlugin();
+		final JNNetBinaryClassifier plugin = new JNNetBinaryClassifier();
 		final Instances data = newWekaDataset();
 		
 		plugin.buildClassifier(data);
@@ -33,7 +33,7 @@ public final class JNNetWekaPluginTest {
 	
 	@Test
 	public final void testClassifyInstanceInstance1() throws Exception {
-		final JNNetWekaPlugin plugin = new JNNetWekaPlugin();
+		final JNNetBinaryClassifier plugin = new JNNetBinaryClassifier();
 		final Instances data = newWekaDataset();
 		
 		plugin.buildClassifier(data);
@@ -47,7 +47,7 @@ public final class JNNetWekaPluginTest {
 	
 	@Test
 	public final void testClassifyInstanceInstance2() throws Exception {
-		final JNNetWekaPlugin plugin = new JNNetWekaPlugin();
+		final JNNetBinaryClassifier plugin = new JNNetBinaryClassifier();
 		final Instances data = new Instances(new FileReader("test/weka/classifiers/functions/breast-cancer.arff"));
 		
 		data.setClassIndex(data.numAttributes() - 1);
