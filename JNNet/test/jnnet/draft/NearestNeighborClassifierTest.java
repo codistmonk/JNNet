@@ -1,6 +1,6 @@
 package jnnet.draft;
 
-import static jnnet.draft.SimplifiedNeuralBinaryClassifierTest.show;
+import static jnnet.SimplifiedNeuralBinaryClassifierTest.show;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
