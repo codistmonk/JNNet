@@ -9,9 +9,10 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+import jnnet.Dataset;
 import jnnet.DoubleList;
 import jnnet.draft.CSV2Bin.DataType;
-import jnnet.draft.MitosAtypiaImporter.ConsoleMonitor;
+import jnnet.ConsoleMonitor;
 
 /**
  * @author codistmonk (creation 2014-04-09)

@@ -1,13 +1,13 @@
 package jnnet.draft;
 
 import static jnnet.DLLTools.loadDLL;
+import static jnnet.SimplifiedNeuralBinaryClassifier.generateHyperplanes;
 import static jnnet.draft.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_ID;
 import static jnnet.draft.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_LINEAR;
 import static jnnet.draft.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_SIGMOID;
 import static jnnet.draft.FeedforwardNeuralNetwork.NEURON_TYPE_SUM_THRESHOLD;
 import static jnnet.draft.JNNetTools.sigmoid;
 import static jnnet.draft.JNNetTools.uint8;
-import static jnnet.draft.SimplifiedNeuralBinaryClassifier.generateHyperplanes;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -25,7 +25,9 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Set;
 
-import jnnet.draft.BinaryClassifier.Default;
+import jnnet.SimpleConfusionMatrix;
+import jnnet.SimplifiedNeuralBinaryClassifier;
+import jnnet.BinaryClassifier.Default;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;

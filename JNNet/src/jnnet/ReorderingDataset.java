@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet;
 
 import static java.util.Arrays.copyOfRange;
 import static jnnet.draft.JNNetTools.irange;

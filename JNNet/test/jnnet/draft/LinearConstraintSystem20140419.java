@@ -2,7 +2,8 @@ package jnnet.draft;
 
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.debug;
-import jnnet.draft.MitosAtypiaImporter.ConsoleMonitor;
+
+import jnnet.ConsoleMonitor;
 
 /**
  * @author codistmonk (creation 2014-04-19)

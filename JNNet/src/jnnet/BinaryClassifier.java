@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet;
 
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 

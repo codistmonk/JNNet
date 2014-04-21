@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet;
 
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
@@ -34,7 +34,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import jnnet.DoubleList;
+import jnnet.draft.VectorStatistics;
+
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;

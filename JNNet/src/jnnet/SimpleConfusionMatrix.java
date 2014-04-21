@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet;
 
 import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicLong;

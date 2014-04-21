@@ -20,6 +20,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
+import jnnet.Dataset;
 import jnnet.DoubleList;
 import net.sourceforge.aprog.tools.TicToc;
 
