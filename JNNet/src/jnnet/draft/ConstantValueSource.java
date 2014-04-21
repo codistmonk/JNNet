@@ -1,4 +1,4 @@
-package jnnet;
+package jnnet.draft;
 
 /**
  * @author codistmonk (creation 2013-12-14)

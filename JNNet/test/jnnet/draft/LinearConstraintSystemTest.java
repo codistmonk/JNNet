@@ -176,7 +176,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test7() {
-		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist0_system.bin",
+		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("jnnet/data/mnist0_system.bin",
 				CLASS, true);
 //		debugPrint(system.getData().size(), system.getOrder());
 		
@@ -189,7 +189,7 @@ public final class LinearConstraintSystemTest {
 	
 	@Test
 	public final void test8() {
-		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("test/jnnet4/mnist4_system.bin",
+		final LinearConstraintSystem system = LinearConstraintSystem.IO.read("jnnet/data/mnist4_system.bin",
 				CLASS, true);
 //		debugPrint(system.getData().size(), system.getOrder());
 		
@@ -215,7 +215,7 @@ public final class LinearConstraintSystemTest {
 	 */
 	public static final int Z = 2;
 	
-	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystem20140419.class;
+	public static final Class<? extends LinearConstraintSystem> CLASS = LinearConstraintSystem20140414.class;
 	
 	public static final double[] v(final double... v) {
 		return v;

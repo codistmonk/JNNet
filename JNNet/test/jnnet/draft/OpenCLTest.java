@@ -5,7 +5,7 @@ import static java.lang.Math.log;
 import static java.lang.Math.min;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static jnnet.DLLTools.loadDLL;
-import static jnnet.Neuron.sigmoid;
+import static jnnet.draft.Neuron.sigmoid;
 import static net.sourceforge.aprog.tools.SystemProperties.getAvailableProcessorCount;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisMethodName;

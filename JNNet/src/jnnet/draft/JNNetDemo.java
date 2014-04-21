@@ -1,11 +1,11 @@
-package jnnet;
+package jnnet.draft;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 import static java.util.Collections.sort;
-import static jnnet.ConstantValueSource.ONE;
+import static jnnet.draft.ConstantValueSource.ONE;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
@@ -25,8 +25,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
-import jnnet.Neuron.Input;
-
+import jnnet.draft.Neuron.Input;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
