@@ -1,6 +1,7 @@
 package jnnet.draft;
 
 import static jnnet.DLLTools.loadDLL;
+import static jnnet.JNNetTools.intersection;
 import static jnnet.JNNetTools.sigmoid;
 import static jnnet.JNNetTools.uint8;
 import static jnnet.SimplifiedNeuralBinaryClassifier.generateHyperplanes;
@@ -13,7 +14,6 @@ import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.instances;
-import static net.sourceforge.aprog.tools.Tools.invoke;
 import static org.junit.Assert.*;
 
 import java.awt.Color;
@@ -21,14 +21,13 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Set;
 
 import jnnet.CSVDataset;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
-import jnnet.BinaryClassifier.Default;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
@@ -619,14 +618,6 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 		
 		debugPrint("Neural network built");
-		
-		return result;
-	}
-	
-	public static final <T, C extends Collection<T>> C intersection(final C s1, final C s2) {
-		final C result = invoke(s1, "clone");
-		
-		result.retainAll(s2);
 		
 		return result;
 	}

@@ -2,9 +2,11 @@ package jnnet;
 
 import static java.lang.Math.exp;
 import static java.util.Arrays.copyOf;
+import static net.sourceforge.aprog.tools.Tools.invoke;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -191,6 +193,14 @@ public final class JNNetTools {
 		final int tmp = array[i];
 		array[i] = array[j];
 		array[j] = tmp;
+	}
+	
+	public static final <T, C extends Collection<T>> C intersection(final C s1, final C s2) {
+		final C result = invoke(s1, "clone");
+		
+		result.retainAll(s2);
+		
+		return result;
 	}
 	
 }
