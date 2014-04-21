@@ -1,9 +1,8 @@
 package jnnet;
 
 import static java.util.Arrays.copyOfRange;
-import static jnnet.draft.JNNetTools.irange;
-import static jnnet.draft.JNNetTools.swap;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static jnnet.JNNetTools.irange;
+import static jnnet.JNNetTools.swap;
 
 import java.util.Random;
 

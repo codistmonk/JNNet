@@ -1,9 +1,9 @@
 package jnnet.draft;
 
 import static java.lang.Math.sqrt;
-import static jnnet.draft.JNNetTools.add;
-import static jnnet.draft.JNNetTools.getDeclaredField;
-import static jnnet.draft.JNNetTools.sigmoid;
+import static jnnet.JNNetTools.add;
+import static jnnet.JNNetTools.getDeclaredField;
+import static jnnet.JNNetTools.sigmoid;
 import static net.sourceforge.aprog.tools.MathTools.square;
 
 import java.lang.reflect.Field;

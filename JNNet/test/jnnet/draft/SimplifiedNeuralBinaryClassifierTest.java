@@ -1,7 +1,7 @@
 package jnnet.draft;
 
 import static java.lang.Math.sqrt;
-import static jnnet.draft.JNNetTools.rgb;
+import static jnnet.JNNetTools.rgb;
 import static jnnet.draft.ProjectiveClassifier.preview;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
@@ -22,8 +22,11 @@ import java.util.Date;
 
 import javax.imageio.ImageIO;
 
+import jnnet.BinDataset;
 import jnnet.BinaryClassifier;
+import jnnet.CSVDataset;
 import jnnet.Dataset;
+import jnnet.JNNetTools;
 import jnnet.ReorderingDataset;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;

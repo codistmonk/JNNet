@@ -1,11 +1,14 @@
 package jnnet.draft;
 
 import static java.util.Arrays.copyOf;
-import static jnnet.draft.JNNetTools.sigmoid;
+import static jnnet.JNNetTools.reserve;
+import static jnnet.JNNetTools.sigmoid;
 
 import com.amd.aparapi.Kernel;
 
 import java.util.BitSet;
+
+import jnnet.JNNetTools;
 
 /**
  * @author codistmonk (creation 2014-03-02)
@@ -320,11 +323,11 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 		final int valueCount = max(1, neuronCount * itemCount);
 		final int weightCount = this.getWeightCount();
 		
-		this.neuronTypes = pack(reserve(this.getNeuronTypes(), 1), neuronCount);
-		this.neuronValues = pack(reserve(this.getNeuronValues(), valueCount), valueCount);
-		this.neuronFirstWeightIds = pack(reserve(this.neuronFirstWeightIds, 1), neuronCount + 1);
-		this.sourceIds = pack(reserve(this.getSourceIds(), 1), weightCount);
-		this.weights = pack(reserve(this.getWeights(), 1), weightCount);
+		this.neuronTypes = JNNetTools.pack(reserve(this.getNeuronTypes(), 1), neuronCount);
+		this.neuronValues = JNNetTools.pack(reserve(this.getNeuronValues(), valueCount), valueCount);
+		this.neuronFirstWeightIds = JNNetTools.pack(reserve(this.neuronFirstWeightIds, 1), neuronCount + 1);
+		this.sourceIds = JNNetTools.pack(reserve(this.getSourceIds(), 1), weightCount);
+		this.weights = JNNetTools.pack(reserve(this.getWeights(), 1), weightCount);
 		
 		return this;
 	}
@@ -368,53 +371,5 @@ public final class FeedforwardNeuralNetwork extends Kernel {
 	 * {@value}.
 	 */
 	public static final byte NEURON_TYPE_MAX_THRESHOLD = 7;
-	
-	public static final byte[] pack(final byte[] array, final int maximumLength) {
-		if (maximumLength < array.length) {
-			return copyOf(array, maximumLength);
-		}
-		
-		return array;
-	}
-	
-	public static final int[] pack(final int[] array, final int maximumLength) {
-		if (maximumLength < array.length) {
-			return copyOf(array, maximumLength);
-		}
-		
-		return array;
-	}
-	
-	public static final double[] pack(final double[] array, final int maximumLength) {
-		if (maximumLength < array.length) {
-			return copyOf(array, maximumLength);
-		}
-		
-		return array;
-	}
-	
-	public static final byte[] reserve(final byte[] array, final int minimumLength) {
-		if (array.length < minimumLength) {
-			return copyOf(array, Math.max(array.length * 2, minimumLength));
-		}
-		
-		return array;
-	}
-	
-	public static final int[] reserve(final int[] array, final int minimumLength) {
-		if (array.length < minimumLength) {
-			return copyOf(array, Math.max(array.length * 2, minimumLength));
-		}
-		
-		return array;
-	}
-	
-	public static final double[] reserve(final double[] array, final int minimumLength) {
-		if (array.length < minimumLength) {
-			return copyOf(array, Math.max(array.length * 2, minimumLength));
-		}
-		
-		return array;
-	}
 	
 }

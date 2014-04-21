@@ -1,9 +1,9 @@
 package jnnet.draft;
 
 import static java.lang.Math.sqrt;
-import static jnnet.draft.JNNetTools.doubles;
-import static jnnet.draft.JNNetTools.outputs;
-import static jnnet.draft.JNNetTools.sigmoid;
+import static jnnet.JNNetTools.doubles;
+import static jnnet.JNNetTools.outputs;
+import static jnnet.JNNetTools.sigmoid;
 import static org.junit.Assert.*;
 import jnnet.draft.ArtificialNeuralNetwork.BiasSourceIndex;
 

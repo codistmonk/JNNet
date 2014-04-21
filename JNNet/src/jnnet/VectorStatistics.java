@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet;
 
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;

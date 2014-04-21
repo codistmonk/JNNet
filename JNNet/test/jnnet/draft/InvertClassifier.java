@@ -3,7 +3,7 @@ package jnnet.draft;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
-import static jnnet.draft.JNNetTools.rgb;
+import static jnnet.JNNetTools.rgb;
 import static jnnet.draft.LinearConstraintSystem.Abstract.unscale;
 import static net.sourceforge.aprog.tools.SystemProperties.getAvailableProcessorCount;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
