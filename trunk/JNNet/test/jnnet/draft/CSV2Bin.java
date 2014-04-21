@@ -1,7 +1,7 @@
 package jnnet.draft;
 
-import static jnnet.draft.Functional.map;
-import static jnnet.draft.Functional.method;
+import static jnnet.Functional.map;
+import static jnnet.Functional.method;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
 import java.io.BufferedOutputStream;
@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Scanner;
 
-import jnnet.draft.MitosAtypiaImporter.ConsoleMonitor;
+import jnnet.ConsoleMonitor;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;

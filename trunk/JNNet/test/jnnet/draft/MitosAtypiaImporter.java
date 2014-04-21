@@ -29,13 +29,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
+import jnnet.ConsoleMonitor;
+
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -431,49 +431,6 @@ public final class MitosAtypiaImporter {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 5357895005657732226L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-04-07)
-	 */
-	public static final class ConsoleMonitor implements Serializable {
-		
-		private final TicToc timer;
-		
-		private final long periodMilliseconds;
-		
-		private final AtomicBoolean newLineNeeded;
-		
-		public ConsoleMonitor(final long periodMilliseconds) {
-			this.timer = new TicToc();
-			this.periodMilliseconds = periodMilliseconds;
-			this.newLineNeeded = new AtomicBoolean();
-			this.timer.tic();
-		}
-		
-		public final void ping() {
-			this.ping(".");
-		}
-		
-		public final void ping(final String text) {
-			if (this.periodMilliseconds <= this.timer.toc()) {
-				System.out.print(text);
-				this.newLineNeeded.set(true);
-				this.timer.tic();
-			}
-		}
-		
-		public final void pause() {
-			if (this.newLineNeeded.getAndSet(false)) {
-				System.out.println();
-			}
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = -3669736743010335592L;
 		
 	}
 	

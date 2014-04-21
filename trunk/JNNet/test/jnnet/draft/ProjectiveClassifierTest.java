@@ -16,6 +16,9 @@ import java.util.Date;
 
 import javax.imageio.ImageIO;
 
+import jnnet.BinaryClassifier;
+import jnnet.Dataset;
+import jnnet.SimpleConfusionMatrix;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;

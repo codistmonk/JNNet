@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
+import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.LinearConstraintSystemTest.OjAlgoLinearConstraintSystem;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
