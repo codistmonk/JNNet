@@ -1,10 +1,10 @@
-package jnnet;
+package jnnet.draft;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import jnnet.Neuron.Input;
+import jnnet.draft.Neuron.Input;
 
 /**
  * @author codistmonk (creation 2013-12-17)

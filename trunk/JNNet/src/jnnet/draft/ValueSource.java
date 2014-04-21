@@ -1,4 +1,4 @@
-package jnnet;
+package jnnet.draft;
 
 import java.io.Serializable;
 

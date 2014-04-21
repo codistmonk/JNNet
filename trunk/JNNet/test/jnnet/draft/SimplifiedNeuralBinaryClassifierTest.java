@@ -42,8 +42,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final CSVDataset trainingData = new CSVDataset("jnnet/2spirals.txt");
-//		final Dataset trainingData = new Dataset("jnnet/iris_versicolor.txt");
+		final CSVDataset trainingData = new CSVDataset("jnnet/data/2spirals.txt");
+//		final Dataset trainingData = new Dataset("jnnet/data/iris_versicolor.txt");
 //		final CSVDataset trainingData = new CSVDataset("../Libraries/datasets/gisette/gisette_train.data");
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/HIGGS.csv", 0, 0, 500000);
 //		final Dataset trainingData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 0, 500000);

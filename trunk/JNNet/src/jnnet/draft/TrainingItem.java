@@ -1,10 +1,10 @@
-package jnnet;
+package jnnet.draft;
 
 import static net.sourceforge.aprog.tools.MathTools.square;
 
 import java.io.Serializable;
 
-import jnnet.Neuron.Input;
+import jnnet.draft.Neuron.Input;
 
 /**
  * @author codistmonk (creation 2013-12-17)
