@@ -1,13 +1,13 @@
 package weka.classifiers.functions;
 
-import static jnnet.draft.JNNetTools.doubles;
+import static jnnet.JNNetTools.doubles;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
 import java.io.FileReader;
 import java.util.Arrays;
 
-import jnnet.draft.JNNetTools;
+import jnnet.JNNetTools;
 import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
