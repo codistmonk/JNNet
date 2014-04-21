@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet;
 
 import static java.lang.Math.sqrt;
 import static jnnet.JNNetTools.rgb;
@@ -31,6 +31,7 @@ import jnnet.ReorderingDataset;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.BinaryClassifier.EvaluationMonitor;
+import jnnet.draft.InvertClassifier;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
