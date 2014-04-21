@@ -12,7 +12,6 @@ import static net.sourceforge.aprog.tools.Tools.ignore;
 import java.io.Serializable;
 import java.util.Arrays;
 
-import net.sourceforge.aprog.tools.Tools;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
