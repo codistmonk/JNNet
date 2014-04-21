@@ -328,8 +328,10 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		final int itemCount = trainingData.getItemCount();
 		final List<List<Id>> todo = new ArrayList<List<Id>>();
 		final Factory<VectorStatistics> vectorStatisticsFactory = DefaultFactory.forClass(VectorStatistics.class, inputDimension);
+		int[] acceptableErrors = null;
 		boolean continueProcessing = true;
 		final TicToc timer = new TicToc();
+		final double acceptableErrorRate = 0.08;
 		
 		timer.tic();
 		todo.add(idRange(0, itemCount - 1));
@@ -347,7 +349,19 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 				statistics[(int) trainingData.getItemLabel(id.getId())].addValues(trainingData.getItemWeights(id.getId()));
 			}
 			
-			if (statistics[0].getCount() == 0 || statistics[1].getCount() == 0) {
+			final double count0 = statistics[0].getCount();
+			final double count1 = statistics[1].getCount();
+			
+			if (acceptableErrors == null) {
+				acceptableErrors = new int[] {
+						(int) (count0  * acceptableErrorRate),
+						(int) (count1 * acceptableErrorRate)
+				};
+			}
+			
+			if (count0 == 0.0 || count1 == 0.0
+					|| (count0 <= acceptableErrors[0] && count0 < count1)
+					|| (count1 <= acceptableErrors[1] && count1 < count0)) {
 				continue;
 			}
 			
@@ -376,8 +390,8 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 				Collections.sort(ids);
 				
 				{
-					final double actualNegatives = statistics[0].getCount();
-					final double actualPositives = statistics[1].getCount();
+					final double actualNegatives = count0;
+					final double actualPositives = count1;
 					final double[] predictedNegatives = new double[2];
 					double bestScore = 0.0;
 					int bestScoreIndex = 0;
