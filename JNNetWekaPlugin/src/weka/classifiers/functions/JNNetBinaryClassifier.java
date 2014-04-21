@@ -1,15 +1,12 @@
 package weka.classifiers.functions;
 
 import static java.util.Arrays.copyOf;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static weka.classifiers.functions.WekaDataset.convert;
 
-import java.util.Arrays;
+import jnnet.BinaryClassifier;
+import jnnet.SimpleConfusionMatrix;
+import jnnet.SimplifiedNeuralBinaryClassifier;
 
-import net.sourceforge.aprog.tools.Tools;
-import jnnet4.BinaryClassifier;
-import jnnet4.SimpleConfusionMatrix;
-import jnnet4.SimplifiedNeuralBinaryClassifier;
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.WekaDataset;
 import weka.core.Instance;
@@ -19,7 +16,7 @@ import weka.filters.SupervisedFilter;
 /**
  * @author codistmonk (creation 2014-04-20)
  */
-public final class JNNetWekaPlugin extends Classifier implements SupervisedFilter {
+public final class JNNetBinaryClassifier extends Classifier implements SupervisedFilter {
 	
 	private BinaryClassifier classifier;
 	
