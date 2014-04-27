@@ -14,7 +14,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 
-import jnnet.DoubleList;
+import jgencode.primitivelists.DoubleList;
+
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**

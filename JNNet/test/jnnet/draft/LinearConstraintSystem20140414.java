@@ -7,8 +7,8 @@ import static java.util.Arrays.copyOf;
 import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
-import jnnet.DoubleList;
-import jnnet.IntList;
+import jgencode.primitivelists.DoubleList;
+import jgencode.primitivelists.IntList;
 
 import net.sourceforge.aprog.tools.TicToc;
 	
