@@ -2,15 +2,13 @@ package jnnet;
 
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
+import static java.lang.Math.min;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
 import static java.util.Collections.swap;
 import static jnnet.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static jnnet.JNNetTools.RANDOM;
 import static jnnet.JNNetTools.intersection;
-import static jnnet.VectorStatistics.add;
-import static jnnet.VectorStatistics.dot;
-import static jnnet.VectorStatistics.subtract;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
@@ -181,6 +179,28 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		} catch (final Exception exception) {
 			throw unchecked(exception);
 		}
+	}
+	
+	public static final double[] add(final double[] v1, final double scale1, final double[] v2, final double scale2) {
+		final int n = v1.length;
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = v1[i] * scale1 + v2[i] * scale2;
+		}
+		
+		return result;
+	}
+	
+	public static final double dot(final double[] v1, final double[] v2) {
+		final int n = min(v1.length, v2.length);
+		double result = 0.0;
+		
+		for (int i = 0; i < n; ++i) {
+			result += v1[i] * v2[i];
+		}
+		
+		return result;
 	}
 	
 	public static final Codeset newHigherLayer(final Codeset codes) {
@@ -367,7 +387,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 			
 			final double[] cluster0 = statistics[0].getMeans();
 			final double[] cluster1 = statistics[1].getMeans();
-			final double[] neuronWeights = subtract(cluster1, cluster0);
+			final double[] neuronWeights = add(cluster1, 1.0, cluster0, -1.0);
 			
 			if (Arrays.equals(cluster0, cluster1)) {
 				for (int i = 0; i < inputDimension; ++i) {
