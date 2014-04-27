@@ -9,7 +9,8 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
-import jnnet.draft.CSV2Bin;
+import jgencode.primitivelists.DoubleList;
+
 import jnnet.draft.CSV2Bin.DataType;
 
 /**

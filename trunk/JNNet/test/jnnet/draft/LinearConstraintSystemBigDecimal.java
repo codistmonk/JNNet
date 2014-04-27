@@ -1,7 +1,5 @@
 package jnnet.draft;
 
-import static java.lang.Double.isNaN;
-import static java.util.Arrays.copyOfRange;
 import static jnnet.JNNetTools.irange;
 import static jnnet.draft.LinearConstraintSystem20140418.ALL_CONSTRAINTS_OK;
 import static jnnet.draft.LinearConstraintSystem20140418.MORE_PROCESSING_NEEDED;
@@ -10,12 +8,13 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import net.sourceforge.aprog.tools.TicToc;
-import jnnet.IntList;
+import jgencode.primitivelists.IntList;
+
 import jnnet.draft.SortingTools.IndexComparator;
+
+import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2014-04-18)

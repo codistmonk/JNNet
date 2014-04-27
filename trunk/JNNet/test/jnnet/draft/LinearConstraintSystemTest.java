@@ -3,13 +3,15 @@ package jnnet.draft;
 import static java.util.Arrays.copyOf;
 import static jnnet.draft.LinearConstraintSystem.Abstract.unscale;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import jnnet.DoubleList;
+import jgencode.primitivelists.DoubleList;
+
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 import org.junit.Test;

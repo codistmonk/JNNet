@@ -15,8 +15,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import jnnet.IntList;
+import jgencode.primitivelists.IntList;
+
 import jnnet.draft.SortingTools.IndexComparator;
+
 import net.sourceforge.aprog.tools.TicToc;
 
 /**
