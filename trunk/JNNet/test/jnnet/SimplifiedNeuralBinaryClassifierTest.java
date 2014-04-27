@@ -45,7 +45,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	
 	@Test
 	public final void test1() {
-		final boolean showClassifier = false;
+		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
 		final boolean previewValidationData = false;
 		final TicToc timer = new TicToc();
@@ -76,7 +76,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 ////		final Dataset testData = new Dataset("../Libraries/datasets/SUSY.csv", 0, 5000000-500000, 500000);
 //		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
-		for (int maximumHyperplaneCount = 2; maximumHyperplaneCount <= 200; maximumHyperplaneCount += 2) {
+		for (int maximumHyperplaneCount = 200; maximumHyperplaneCount <= 200; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
 			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
