@@ -24,13 +24,14 @@ public final class SortingTools {
      * @param indices the array to be sorted
      */
     public static final void sort(final int[] indices, final IndexComparator comparator) {
-    	sort1(indices, 0, indices.length, comparator);
+    	sort(indices, 0, indices.length, comparator);
     }
     
 	/**
 	 * Sorts the specified sub-array of integers into ascending order.
+	 * XXX seems to be defective
 	 */
-	private static final void sort1(final int indices[], final int offset,
+	public static final void sort(final int[] indices, final int offset,
 			final int length, final IndexComparator comparator) {
 		if (length < 7) {
 			for (int i = offset; i < length + offset; i++) {
@@ -87,10 +88,10 @@ public final class SortingTools {
 		
 		// Recursively sort non-partition-elements
 		if ((s = b - a) > 1) {
-			sort1(indices, offset, s, comparator);
+			sort(indices, offset, s, comparator);
 		}
 		if ((s = d - c) > 1) {
-			sort1(indices, n - s, s, comparator);
+			sort(indices, n - s, s, comparator);
 		}
 	}
 	
