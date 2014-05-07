@@ -11,13 +11,14 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.Date;
 
 import jgencode.primitivelists.DoubleList;
-
 import jnnet.Dataset;
 import jnnet.Dataset.DatasetStatistics;
 import jnnet.VectorStatistics;
 import jnnet.draft.LinearConstraintSystem;
+import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 import org.ojalgo.matrix.BasicMatrix;
@@ -48,7 +49,9 @@ public final class LDATest {
 		computeProjectedStatistics(dataset, mu01).printTo(System.out);
 		
 		{
-			debugPrint("LDA");
+			final TicToc timer = new TicToc();
+			
+			debugPrint("LDA...", new Date(timer.tic()));
 			
 			final MatrixBuilder<?>[] builders = { PrimitiveMatrix.getBuilder(dimension, (int) datasetStatistics[0].getCount())
 					, PrimitiveMatrix.getBuilder(dimension, (int) datasetStatistics[1].getCount()) };
@@ -68,6 +71,7 @@ public final class LDATest {
 			final BasicMatrix s = s0.add(s1);
 			final double[] bestDirection = toArray(s.invert().multiplyRight(columnVector(mu01)));
 			
+			debugPrint("LDA done in", timer.toc(), "ms");
 			debugPrint("Projection on best direction:", Arrays.toString(bestDirection));
 			
 			final DatasetStatistics bestProjection = computeProjectedStatistics(dataset, bestDirection);
