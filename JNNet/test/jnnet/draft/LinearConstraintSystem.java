@@ -148,12 +148,14 @@ public abstract interface LinearConstraintSystem extends Serializable {
 			return result;
 		}
 		
-		public static final void add(final double scale1, final double[] data1, final int offset1,
+		public static final double[] add(final double scale1, final double[] data1, final int offset1,
 				final double scale2, final double[] data2, final int offset2,
 				final double[] result, final int resultOffset, final int dimension) {
 			for (int i = 0; i < dimension; ++i) {
 				result[resultOffset + i] = scale1 * data1[offset1 + i] + scale2 * data2[offset2 + i];
 			}
+			
+			return result;
 		}
 		
 		public static final double dot(final double[] data1, final double[] data2, final int dimension) {
