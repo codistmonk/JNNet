@@ -416,7 +416,7 @@ public final class FeedforwardNeuralNetworkTest {
 			
 			result.newLayer();
 			
-			generateHyperplanes(trainingData, 0.5, new SimplifiedNeuralBinaryClassifier.HyperplaneHandler() {
+			generateHyperplanes(trainingData, 0.5, 0.08, new SimplifiedNeuralBinaryClassifier.HyperplaneHandler() {
 				
 				@Override
 				public boolean hyperplane(final double bias, final double[] weights) {
