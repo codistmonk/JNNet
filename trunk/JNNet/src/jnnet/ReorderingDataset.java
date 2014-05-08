@@ -49,6 +49,18 @@ public final class ReorderingDataset implements Dataset {
 		return new ReorderingDataset(this.source, copyOfRange(this.indices, start, start + count));
 	}
 	
+	public final ReorderingDataset swapFolds(final int fold1, final int fold2, final int foldCount) {
+		final int n = this.getItemCount() / foldCount;
+		final int i1 = fold1 * n;
+		final int i2 = fold2 * n;
+		
+		for (int i = 0; i < n; ++i) {
+			swap(this.indices, i1 + i, i2 + i);
+		}
+		
+		return this;
+	}
+	
 	@Override
 	public final int getItemCount() {
 		return this.indices.length;
