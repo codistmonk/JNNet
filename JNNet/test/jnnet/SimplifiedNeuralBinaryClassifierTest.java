@@ -3,6 +3,7 @@ package jnnet;
 import static java.lang.Math.sqrt;
 import static jnnet.JNNetTools.rgb;
 import static jnnet.draft.ProjectiveClassifier.preview;
+import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
@@ -19,6 +20,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 
@@ -34,7 +36,9 @@ import jnnet.BinaryClassifier.EvaluationMonitor;
 import jnnet.draft.InvertClassifier;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -43,7 +47,7 @@ import org.junit.Test;
  */
 public final class SimplifiedNeuralBinaryClassifierTest {
 	
-	@Test
+//	@Test
 	public final void test1() {
 		final boolean showClassifier = true;
 		final boolean previewTrainingData = false;
@@ -176,47 +180,108 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
 	}
 	
-//	@Test
+	@Test
 	public final void test3() throws Exception {
 		final TicToc timer = new TicToc();
-		final int validationItems = 10000;
+		final int testItems = 10000;
+		final int crossValidationFolds = 10;
 		
 		debugPrint("Loading full dataset started", new Date(timer.tic()));
 		final ReorderingDataset all = new ReorderingDataset(new BinDataset("F:/icpr2014_mitos_atypia/A.bin")).shuffle();
 		debugPrint("Loading full dataset done in", timer.toc(), "ms");
 		
-		debugPrint("Loading training dataset started", new Date(timer.tic()));
-		final Dataset trainingData = all.subset(0, all.getItemCount() - validationItems);
-		debugPrint("Loading training dataset done in", timer.toc(), "ms");
+		debugPrint("Loading test dataset started", new Date(timer.tic()));
+		final Dataset testData = all.subset(all.getItemCount() - testItems, testItems);
+		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
-		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-		final Dataset validationData = all.subset(all.getItemCount() - validationItems, validationItems);
-		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+		debugPrint("Loading full training dataset started", new Date(timer.tic()));
+		final ReorderingDataset fullTrainingData = all.subset(0, all.getItemCount() - testItems);
+		debugPrint("Loading full training dataset done in", timer.toc(), "ms");
 		
-		BinaryClassifier bestClassifier = null;
+		final int validationItems = (all.getItemCount() - testItems) / crossValidationFolds;
+		
+		final List<Dataset[]> trainingValidationPairs = new ArrayList<>(crossValidationFolds);
+		
+		for (int fold = 1; fold <= crossValidationFolds; ++fold) {
+			fullTrainingData.swapFolds(0, fold - 1, crossValidationFolds);
+			
+			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading training dataset started", new Date(timer.tic()));
+			final Dataset trainingData = fullTrainingData.subset(validationItems, fullTrainingData.getItemCount() - validationItems);
+			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading training dataset done in", timer.toc(), "ms");
+			
+			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading validation dataset started", new Date(timer.tic()));
+			final Dataset validationData = fullTrainingData.subset(0, validationItems);
+			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading validation dataset done in", timer.toc(), "ms");
+			
+			trainingValidationPairs.add(array(trainingData, validationData));
+			
+			fullTrainingData.swapFolds(0, fold - 1, crossValidationFolds);
+		}
+		
+//		debugPrint("Loading training dataset started", new Date(timer.tic()));
+//		final Dataset trainingData = all.subset(0, all.getItemCount() - validationItems);
+//		debugPrint("Loading training dataset done in", timer.toc(), "ms");
+//		
+//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
+//		final Dataset validationData = all.subset(all.getItemCount() - validationItems, validationItems);
+//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
+		
+		int bestMaximumHyperplaneCount = 0;
 		double bestSensitivity = 0.0;
 		
-		for (int maximumHyperplaneCount = 38; maximumHyperplaneCount <= 38; maximumHyperplaneCount += 2) {
-			debugPrint("Building classifier started", new Date(timer.tic()));
-			final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
-			debugPrint("Building classifier done in", timer.toc(), "ms");
+		for (int maximumHyperplaneCount = 10; maximumHyperplaneCount <= 70; maximumHyperplaneCount += 2) {
+			debugPrint("maximumHyperplaneCount:", maximumHyperplaneCount);
 			
-			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
-			debugPrint("training:", classifier.evaluate(trainingData, null));
-			debugPrint("Evaluating classifier on training set done in", timer.toc(), "ms");
+			final Statistics sensitivity = new Statistics();
+			int fold = 1;
 			
-			debugPrint("Evaluating classifier on validation set started", new Date(timer.tic()));
-			final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
-			debugPrint("validation:", validationResult);
-			debugPrint("Evaluating classifier on validation set done in", timer.toc(), "ms");
+			for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
+				final Dataset trainingData = trainingValidationPair[0];
+				final Dataset validationData = trainingValidationPair[1];
+				
+				debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier started", new Date(timer.tic()));
+				final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
+						trainingData, 0.5, maximumHyperplaneCount, true, true);
+				debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
+				
+				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
+				debugPrint("fold:", fold + "/" + crossValidationFolds, "training:", classifier.evaluate(trainingData, null));
+				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set done in", timer.toc(), "ms");
+				
+				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set started", new Date(timer.tic()));
+				final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
+				debugPrint("fold:", fold + "/" + crossValidationFolds, "validation:", validationResult);
+				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set done in", timer.toc(), "ms");
+				
+				sensitivity.addValue(validationResult.getSensitivity());
+				++fold;
+			}
 			
-			if (bestSensitivity < validationResult.getSensitivity()) {
-				bestSensitivity = validationResult.getSensitivity();
-				bestClassifier = classifier;
+			debugPrint("maximumHyperplaneCount:", maximumHyperplaneCount, "sensitivity:", sensitivity.getMinimum() + "<=" + sensitivity.getMean() + "(" + sqrt(sensitivity.getVariance()) + ")<=" + sensitivity.getMaximum());
+			
+			if (bestSensitivity < sensitivity.getMean()) {
+				bestSensitivity = sensitivity.getMean();
+				bestMaximumHyperplaneCount = maximumHyperplaneCount;
 			}
 		}
 		
-		if (bestClassifier != null) {
+		if (bestMaximumHyperplaneCount != 0) {
+			debugPrint("bestMaximumHyperplaneCount:", bestMaximumHyperplaneCount);
+			
+			debugPrint("Building best classifier started", new Date(timer.tic()));
+			final SimplifiedNeuralBinaryClassifier bestClassifier = new SimplifiedNeuralBinaryClassifier(
+					fullTrainingData, 0.5, bestMaximumHyperplaneCount, true, true);
+			debugPrint("Building best classifier done in", timer.toc(), "ms");
+			
+			debugPrint("Evaluating best classifier on training set started", new Date(timer.tic()));
+			debugPrint("training:", bestClassifier.evaluate(fullTrainingData, null));
+			debugPrint("Evaluating best classifier on training set done in", timer.toc(), "ms");
+			
+			debugPrint("Evaluating best classifier on test set started", new Date(timer.tic()));
+			final SimpleConfusionMatrix testResult = bestClassifier.evaluate(testData, null);
+			debugPrint("validation:", testResult);
+			debugPrint("Evaluating best classifier on test set done in", timer.toc(), "ms");
+			
 			debugPrint("Serializing best classifier started", new Date(timer.tic()));
 			writeObject(bestClassifier, "bestclassifier.jo");
 			debugPrint("Serializing best classifier done in", timer.toc(), "ms");
