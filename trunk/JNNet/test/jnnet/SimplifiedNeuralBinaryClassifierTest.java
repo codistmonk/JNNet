@@ -194,7 +194,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final ReorderingDataset fullTrainingData = all.subset(0, all.getItemCount() - testItems);
 		debugPrint("Loading full training dataset done in", timer.toc(), "ms");
 		
-		final int validationItems = (all.getItemCount() - testItems) / crossValidationFolds;
+		final int validationItems = crossValidationFolds == 1 ? 0
+				: (all.getItemCount() - testItems) / crossValidationFolds;
 		
 		final List<Dataset[]> trainingValidationPairs = new ArrayList<>(crossValidationFolds);
 		
@@ -206,7 +207,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading training dataset done in", timer.toc(), "ms");
 			
 			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading validation dataset started", new Date(timer.tic()));
-			final Dataset validationData = fullTrainingData.subset(0, validationItems);
+			final Dataset validationData = validationItems == 0 ? trainingData : fullTrainingData.subset(0, validationItems);
 			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading validation dataset done in", timer.toc(), "ms");
 			
 			trainingValidationPairs.add(array(trainingData, validationData));
