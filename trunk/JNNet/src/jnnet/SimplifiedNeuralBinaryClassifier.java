@@ -53,17 +53,17 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 	private final boolean invertOutput;
 	
 	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset) {
-		this(trainingDataset, 0.5, Integer.MAX_VALUE, true, true);
+		this(trainingDataset, 0.5, 0.08, Integer.MAX_VALUE, true, true);
 	}
 	
-	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset, final double k, final int maximumHyperplaneCount,
+	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset, final double k, final double acceptableErrorRate, final int maximumHyperplaneCount,
 			final boolean allowHyperplanePruning, final boolean allowOutputInversion) {
 		debugPrint("Partitioning...");
 		
 		final DoubleList hyperplanes = new DoubleList();
 		final int step = trainingDataset.getItemSize();
 		
-		generateHyperplanes(trainingDataset, k, new HyperplaneHandler() {
+		generateHyperplanes(trainingDataset, k, acceptableErrorRate, new HyperplaneHandler() {
 			
 			@Override
 			public final boolean hyperplane(final double bias, final double[] weights) {
@@ -210,7 +210,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		final int higherLevelDataStep = codes.getCodeSize() + 1;
 		final DoubleList higherLevelHyperplanes = new DoubleList();
 		
-		generateHyperplanes(higherLevelData, 0.5, new HyperplaneHandler() {
+		generateHyperplanes(higherLevelData, 0.5, 0.08, new HyperplaneHandler() {
 			
 			@Override
 			public final boolean hyperplane(final double bias, final double[] weights) {
@@ -345,7 +345,8 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		return code;
 	}
 	
-	public static final void generateHyperplanes(final Dataset trainingData, final double k, final HyperplaneHandler hyperplaneHandler) {
+	public static final void generateHyperplanes(final Dataset trainingData
+			, final double k, final double acceptableErrorRate, final HyperplaneHandler hyperplaneHandler) {
 		final int inputDimension = trainingData.getItemSize() - 1;
 		final int itemCount = trainingData.getItemCount();
 		final List<List<Id>> todo = new ArrayList<List<Id>>();
@@ -353,7 +354,6 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		int[] acceptableErrors = null;
 		boolean continueProcessing = true;
 		final TicToc timer = new TicToc();
-		final double acceptableErrorRate = 0.08;
 		
 		timer.tic();
 		todo.add(idRange(0, itemCount - 1));

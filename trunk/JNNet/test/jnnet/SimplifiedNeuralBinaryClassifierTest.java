@@ -8,15 +8,12 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.lang.reflect.Array;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -34,11 +31,10 @@ import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.BinaryClassifier.EvaluationMonitor;
 import jnnet.draft.InvertClassifier;
+
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -82,7 +78,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		for (int maximumHyperplaneCount = 200; maximumHyperplaneCount <= 200; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
-			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
+			final BinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, 0.08, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating classifier on training set started", new Date(timer.tic()));
@@ -144,7 +140,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		for (int maximumHyperplaneCount = 10; maximumHyperplaneCount <= 10; maximumHyperplaneCount += 2) {
 			debugPrint("Building classifier started", new Date(timer.tic()));
-			final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, maximumHyperplaneCount, true, true);
+			final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(trainingData, 0.5, 0.08, maximumHyperplaneCount, true, true);
 			debugPrint("Building classifier done in", timer.toc(), "ms");
 			
 			if (true) {
@@ -218,19 +214,11 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			fullTrainingData.swapFolds(0, fold - 1, crossValidationFolds);
 		}
 		
-//		debugPrint("Loading training dataset started", new Date(timer.tic()));
-//		final Dataset trainingData = all.subset(0, all.getItemCount() - validationItems);
-//		debugPrint("Loading training dataset done in", timer.toc(), "ms");
-//		
-//		debugPrint("Loading validation dataset started", new Date(timer.tic()));
-//		final Dataset validationData = all.subset(all.getItemCount() - validationItems, validationItems);
-//		debugPrint("Loading validation dataset done in", timer.toc(), "ms");
-		
-		int bestMaximumHyperplaneCount = 0;
+		int bestClassifierParameter = 0;
 		double bestSensitivity = 0.0;
 		
-		for (int maximumHyperplaneCount = 10; maximumHyperplaneCount <= 70; maximumHyperplaneCount += 2) {
-			debugPrint("maximumHyperplaneCount:", maximumHyperplaneCount);
+		for (int classifierParameter = 40; 0 <= classifierParameter; classifierParameter -= 2) {
+			debugPrint("classifierParameter:", classifierParameter);
 			
 			final Statistics sensitivity = new Statistics();
 			int fold = 1;
@@ -241,7 +229,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				
 				debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier started", new Date(timer.tic()));
 				final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
-						trainingData, 0.5, maximumHyperplaneCount, true, true);
+						trainingData, 0.5, classifierParameter / 100.0, 100, true, true);
 				debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
 				
 				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
@@ -257,20 +245,20 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 				++fold;
 			}
 			
-			debugPrint("maximumHyperplaneCount:", maximumHyperplaneCount, "sensitivity:", sensitivity.getMinimum() + "<=" + sensitivity.getMean() + "(" + sqrt(sensitivity.getVariance()) + ")<=" + sensitivity.getMaximum());
+			debugPrint("classifierParameter:", classifierParameter, "sensitivity:", sensitivity.getMinimum() + "<=" + sensitivity.getMean() + "(" + sqrt(sensitivity.getVariance()) + ")<=" + sensitivity.getMaximum());
 			
 			if (bestSensitivity < sensitivity.getMean()) {
 				bestSensitivity = sensitivity.getMean();
-				bestMaximumHyperplaneCount = maximumHyperplaneCount;
+				bestClassifierParameter = classifierParameter;
 			}
 		}
 		
-		if (bestMaximumHyperplaneCount != 0) {
-			debugPrint("bestMaximumHyperplaneCount:", bestMaximumHyperplaneCount);
+		if (bestClassifierParameter != 0) {
+			debugPrint("bestClassifierParameter:", bestClassifierParameter);
 			
 			debugPrint("Building best classifier started", new Date(timer.tic()));
 			final SimplifiedNeuralBinaryClassifier bestClassifier = new SimplifiedNeuralBinaryClassifier(
-					fullTrainingData, 0.5, bestMaximumHyperplaneCount, true, true);
+					fullTrainingData, 0.5, bestClassifierParameter / 100.0, 100, true, true);
 			debugPrint("Building best classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating best classifier on training set started", new Date(timer.tic()));
