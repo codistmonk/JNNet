@@ -1,5 +1,6 @@
 package jnnet;
 
+import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static jnnet.JNNetTools.rgb;
 import static jnnet.draft.ProjectiveClassifier.preview;
@@ -8,16 +9,23 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.ignore;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
+import imj2.tools.MultiThreadTools;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 
@@ -31,10 +39,11 @@ import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.BinaryClassifier.EvaluationMonitor;
 import jnnet.draft.InvertClassifier;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
@@ -180,7 +189,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	public final void test3() throws Exception {
 		final TicToc timer = new TicToc();
 		final int testItems = 10000;
-		final int crossValidationFolds = 10;
+		final int crossValidationFolds = 6;
 		
 		debugPrint("Loading full dataset started", new Date(timer.tic()));
 		final ReorderingDataset all = new ReorderingDataset(new BinDataset("F:/icpr2014_mitos_atypia/A.bin")).shuffle();
@@ -215,51 +224,65 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			fullTrainingData.swapFolds(0, fold - 1, crossValidationFolds);
 		}
 		
-		int bestClassifierParameter = 0;
-		double bestSensitivity = 0.0;
+		final int[] bestClassifierParameter = { 0 };
+		final double[] bestSensitivity = { 0.0 };
+		final TaskManager taskManager = new TaskManager();
 		
-		for (int classifierParameter = 40; 0 <= classifierParameter; classifierParameter -= 2) {
-			debugPrint("classifierParameter:", classifierParameter);
+		for (int classifierParameter0 = 40; 0 <= classifierParameter0; classifierParameter0 -= 2) {
+			final int classifierParameter = classifierParameter0;
 			
-			final Statistics sensitivity = new Statistics();
-			int fold = 1;
-			
-			for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
-				final Dataset trainingData = trainingValidationPair[0];
-				final Dataset validationData = trainingValidationPair[1];
+			taskManager.submit(new Runnable() {
 				
-				debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier started", new Date(timer.tic()));
-				final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
-						trainingData, 0.5, classifierParameter / 100.0, 100, true, true);
-				debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
+				@Override
+				public final void run() {
+					debugPrint("classifierParameter:", classifierParameter);
+					
+					final Statistics sensitivity = new Statistics();
+					int fold = 1;
+					
+					for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
+						final Dataset trainingData = trainingValidationPair[0];
+						final Dataset validationData = trainingValidationPair[1];
+						
+						debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier started", new Date(timer.tic()));
+						final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
+								trainingData, 0.5, classifierParameter / 100.0, 100, true, true);
+						debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
+						
+						debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
+						debugPrint("fold:", fold + "/" + crossValidationFolds, "training:", classifier.evaluate(trainingData, null));
+						debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set done in", timer.toc(), "ms");
+						
+						debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set started", new Date(timer.tic()));
+						final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
+						debugPrint("fold:", fold + "/" + crossValidationFolds, "validation:", validationResult);
+						debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set done in", timer.toc(), "ms");
+						
+						sensitivity.addValue(validationResult.getSensitivity());
+						++fold;
+					}
+					
+					debugPrint("classifierParameter:", classifierParameter, "sensitivity:", sensitivity.getMinimum() + "<=" + sensitivity.getMean() + "(" + sqrt(sensitivity.getVariance()) + ")<=" + sensitivity.getMaximum());
+					
+					synchronized (bestSensitivity) {
+						if (bestSensitivity[0] < sensitivity.getMean()) {
+							bestSensitivity[0] = sensitivity.getMean();
+							bestClassifierParameter[0] = classifierParameter;
+						}
+					}
+				}
 				
-				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
-				debugPrint("fold:", fold + "/" + crossValidationFolds, "training:", classifier.evaluate(trainingData, null));
-				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set done in", timer.toc(), "ms");
-				
-				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set started", new Date(timer.tic()));
-				final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
-				debugPrint("fold:", fold + "/" + crossValidationFolds, "validation:", validationResult);
-				debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set done in", timer.toc(), "ms");
-				
-				sensitivity.addValue(validationResult.getSensitivity());
-				++fold;
-			}
-			
-			debugPrint("classifierParameter:", classifierParameter, "sensitivity:", sensitivity.getMinimum() + "<=" + sensitivity.getMean() + "(" + sqrt(sensitivity.getVariance()) + ")<=" + sensitivity.getMaximum());
-			
-			if (bestSensitivity < sensitivity.getMean()) {
-				bestSensitivity = sensitivity.getMean();
-				bestClassifierParameter = classifierParameter;
-			}
+			});
 		}
 		
-		if (bestClassifierParameter != 0) {
-			debugPrint("bestClassifierParameter:", bestClassifierParameter);
+		taskManager.join();
+		
+		if (bestClassifierParameter[0] != 0) {
+			debugPrint("bestClassifierParameter:", bestClassifierParameter[0]);
 			
 			debugPrint("Building best classifier started", new Date(timer.tic()));
 			final SimplifiedNeuralBinaryClassifier bestClassifier = new SimplifiedNeuralBinaryClassifier(
-					fullTrainingData, 0.5, bestClassifierParameter / 100.0, 100, true, true);
+					fullTrainingData, 0.5, bestClassifierParameter[0] / 100.0, 100, true, true);
 			debugPrint("Building best classifier done in", timer.toc(), "ms");
 			
 			debugPrint("Evaluating best classifier on training set started", new Date(timer.tic()));
@@ -428,6 +451,46 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -3549752842564996266L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-05-08)
+	 */
+	public static final class TaskManager implements Serializable {
+		
+		private ExecutorService executor;
+		
+		public final TaskManager submit(final Runnable task) {
+			this.getExecutor().submit(task);
+			
+			return this;
+		}
+		
+		public final void join() {
+			this.executor.shutdown();
+			
+			try {
+				this.executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+			} catch (final InterruptedException exception) {
+				throw unchecked(exception);
+			}
+			
+			this.executor = null;
+		}
+		
+		private final ExecutorService getExecutor() {
+			if (this.executor == null) {
+				this.executor = Executors.newFixedThreadPool(max(1, SystemProperties.getAvailableProcessorCount() / 2));
+			}
+			
+			return this.executor;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = 3623189981603208763L;
 		
 	}
 	
