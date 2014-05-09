@@ -8,17 +8,20 @@ import static java.util.Arrays.copyOfRange;
 import static jnnet.draft.LinearConstraintSystem.Abstract.dot;
 import static net.sourceforge.aprog.tools.MathTools.lcm;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.instances;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.Date;
 
 import jgencode.primitivelists.DoubleList;
+import jgencode.primitivelists.IntList;
 import jnnet.Dataset;
 import jnnet.Dataset.DatasetStatistics;
 import jnnet.VectorStatistics;
 import jnnet.draft.LinearConstraintSystem;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 import org.ojalgo.matrix.BasicMatrix;
@@ -38,7 +41,6 @@ public final class LDATest {
 		final int dimension = dataset.getItemSize() - 1;
 		final VectorStatistics[] datasetStatistics = dataset.getStatistics().getStatistics();
 		
-		debugPrint(dataset);
 		dataset.getStatistics().printTo(System.out);
 		
 		final double[] mu01 = LinearConstraintSystem.Abstract.add(-1.0, datasetStatistics[0].getMeans(), 0
@@ -53,23 +55,11 @@ public final class LDATest {
 			
 			debugPrint("LDA...", new Date(timer.tic()));
 			
-			final MatrixBuilder<?>[] builders = { PrimitiveMatrix.getBuilder(dimension, (int) datasetStatistics[0].getCount())
-					, PrimitiveMatrix.getBuilder(dimension, (int) datasetStatistics[1].getCount()) };
-			final int[] counts = new int[builders.length];
-			final int n = dataset.getItemCount();
-			
-			for (int i = 0; i < n; ++i) {
-				final int label = (int) dataset.getItemLabel(i);
-				
-				setColumn(builders[label], counts[label]++, dataset.getItemWeights(i));
-			}
-			
-			final BasicMatrix x0 = builders[0].build();
-			final BasicMatrix x1 = builders[1].build();
-			final BasicMatrix s0 = x0.multiplyRight(x0.transpose());
-			final BasicMatrix s1 = x1.multiplyRight(x1.transpose());
+			final double[][] covariances = computeCovariances(dataset);
+			final BasicMatrix s0 = matrix(dimension, covariances[0]);
+			final BasicMatrix s1 = matrix(dimension, covariances[1]);
 			final BasicMatrix s = s0.add(s1);
-			final double[] bestDirection = toArray(s.invert().multiplyRight(columnVector(mu01)));
+			final double[] bestDirection = toArray(s.solve(columnVector(mu01)));
 			
 			debugPrint("LDA done in", timer.toc(), "ms");
 			debugPrint("Projection on best direction:", Arrays.toString(bestDirection));
@@ -81,6 +71,40 @@ public final class LDATest {
 			assertTrue(bestProjection.getStatistics()[0].getMaxima()[0] < bestProjection.getStatistics()[1].getMinima()[0]);
 			assertEquals(0.0, colinearity(expectedDirection, bestDirection), 1E-4);
 		}
+	}
+	
+	public static final double[][] computeCovariances(final SimpleDataset dataset) {
+		final int dimension = dataset.getItemSize() - 1;
+		final double[][] result = { new double[dimension * dimension], new double[dimension * dimension] };
+		final int n = dataset.getItemCount();
+		
+		// Set upper half
+		for (int i = 0; i < n; ++i) {
+			final double[] item = dataset.getItemWeights(i);
+			final int label = (int) dataset.getItemLabel(i);
+			final double[] matrix = result[label];
+			
+			for (int j = 0; j < dimension; ++j) {
+				final double jth = item[j];
+				
+				for (int k = j; k < dimension; ++k) {
+					final double kth = item[k];
+					
+					matrix[j * dimension + k] += jth * kth;
+				}
+			}
+		}
+		
+		// Copy upper half to lower half
+		for (final double[] matrix : result) {
+			for (int j = 0; j < dimension; ++j) {
+				for (int k = j + 1; k < dimension; ++k) {
+					matrix[k * dimension + j] = matrix[j * dimension + k];
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 	public static final double colinearity(final double[] v1, final double[] v2) {
@@ -111,6 +135,16 @@ public final class LDATest {
 		}
 		
 		return result;
+	}
+	
+	public static final BasicMatrix matrix(final int columnCount, final double... values) {
+		final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(values.length / columnCount, columnCount);
+		
+		for (int i = 0; i < values.length; ++i) {
+			builder.set(i, values[i]);
+		}
+		
+		return builder.build();
 	}
 	
 	public static final BasicMatrix columnVector(final double... values) {
