@@ -1,10 +1,16 @@
 package jnnet.draft;
 
+import static imj2.tools.IMJTools.a8r8g8b8;
+import static imj2.tools.IMJTools.alpha8;
+import static imj2.tools.IMJTools.blue8;
+import static imj2.tools.IMJTools.green8;
+import static imj2.tools.IMJTools.red8;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -22,6 +28,7 @@ import javax.swing.JList;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -69,31 +76,18 @@ public final class InteractiveImageClassifier {
 		}.addTo(imageView.getImageHolder());
 		
 		imageView.getPainters().add(new Painter<SimpleImageView>() {
-
+			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
-				final int n = polygon.npoints;
-				
-				if (n < 3) {
-					return;
-				}
-				
-				final double[] vertices = new double[n * 3];
-				
-				for (int i = 0; i < n; ++i) {
-					vertices[i * 3 + X] = polygon.xpoints[i];
-					vertices[i * 3 + Y] = polygon.ypoints[i];
-				}
-				
-				PolygonTools.render(new Processor() {
+				final Processor setPixelColorInBuffer = new Processor() {
 					
 					@Override
 					public final void pixel(final double x, final double y, final double z) {
 						final BufferedImage buffer = component.getBufferImage();
 						
 						if (0 <= x && x < buffer.getWidth() && 0 <= y && y < buffer.getHeight()) {
-							buffer.setRGB((int) x, (int) y, 0xFFFF0000);
+							overlay(buffer, (int) x, (int) y, 0x80FFFF00);
 						}
 					}
 					
@@ -102,7 +96,9 @@ public final class InteractiveImageClassifier {
 					 */
 					private static final long serialVersionUID = -4126445286020078292L;
 					
-				}, vertices);
+				};
+				
+				forEachPixelIn(polygon, setPixelColorInBuffer);
 			}
 			
 			/**
@@ -121,6 +117,34 @@ public final class InteractiveImageClassifier {
 				, verticalBox(class0List, addPolygonToClass0Button, class1List, addPolygonToClass1Button))
 				, InteractiveImageClassifier.class.getSimpleName(), false);
 		SwingTools.setCheckAWT(true);
+	}
+	
+	public static final void forEachPixelIn(final Polygon polygon, final Processor processor) {
+		final int n = polygon.npoints;
+		
+		if (n < 3) {
+			return;
+		}
+		
+		final double[] vertices = new double[n * 3];
+		
+		for (int i = 0; i < n; ++i) {
+			vertices[i * 3 + X] = polygon.xpoints[i];
+			vertices[i * 3 + Y] = polygon.ypoints[i];
+		}
+		
+		PolygonTools.render(processor, vertices);
+	}
+	
+	public static final void overlay(final BufferedImage image, final int x, final int y, final int argb) {
+		final int rgb = image.getRGB(x, y);
+		final int alpha = alpha8(argb);
+		final int beta = 255 - alpha;
+		final int red = (red8(rgb) * beta + red8(argb) * alpha) / 255;
+		final int green = (green8(rgb) * beta + green8(argb) * alpha) / 255;
+		final int blue = (blue8(rgb) * beta + blue8(argb) * alpha) / 255;
+		
+		image.setRGB(x, y, a8r8g8b8(0xFF, red, green, blue));
 	}
 	
 	/**
