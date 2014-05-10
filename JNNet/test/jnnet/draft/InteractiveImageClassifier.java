@@ -103,7 +103,7 @@ public final class InteractiveImageClassifier {
 					final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
 					
 					for (int y = 0, i = 0; y < h; ++y) {
-						for (int x = 0; x < w; ++x) {
+						for (int x = 0; x < w; ++x, ++i) {
 							monitor.ping(i + "/" + (w * h) + "\r");
 							
 							if (classifier.accept(toItem(buffer, x, y
