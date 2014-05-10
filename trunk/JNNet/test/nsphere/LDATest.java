@@ -8,20 +8,19 @@ import static java.util.Arrays.copyOfRange;
 import static jnnet.draft.LinearConstraintSystem.Abstract.dot;
 import static net.sourceforge.aprog.tools.MathTools.lcm;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.instances;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.Date;
 
 import jgencode.primitivelists.DoubleList;
-import jgencode.primitivelists.IntList;
+
 import jnnet.Dataset;
 import jnnet.Dataset.DatasetStatistics;
 import jnnet.VectorStatistics;
 import jnnet.draft.LinearConstraintSystem;
+
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 import org.ojalgo.matrix.BasicMatrix;
