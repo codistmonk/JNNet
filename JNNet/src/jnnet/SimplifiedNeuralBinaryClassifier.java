@@ -3,6 +3,7 @@ package jnnet;
 import static java.lang.Double.isInfinite;
 import static java.lang.Double.isNaN;
 import static java.lang.Math.min;
+import static java.util.Arrays.copyOf;
 import static java.util.Arrays.copyOfRange;
 import static java.util.Collections.disjoint;
 import static java.util.Collections.swap;
@@ -33,7 +34,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jgencode.primitivelists.DoubleList;
-
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;
@@ -148,7 +148,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 	}
 	
 	public final BitSet encode(final double[] item) {
-		return encode(item, this.getHyperplanes());
+		return encode(this.trimItem(item), this.getHyperplanes());
 	}
 	
 	@Override
@@ -159,6 +159,11 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 	@Override
 	public final SimpleConfusionMatrix evaluate(final Dataset dataset, final EvaluationMonitor monitor) {
 		return Default.defaultEvaluate(this, dataset, monitor);
+	}
+	
+	public final double[] trimItem(final double... item) {
+		final int n = this.getInputDimension();
+		return item.length <= n ? item : copyOf(item, n);
 	}
 	
 	/**

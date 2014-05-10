@@ -28,6 +28,7 @@ import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.Box;
 import javax.swing.DefaultListModel;
@@ -35,6 +36,7 @@ import javax.swing.JButton;
 import javax.swing.JList;
 
 import jnnet.BinaryClassifier;
+import jnnet.ConsoleMonitor;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -90,13 +92,39 @@ public final class InteractiveImageClassifier {
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
+				final BufferedImage buffer = component.getBufferImage();
+				final int w = buffer.getWidth();
+				final int h = buffer.getHeight();
+				final BinaryClassifier classifier = context.getClassifier();
+				
+				if (classifier != null && context.getClassifierUpdated().getAndSet(false)) {
+					context.debugPrintBegin("Classifying");
+					
+					final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+					
+					for (int y = 0, i = 0; y < h; ++y) {
+						for (int x = 0; x < w; ++x) {
+							monitor.ping(i + "/" + (w * h) + "\r");
+							
+							if (classifier.accept(toItem(buffer, x, y
+									, context.getWindowHalfSize(), Double.NaN))) {
+								overlay(buffer, x, y, 0x6000FF00);
+							} else {
+								overlay(buffer, x, y, 0x60FF0000);
+							}
+						}
+					}
+					
+					monitor.pause();
+					
+					context.debugPrintEnd("Classifying");
+				}
+				
 				final Processor setPixelColorInBuffer = new Processor() {
 					
 					@Override
 					public final void pixel(final double x, final double y, final double z) {
-						final BufferedImage buffer = component.getBufferImage();
-						
-						if (0 <= x && x < buffer.getWidth() && 0 <= y && y < buffer.getHeight()) {
+						if (0 <= x && x < w && 0 <= y && y < h) {
 							overlay(buffer, (int) x, (int) y, 0x80FFFF00);
 						}
 					}
@@ -309,6 +337,8 @@ public final class InteractiveImageClassifier {
 		
 		private final SimpleImageView imageView;
 		
+		private final AtomicBoolean classifierUpdated;
+		
 		private final JList<Polygon>[] lists;
 		
 		private final int windowHalfSize;
@@ -323,6 +353,7 @@ public final class InteractiveImageClassifier {
 		public Context(final SimpleImageView imageView, final int windowHalfSize) {
 			this.timer = new TicToc();
 			this.imageView = imageView;
+			this.classifierUpdated = new AtomicBoolean();
 			this.lists = array(new JList<Polygon>(new DefaultListModel<Polygon>()), new JList<Polygon>(new DefaultListModel<Polygon>()));
 			this.windowHalfSize = windowHalfSize;
 			this.polygon = new Polygon();
@@ -331,6 +362,10 @@ public final class InteractiveImageClassifier {
 		
 		public final TicToc getTimer() {
 			return this.timer;
+		}
+		
+		public final AtomicBoolean getClassifierUpdated() {
+			return this.classifierUpdated;
 		}
 		
 		public final BinaryClassifier getClassifier() {
@@ -391,14 +426,16 @@ public final class InteractiveImageClassifier {
 			
 			this.debugPrintEnd("Creating classifier");
 			
+			this.getClassifierUpdated().set(true);
+			
 			this.getImageView().refreshBuffer();
 		}
 		
-		private final void debugPrintBegin(final String operation) {
+		public final void debugPrintBegin(final String operation) {
 			System.out.println(debug(DEBUG_STACK_OFFSET + 1, operation, "started...", new Date(this.getTimer().tic())));
 		}
 		
-		private final void debugPrintEnd(final String operation) {
+		public final void debugPrintEnd(final String operation) {
 			System.out.println(debug(DEBUG_STACK_OFFSET + 1, operation, "done in", this.getTimer().toc(), "ms"));
 		}
 		
