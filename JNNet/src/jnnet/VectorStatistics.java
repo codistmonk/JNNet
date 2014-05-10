@@ -20,6 +20,12 @@ public final class VectorStatistics implements Serializable {
 		this.statistics = instances(dimension, STATISTICS_FACTORY);
 	}
 	
+	public final void reset() {
+		for (final Statistics statistics : this.getStatistics()) {
+			statistics.reset();
+		}
+	}
+	
 	public final Statistics[] getStatistics() {
 		return this.statistics;
 	}

@@ -44,6 +44,12 @@ public abstract interface Dataset extends Serializable {
 			this.statistics = instances(3, DefaultFactory.forClass(VectorStatistics.class, inputDimension));
 		}
 		
+		public final void reset() {
+			for (final VectorStatistics statistics : this.getStatistics()) {
+				statistics.reset();
+			}
+		}
+		
 		public final Map<Integer, AtomicInteger> getLabelCounts() {
 			return this.labelCounts;
 		}
