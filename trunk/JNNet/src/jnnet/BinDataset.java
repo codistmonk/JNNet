@@ -18,11 +18,18 @@ import jnnet.draft.CSV2Bin.DataType;
  */
 public final class BinDataset implements Dataset {
 	
-	private final DatasetStatistics statistics;
+	private final int itemSize;
 	
 	private final DoubleList data;
 	
-	private int itemSize;
+	private final DatasetStatistics statistics;
+	
+	public BinDataset(final int itemSize) {
+		this.itemSize = itemSize;
+		final int inputDimension = itemSize - 1;
+		this.statistics = new DatasetStatistics(inputDimension);
+		this.data = new DoubleList();
+	}
 	
 	public BinDataset(final String resourcePath) {
 		this(resourcePath, 0, Integer.MAX_VALUE);
@@ -43,17 +50,16 @@ public final class BinDataset implements Dataset {
 				final int inputDimension = this.itemSize - 1;
 				this.statistics = new DatasetStatistics(inputDimension);
 				this.data = new DoubleList(count < Integer.MAX_VALUE ? count * this.itemSize : input.available() / dataType.getByteCount());
-				final double[] buffer = new double[this.itemSize];
+				final double[] item = new double[this.itemSize];
 				int lineId = 0;
 				
 				while (0 < input.available() && lineId < offset + count) {
 					monitor.ping(lineId + "\r");
 					
-					dataType.read(input, buffer, 0, this.itemSize);
+					dataType.read(input, item, 0, this.itemSize);
 					
 					if (offset <= lineId) {
-						this.data.addAll(buffer);
-						this.statistics.addItem(buffer);
+						this.addItem(item);
 					}
 					
 					++lineId;
@@ -66,6 +72,21 @@ public final class BinDataset implements Dataset {
 		} catch (final IOException exception) {
 			throw unchecked(exception);
 		}
+	}
+	
+	public final DoubleList getData() {
+		return this.data;
+	}
+	
+	public final DatasetStatistics getStatistics() {
+		return this.statistics;
+	}
+	
+	public final BinDataset addItem(final double... item) {
+		this.getData().addAll(item);
+		this.getStatistics().addItem(item);
+		
+		return this;
 	}
 	
 	@Override

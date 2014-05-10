@@ -3,7 +3,10 @@ package jnnet;
 import static jnnet.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.instances;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -11,6 +14,9 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import jnnet.draft.CSV2Bin.DataType;
+
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -29,6 +35,35 @@ public abstract interface Dataset extends Serializable {
 	public abstract double[] getItemWeights(int itemId);
 	
 	public abstract double getItemLabel(int itemId);
+	
+	/**
+	 * @author codistmonk (creation 2014-05-11)
+	 */
+	public static final class IO {
+		
+		private IO() {
+			throw new IllegalInstantiationException();
+		}
+		
+		public static final void writeBin(final Dataset dataset
+				, final DataType dataType, final DataOutputStream out) {
+			try {
+				out.writeByte(dataType.ordinal());
+				out.writeInt(dataset.getItemSize());
+				
+				final int n = dataset.getItemCount();
+				
+				for (int i = 0; i < n; ++i) {
+					for (final double value : dataset.getItem(i)) {
+						dataType.write(value, out);
+					}
+				}
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+	}
 	
 	/**
 	 * @author codistmonk (creation 2014-04-09)

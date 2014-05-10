@@ -4,7 +4,6 @@ import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static java.util.Arrays.copyOfRange;
 import static jnnet.draft.LinearConstraintSystem.Abstract.dot;
 import static net.sourceforge.aprog.tools.MathTools.lcm;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -13,8 +12,7 @@ import static org.junit.Assert.*;
 import java.util.Arrays;
 import java.util.Date;
 
-import jgencode.primitivelists.DoubleList;
-
+import jnnet.BinDataset;
 import jnnet.Dataset;
 import jnnet.Dataset.DatasetStatistics;
 import jnnet.VectorStatistics;
@@ -35,7 +33,7 @@ public final class LDATest {
 	@Test
 	public final void test() {
 		final double[] expectedDirection = { -1.0, 2.0, 3.0 };
-		final SimpleDataset dataset = generateDiscretePlaneBounds(
+		final BinDataset dataset = generateDiscretePlaneBounds(
 				(int) expectedDirection[0], (int) expectedDirection[1], (int) expectedDirection[2]);
 		final int dimension = dataset.getItemSize() - 1;
 		final VectorStatistics[] datasetStatistics = dataset.getStatistics().getStatistics();
@@ -72,7 +70,7 @@ public final class LDATest {
 		}
 	}
 	
-	public static final double[][] computeCovariances(final SimpleDataset dataset) {
+	public static final double[][] computeCovariances(final Dataset dataset) {
 		final int dimension = dataset.getItemSize() - 1;
 		final double[][] result = { new double[dimension * dimension], new double[dimension * dimension] };
 		final int n = dataset.getItemCount();
@@ -173,8 +171,8 @@ public final class LDATest {
 		return result;
 	}
 	
-	public static final SimpleDataset generateDiscretePlaneBounds(final int a, final int b, final int c) {
-		final SimpleDataset result = new SimpleDataset(4);
+	public static final BinDataset generateDiscretePlaneBounds(final int a, final int b, final int c) {
+		final BinDataset result = new BinDataset(4);
 		final int m = (int) max(lcm(abs(a), abs(c)), lcm(abs(b), abs(c)));
 		
 		for (int y = -m; y <= m; ++y) {
@@ -190,93 +188,6 @@ public final class LDATest {
 		}
 		
 		return result;
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-05-07)
-	 */
-	public static final class SimpleDataset implements Dataset {
-		
-		private final int order;
-		
-		private final DoubleList data;
-		
-		private final DatasetStatistics statistics;
-		
-		public SimpleDataset(final int order) {
-			this.order = order;
-			this.data = new DoubleList();
-			this.statistics = new DatasetStatistics(order - 1);
-		}
-		
-		public final SimpleDataset reset() {
-			this.data.clear();
-			this.statistics.reset();
-			
-			return this;
-		}
-		
-		public final DoubleList getData() {
-			return this.data;
-		}
-		
-		public final DatasetStatistics getStatistics() {
-			return this.statistics;
-		}
-		
-		public final SimpleDataset addItem(final double... item) {
-			this.getData().addAll(item);
-			this.getStatistics().addItem(item);
-			
-			return this;
-		}
-		
-		@Override
-		public final int getItemCount() {
-			return this.getData().size() / this.getItemSize();
-		}
-		
-		@Override
-		public final int getItemSize() {
-			return this.order;
-		}
-		
-		@Override
-		public final double getItemValue(final int itemId, final int valueId) {
-			return this.getData().get(itemId * this.getItemSize() + valueId);
-		}
-		
-		@Override
-		public final double[] getItem(final int itemId) {
-			final int n = this.getItemSize();
-			final int offset = itemId * n;
-			
-			return copyOfRange(this.getData().toArray(), offset, offset + n);
-		}
-		
-		@Override
-		public final double[] getItemWeights(final int itemId) {
-			final int n = this.getItemSize();
-			final int offset = itemId * n;
-			
-			return copyOfRange(this.getData().toArray(), offset, offset + n - 1);
-		}
-		
-		@Override
-		public final double getItemLabel(final int itemId) {
-			return this.getItemValue(itemId, this.getItemSize() - 1);
-		}
-		
-		@Override
-		public final String toString() {
-			return this.getData().toString();
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = 1448280373109937349L;
-		
 	}
 	
 }
