@@ -8,12 +8,14 @@ import static imj2.tools.IMJTools.red8;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
 
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.event.ActionEvent;
@@ -21,6 +23,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.util.Iterator;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -99,6 +102,22 @@ public final class InteractiveImageClassifier {
 				};
 				
 				forEachPixelIn(polygon, setPixelColorInBuffer);
+				
+				{
+					g.setColor(Color.RED);
+					
+					for (final Polygon polygon : elements(class0List)) {
+						g.drawPolygon(polygon);
+					}
+				}
+				
+				{
+					g.setColor(Color.GREEN);
+					
+					for (final Polygon polygon : elements(class1List)) {
+						g.drawPolygon(polygon);
+					}
+				}
 			}
 			
 			/**
@@ -117,6 +136,48 @@ public final class InteractiveImageClassifier {
 				, verticalBox(class0List, addPolygonToClass0Button, class1List, addPolygonToClass1Button))
 				, InteractiveImageClassifier.class.getSimpleName(), false);
 		SwingTools.setCheckAWT(true);
+	}
+	
+	public static final <E> Iterable<E> elements(final JList<E> list) {
+		return new Iterable<E>() {
+			
+			@Override
+			public final Iterator<E> iterator() {
+				return new Iterator<E>() {
+					
+					private int index = 0;
+					
+					@Override
+					public final boolean hasNext() {
+						return this.index < list.getModel().getSize();
+					}
+					
+					@Override
+					public final E next() {
+						return list.getModel().getElementAt(this.index++);
+					}
+					
+					@Override
+					public final void remove() {
+						final DefaultListModel<E> model = cast(DefaultListModel.class, list.getModel());
+						
+						if (model == null) {
+							if (list.getModel() == null) {
+								throw new NullPointerException("List model undefined");
+							}
+							
+							throw new UnsupportedOperationException(
+									"expectedListModelClass: " + DefaultListModel.class.getName()
+									+ " actualListModelClass: " + list.getModel().getClass().getName());
+						}
+						
+						model.remove(this.index - 1);
+					}
+					
+				};
+			}
+			
+		};
 	}
 	
 	public static final void forEachPixelIn(final Polygon polygon, final Processor processor) {
