@@ -11,7 +11,6 @@ import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -29,8 +28,12 @@ import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JList;
 
+import jnnet.Dataset;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+
+import nsphere.LDATest.SimpleDataset;
 
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
@@ -50,25 +53,24 @@ public final class InteractiveImageClassifier {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
+		final Context context = new Context(new SimpleImageView(), 32);
 		final JList<Polygon> class0List = new JList<>(new DefaultListModel<Polygon>());
 		final JButton addPolygonToClass0Button = new JButton("Class 0");
 		final JList<Polygon> class1List = new JList<>(new DefaultListModel<Polygon>());
 		final JButton addPolygonToClass1Button = new JButton("Class 1");
-		final SimpleImageView imageView = new SimpleImageView();
-		final Polygon polygon = new Polygon();
 		
 		new MouseHandler(null) {
 			
 			@Override
 			public final void mousePressed(final MouseEvent event) {
-				polygon.reset();
-				imageView.refreshBuffer();
+				context.getPolygon().reset();
+				context.getImageView().refreshBuffer();
 			}
 			
 			@Override
 			public final void mouseDragged(final MouseEvent event) {
-				polygon.addPoint(event.getX(), event.getY());
-				imageView.refreshBuffer();
+				context.getPolygon().addPoint(event.getX(), event.getY());
+				context.getImageView().refreshBuffer();
 			}
 			
 			/**
@@ -76,9 +78,9 @@ public final class InteractiveImageClassifier {
 			 */
 			private static final long serialVersionUID = 6747291512279656984L;
 			
-		}.addTo(imageView.getImageHolder());
+		}.addTo(context.getImageView().getImageHolder());
 		
-		imageView.getPainters().add(new Painter<SimpleImageView>() {
+		context.getImageView().getPainters().add(new Painter<SimpleImageView>() {
 			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
@@ -101,7 +103,7 @@ public final class InteractiveImageClassifier {
 					
 				};
 				
-				forEachPixelIn(polygon, setPixelColorInBuffer);
+				forEachPixelIn(context.getPolygon(), setPixelColorInBuffer);
 				
 				{
 					g.setColor(Color.RED);
@@ -127,12 +129,12 @@ public final class InteractiveImageClassifier {
 			
 		});
 		
-		addPolygonToClass0Button.addActionListener(new AddPolygonToListAction(polygon, class0List, imageView));
-		addPolygonToClass1Button.addActionListener(new AddPolygonToListAction(polygon, class1List, imageView));
+		addPolygonToClass0Button.addActionListener(new AddPolygonToListAction(context, class0List));
+		addPolygonToClass1Button.addActionListener(new AddPolygonToListAction(context, class1List));
 		
 		SwingTools.useSystemLookAndFeel();
 		SwingTools.setCheckAWT(false);
-		show(horizontalSplit(imageView
+		show(horizontalSplit(context.getImageView()
 				, verticalBox(class0List, addPolygonToClass0Button, class1List, addPolygonToClass1Button))
 				, InteractiveImageClassifier.class.getSimpleName(), false);
 		SwingTools.setCheckAWT(true);
@@ -213,29 +215,25 @@ public final class InteractiveImageClassifier {
 	 */
 	public static final class AddPolygonToListAction implements ActionListener, Serializable {
 		
-		private final Polygon polygon;
+		private final Context context;
 		
 		private final JList<Polygon> list;
 		
-		private final SimpleImageView imageView;
-		
-		public AddPolygonToListAction(final Polygon polygon, final JList<Polygon> list,
-				final SimpleImageView imageView) {
-			this.polygon = polygon;
+		public AddPolygonToListAction(final Context context, final JList<Polygon> list) {
+			this.context = context;
 			this.list = list;
-			this.imageView = imageView;
 		}
 		
 		@Override
 		public final void actionPerformed(final ActionEvent event) {
-			if (3 <= this.polygon.npoints) {
+			if (3 <= this.context.getPolygon().npoints) {
 				final DefaultListModel<Polygon> model = (DefaultListModel<Polygon>) this.list.getModel();
 				
-				model.addElement(new Polygon(this.polygon.xpoints, this.polygon.ypoints, this.polygon.npoints));
+				model.addElement(new Polygon(this.context.getPolygon().xpoints, this.context.getPolygon().ypoints, this.context.getPolygon().npoints));
 				
-				this.polygon.reset();
+				this.context.getPolygon().reset();
 				
-				this.imageView.refreshBuffer();
+				this.context.getImageView().refreshBuffer();
 			}
 		}
 		
@@ -243,6 +241,49 @@ public final class InteractiveImageClassifier {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 6578501846544772646L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-05-10)
+	 */
+	public static final class Context implements Serializable {
+		
+		private final SimpleImageView imageView;
+		
+		private final int windowHalfSize;
+		
+		private final Polygon polygon;
+		
+		private final SimpleDataset dataset;
+		
+		public Context(final SimpleImageView imageView, final int windowHalfSize) {
+			this.imageView = imageView;
+			this.windowHalfSize = windowHalfSize;
+			this.polygon = new Polygon();
+			this.dataset = new SimpleDataset(windowHalfSize * windowHalfSize * 4 * 3);
+		}
+		
+		public final SimpleImageView getImageView() {
+			return this.imageView;
+		}
+		
+		public final int getWindowHalfSize() {
+			return this.windowHalfSize;
+		}
+		
+		public final Polygon getPolygon() {
+			return this.polygon;
+		}
+		
+		public final SimpleDataset getDataset() {
+			return this.dataset;
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -5900224225503382429L;
 		
 	}
 	
