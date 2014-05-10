@@ -26,6 +26,7 @@ import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.Iterator;
 
+import javax.swing.Box;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JList;
@@ -54,6 +55,7 @@ public final class InteractiveImageClassifier {
 		final Context context = new Context(new SimpleImageView(), 32);
 		final JButton addPolygonToClass0Button = new JButton("Class 0");
 		final JButton addPolygonToClass1Button = new JButton("Class 1");
+		final JButton trainAndClassifyButton = new JButton("Train and classify");
 		
 		new MouseHandler(null) {
 			
@@ -127,11 +129,47 @@ public final class InteractiveImageClassifier {
 		
 		addPolygonToClass0Button.addActionListener(new AddPolygonToListAction(context, 0));
 		addPolygonToClass1Button.addActionListener(new AddPolygonToListAction(context, 1));
+		trainAndClassifyButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public final void actionPerformed(final ActionEvent event) {
+				final SimpleDataset dataset = context.getDataset().reset();
+				
+				for (final int label : new int[] { 0, 1 }) {
+					for (final Polygon polygon : elements(context.getLists()[label])) {
+						forEachPixelIn(polygon, new Processor() {
+							
+							@Override
+							public final void pixel(final double x, final double y, final double z) {
+								dataset.addItem(toItem(context.getImageView().getImage()
+										, (int) x, (int) y, context.getWindowHalfSize(), label));
+							}
+							
+							/**
+							 * {@value}.
+							 */
+							private static final long serialVersionUID = 5310081319263789851L;
+							
+						});
+					}
+				}
+				
+				debugPrint("datasetSize:", context.getDataset().getItemCount());
+			}
+			
+		});
 		
 		SwingTools.useSystemLookAndFeel();
 		SwingTools.setCheckAWT(false);
 		show(horizontalSplit(context.getImageView()
-				, verticalBox(context.getLists()[0], addPolygonToClass0Button, context.getLists()[1], addPolygonToClass1Button))
+				, verticalBox(context.getLists()[0]
+						, addPolygonToClass0Button
+						, Box.createVerticalGlue()
+						, context.getLists()[1]
+						, addPolygonToClass1Button
+						, Box.createVerticalGlue()
+						, trainAndClassifyButton
+				))
 				, InteractiveImageClassifier.class.getSimpleName(), false);
 		SwingTools.setCheckAWT(true);
 	}
@@ -263,23 +301,6 @@ public final class InteractiveImageClassifier {
 				
 				model.addElement(new Polygon(context.getPolygon().xpoints
 						, context.getPolygon().ypoints, context.getPolygon().npoints));
-				
-				forEachPixelIn(context.getPolygon(), new Processor() {
-					
-					@Override
-					public final void pixel(final double x, final double y, final double z) {
-						context.getDataset().addItem(toItem(context.getImageView().getImage()
-								, (int) x, (int) y, context.getWindowHalfSize(), label));
-					}
-					
-					/**
-					 * {@value}.
-					 */
-					private static final long serialVersionUID = 5310081319263789851L;
-					
-				});
-				
-				debugPrint("datasetSize:", context.getDataset().getItemCount());
 				
 				context.getPolygon().reset();
 				context.getImageView().refreshBuffer();

@@ -209,6 +209,13 @@ public final class LDATest {
 			this.statistics = new DatasetStatistics(order - 1);
 		}
 		
+		public final SimpleDataset reset() {
+			this.data.clear();
+			this.statistics.reset();
+			
+			return this;
+		}
+		
 		public final DoubleList getData() {
 			return this.data;
 		}
