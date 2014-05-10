@@ -25,7 +25,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,14 +39,16 @@ import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JList;
 
+import jnnet.BinDataset;
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
+import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
+import jnnet.draft.CSV2Bin.DataType;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
-import nsphere.LDATest.SimpleDataset;
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -345,7 +351,7 @@ public final class InteractiveImageClassifier {
 		
 		private final Polygon polygon;
 		
-		private final SimpleDataset dataset;
+		private final BinDataset dataset;
 		
 		private BinaryClassifier classifier;
 		
@@ -357,7 +363,25 @@ public final class InteractiveImageClassifier {
 			this.lists = array(new JList<Polygon>(new DefaultListModel<Polygon>()), new JList<Polygon>(new DefaultListModel<Polygon>()));
 			this.windowHalfSize = windowHalfSize;
 			this.polygon = new Polygon();
-			this.dataset = new SimpleDataset(windowHalfSize * windowHalfSize * 4 * 3 + 1);
+			BinDataset dataset = null;
+			
+			try {
+				dataset = new BinDataset("dataset.bin");
+			} catch (final Exception exception) {
+				exception.printStackTrace();
+			}
+			
+			final int itemSize = windowHalfSize * windowHalfSize * 4 * 3 + 1;
+			
+			if (dataset.getItemSize() == itemSize) {
+				this.dataset = dataset;
+				this.updateClassifier();
+				
+				debugPrint(Arrays.toString(dataset.getItem(0)));
+				debugPrint(this.getClassifier().evaluate(dataset, null));
+			} else {
+				this.dataset = new BinDataset(itemSize);
+			}
 		}
 		
 		public final TicToc getTimer() {
@@ -388,7 +412,7 @@ public final class InteractiveImageClassifier {
 			return this.polygon;
 		}
 		
-		public final SimpleDataset getDataset() {
+		public final BinDataset getDataset() {
 			return this.dataset;
 		}
 		
@@ -415,6 +439,14 @@ public final class InteractiveImageClassifier {
 			}
 			
 			this.debugPrintEnd("Creating dataset");
+			
+			this.getDataset().getStatistics().printTo(System.out);
+			
+			try {
+				Dataset.IO.writeBin(this.getDataset(), DataType.BYTE, new DataOutputStream(new FileOutputStream("dataset.bin")));
+			} catch (final FileNotFoundException exception) {
+				exception.printStackTrace();
+			}
 			
 			this.updateClassifier();
 		}
