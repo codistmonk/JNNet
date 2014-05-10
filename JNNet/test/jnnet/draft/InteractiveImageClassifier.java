@@ -3,7 +3,8 @@ package jnnet.draft;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
-
+import static pixel3d.PolygonTools.X;
+import static pixel3d.PolygonTools.Y;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -12,6 +13,7 @@ import java.awt.Polygon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.io.Serializable;
 
 import javax.swing.DefaultListModel;
@@ -20,8 +22,9 @@ import javax.swing.JList;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-
 import pixel3d.MouseHandler;
+import pixel3d.PolygonTools;
+import pixel3d.PolygonTools.Processor;
 
 /**
  * @author codistmonk (creation 2014-05-10)
@@ -70,7 +73,36 @@ public final class InteractiveImageClassifier {
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
-				g.fillPolygon(polygon);
+				final int n = polygon.npoints;
+				
+				if (n < 3) {
+					return;
+				}
+				
+				final double[] vertices = new double[n * 3];
+				
+				for (int i = 0; i < n; ++i) {
+					vertices[i * 3 + X] = polygon.xpoints[i];
+					vertices[i * 3 + Y] = polygon.ypoints[i];
+				}
+				
+				PolygonTools.render(new Processor() {
+					
+					@Override
+					public final void pixel(final double x, final double y, final double z) {
+						final BufferedImage buffer = component.getBufferImage();
+						
+						if (0 <= x && x < buffer.getWidth() && 0 <= y && y < buffer.getHeight()) {
+							buffer.setRGB((int) x, (int) y, 0xFFFF0000);
+						}
+					}
+					
+					/**
+					 * {@value}.
+					 */
+					private static final long serialVersionUID = -4126445286020078292L;
+					
+				}, vertices);
 			}
 			
 			/**
