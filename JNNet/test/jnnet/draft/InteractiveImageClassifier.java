@@ -8,8 +8,10 @@ import static imj2.tools.IMJTools.red8;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
+import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
+import static net.sourceforge.aprog.tools.Tools.debug;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
@@ -24,6 +26,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.util.Date;
 import java.util.Iterator;
 
 import javax.swing.Box;
@@ -31,8 +34,12 @@ import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JList;
 
+import jnnet.BinaryClassifier;
+import jnnet.SimplifiedNeuralBinaryClassifier;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 import nsphere.LDATest.SimpleDataset;
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
@@ -133,28 +140,7 @@ public final class InteractiveImageClassifier {
 			
 			@Override
 			public final void actionPerformed(final ActionEvent event) {
-				final SimpleDataset dataset = context.getDataset().reset();
-				
-				for (final int label : new int[] { 0, 1 }) {
-					for (final Polygon polygon : elements(context.getLists()[label])) {
-						forEachPixelIn(polygon, new Processor() {
-							
-							@Override
-							public final void pixel(final double x, final double y, final double z) {
-								dataset.addItem(toItem(context.getImageView().getImage()
-										, (int) x, (int) y, context.getWindowHalfSize(), label));
-							}
-							
-							/**
-							 * {@value}.
-							 */
-							private static final long serialVersionUID = 5310081319263789851L;
-							
-						});
-					}
-				}
-				
-				debugPrint("datasetSize:", context.getDataset().getItemCount());
+				context.updateDatasetAndClassifier();
 			}
 			
 		});
@@ -319,6 +305,8 @@ public final class InteractiveImageClassifier {
 	 */
 	public static final class Context implements Serializable {
 		
+		private final TicToc timer;
+		
 		private final SimpleImageView imageView;
 		
 		private final JList<Polygon>[] lists;
@@ -329,13 +317,24 @@ public final class InteractiveImageClassifier {
 		
 		private final SimpleDataset dataset;
 		
+		private BinaryClassifier classifier;
+		
 		@SuppressWarnings("unchecked")
 		public Context(final SimpleImageView imageView, final int windowHalfSize) {
+			this.timer = new TicToc();
 			this.imageView = imageView;
 			this.lists = array(new JList<Polygon>(new DefaultListModel<Polygon>()), new JList<Polygon>(new DefaultListModel<Polygon>()));
 			this.windowHalfSize = windowHalfSize;
 			this.polygon = new Polygon();
 			this.dataset = new SimpleDataset(windowHalfSize * windowHalfSize * 4 * 3 + 1);
+		}
+		
+		public final TicToc getTimer() {
+			return this.timer;
+		}
+		
+		public final BinaryClassifier getClassifier() {
+			return this.classifier;
 		}
 		
 		public final SimpleImageView getImageView() {
@@ -356,6 +355,51 @@ public final class InteractiveImageClassifier {
 		
 		public final SimpleDataset getDataset() {
 			return this.dataset;
+		}
+		
+		public final void updateDatasetAndClassifier() {
+			this.debugPrintBegin("Creating dataset");
+			
+			for (final int label : new int[] { 0, 1 }) {
+				for (final Polygon polygon : elements(Context.this.getLists()[label])) {
+					forEachPixelIn(polygon, new Processor() {
+						
+						@Override
+						public final void pixel(final double x, final double y, final double z) {
+							Context.this.getDataset().addItem(toItem(Context.this.getImageView().getImage()
+									, (int) x, (int) y, Context.this.getWindowHalfSize(), label));
+						}
+						
+						/**
+						 * {@value}.
+						 */
+						private static final long serialVersionUID = 5310081319263789851L;
+						
+					});
+				}
+			}
+			
+			this.debugPrintEnd("Creating dataset");
+			
+			this.updateClassifier();
+		}
+		
+		public final void updateClassifier() {
+			this.debugPrintBegin("Creating classifier");
+			
+			this.classifier = new SimplifiedNeuralBinaryClassifier(this.getDataset());
+			
+			this.debugPrintEnd("Creating classifier");
+			
+			this.getImageView().refreshBuffer();
+		}
+		
+		private final void debugPrintBegin(final String operation) {
+			System.out.println(debug(DEBUG_STACK_OFFSET + 1, operation, "started...", new Date(this.getTimer().tic())));
+		}
+		
+		private final void debugPrintEnd(final String operation) {
+			System.out.println(debug(DEBUG_STACK_OFFSET + 1, operation, "done in", this.getTimer().toc(), "ms"));
 		}
 		
 		/**
