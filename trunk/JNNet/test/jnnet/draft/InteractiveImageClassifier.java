@@ -335,12 +335,16 @@ public final class InteractiveImageClassifier {
 		public ImageDataset(final BufferedImage image, final int windowHalfSize) {
 			this.image = image;
 			this.windowHalfSize = windowHalfSize;
-			this.itemSize = windowHalfSize * windowHalfSize * 4 * 3 + 1;
+			final int tileSize = windowHalfSize * 2;
+			this.itemSize = tileSize * tileSize * 3 + 1;
 			this.pixelAndLabels = new IntList();
 			this.statistics = new DatasetStatistics(this.itemSize - 1);
 			this.tileTransformers = new ArrayList<>();
 			
 			this.tileTransformers.add(TileTransformer.Predefined.ID);
+			this.tileTransformers.add(new TileRotation90(tileSize));
+			this.tileTransformers.add(new TileRotation180(tileSize));
+			this.tileTransformers.add(new TileRotation270(tileSize));
 		}
 		
 		public final BufferedImage getImage() {
@@ -440,7 +444,7 @@ public final class InteractiveImageClassifier {
 		
 		@Override
 		public final double getItemLabel(final int itemId) {
-			return this.pixelAndLabels.get(itemId * 2 + 1);
+			return this.pixelAndLabels.get(itemId / this.tileTransformers.size() * 2 + 1);
 		}
 		
 		/**
@@ -484,6 +488,111 @@ public final class InteractiveImageClassifier {
 			}
 			
 			return result;
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-05-11)
+		 */
+		public static abstract class TileRotation implements TileTransformer {
+			
+			private final int tileSize;
+			
+			protected TileRotation(final int tileSize) {
+				this.tileSize = tileSize;
+			}
+			
+			public final int getTileSize() {
+				return this.tileSize;
+			}
+			
+			@Override
+			public final int transformRGB(final int rgb) {
+				return rgb;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 4151623294048501227L;
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-05-11)
+		 */
+		public static final class TileRotation90 extends TileRotation {
+			
+			public TileRotation90(final int tileSize) {
+				super(tileSize);
+			}
+			
+			@Override
+			public final int transformXInTile(final int xInTile, final int yInTile) {
+				return this.getTileSize() - yInTile;
+			}
+			
+			@Override
+			public final int transformYInTile(final int xInTile, final int yInTile) {
+				return xInTile;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -1450451672704459382L;
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-05-11)
+		 */
+		public static final class TileRotation180 extends TileRotation {
+			
+			public TileRotation180(final int tileSize) {
+				super(tileSize);
+			}
+			
+			@Override
+			public final int transformXInTile(final int xInTile, final int yInTile) {
+				return this.getTileSize() - xInTile;
+			}
+			
+			@Override
+			public final int transformYInTile(final int xInTile, final int yInTile) {
+				return this.getTileSize() - yInTile;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 6070034523633787629L;
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-05-11)
+		 */
+		public static final class TileRotation270 extends TileRotation {
+			
+			public TileRotation270(final int tileSize) {
+				super(tileSize);
+			}
+			
+			@Override
+			public final int transformXInTile(final int xInTile, final int yInTile) {
+				return yInTile;
+			}
+			
+			@Override
+			public final int transformYInTile(final int xInTile, final int yInTile) {
+				return this.getTileSize() - xInTile;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 5962504140559334542L;
+			
 		}
 		
 		/**
