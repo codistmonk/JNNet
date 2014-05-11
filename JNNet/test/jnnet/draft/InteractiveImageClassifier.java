@@ -6,6 +6,7 @@ import static imj2.tools.IMJTools.blue8;
 import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
+import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
@@ -98,6 +99,7 @@ public final class InteractiveImageClassifier {
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
+				final BufferedImage image = component.getImage();
 				final BufferedImage buffer = component.getBufferImage();
 				final int w = buffer.getWidth();
 				final int h = buffer.getHeight();
@@ -112,7 +114,7 @@ public final class InteractiveImageClassifier {
 						for (int x = 0; x < w; ++x, ++i) {
 							monitor.ping(i + "/" + (w * h) + "\r");
 							
-							if (classifier.accept(toItem(buffer, x, y
+							if (classifier.accept(item(image, x, y
 									, context.getWindowHalfSize(), Double.NaN))) {
 								overlay(buffer, x, y, 0x6000FF00);
 							} else {
@@ -182,10 +184,10 @@ public final class InteractiveImageClassifier {
 		SwingTools.useSystemLookAndFeel();
 		SwingTools.setCheckAWT(false);
 		show(horizontalSplit(context.getImageView()
-				, verticalBox(context.getLists()[0]
+				, verticalBox(scrollable(context.getLists()[0])
 						, addPolygonToClass0Button
 						, Box.createVerticalGlue()
-						, context.getLists()[1]
+						, scrollable(context.getLists()[1])
 						, addPolygonToClass1Button
 						, Box.createVerticalGlue()
 						, trainAndClassifyButton
@@ -265,7 +267,7 @@ public final class InteractiveImageClassifier {
 		image.setRGB(x, y, a8r8g8b8(0xFF, red, green, blue));
 	}
 	
-	public static final double[] toItem(final BufferedImage image
+	public static final double[] item(final BufferedImage image
 			, final int x, final int y, final int windowHalfSize, final double label) {
 		final int order = windowHalfSize * windowHalfSize * 4 * 3 + 1;
 		final double[] result = new double[order];
@@ -363,25 +365,8 @@ public final class InteractiveImageClassifier {
 			this.lists = array(new JList<Polygon>(new DefaultListModel<Polygon>()), new JList<Polygon>(new DefaultListModel<Polygon>()));
 			this.windowHalfSize = windowHalfSize;
 			this.polygon = new Polygon();
-			BinDataset dataset = null;
-			
-			try {
-				dataset = new BinDataset("dataset.bin");
-			} catch (final Exception exception) {
-				exception.printStackTrace();
-			}
-			
 			final int itemSize = windowHalfSize * windowHalfSize * 4 * 3 + 1;
-			
-			if (dataset.getItemSize() == itemSize) {
-				this.dataset = dataset;
-				this.updateClassifier();
-				
-				debugPrint(Arrays.toString(dataset.getItem(0)));
-				debugPrint(this.getClassifier().evaluate(dataset, null));
-			} else {
-				this.dataset = new BinDataset(itemSize);
-			}
+			this.dataset = new BinDataset(itemSize);
 		}
 		
 		public final TicToc getTimer() {
@@ -425,7 +410,7 @@ public final class InteractiveImageClassifier {
 						
 						@Override
 						public final void pixel(final double x, final double y, final double z) {
-							Context.this.getDataset().addItem(toItem(Context.this.getImageView().getImage()
+							Context.this.getDataset().addItem(item(Context.this.getImageView().getImage()
 									, (int) x, (int) y, Context.this.getWindowHalfSize(), label));
 						}
 						
@@ -441,12 +426,6 @@ public final class InteractiveImageClassifier {
 			this.debugPrintEnd("Creating dataset");
 			
 			this.getDataset().getStatistics().printTo(System.out);
-			
-			try {
-				Dataset.IO.writeBin(this.getDataset(), DataType.BYTE, new DataOutputStream(new FileOutputStream("dataset.bin")));
-			} catch (final FileNotFoundException exception) {
-				exception.printStackTrace();
-			}
 			
 			this.updateClassifier();
 		}

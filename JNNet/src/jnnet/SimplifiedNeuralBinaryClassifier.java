@@ -53,7 +53,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 	private final boolean invertOutput;
 	
 	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset) {
-		this(trainingDataset, 0.5, 0.0, Integer.MAX_VALUE, true, true);
+		this(trainingDataset, 0.5, 0.08, Integer.MAX_VALUE, true, true);
 	}
 	
 	public SimplifiedNeuralBinaryClassifier(final Dataset trainingDataset, final double k, final double acceptableErrorRate, final int maximumHyperplaneCount,
