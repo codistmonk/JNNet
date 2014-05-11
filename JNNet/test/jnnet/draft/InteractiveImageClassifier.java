@@ -7,6 +7,7 @@ import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
 import static java.util.Arrays.fill;
 import static jnnet.draft.InteractiveImageClassifier.ImageDataset.item;
+import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
@@ -17,7 +18,6 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -38,19 +38,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.Box;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeListener;
 
 import jgencode.primitivelists.IntList;
-
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -191,7 +193,8 @@ public final class InteractiveImageClassifier {
 						, scrollable(context.getLists()[1])
 						, addPolygonToClass1Button
 						, Box.createVerticalGlue()
-						, trainAndClassifyButton
+						, horizontalBox(new JLabel("acceptableErrorRate:")
+							, context.getClassifierParameterSpinner(), trainAndClassifyButton)
 				))
 				, InteractiveImageClassifier.class.getSimpleName(), false);
 		SwingTools.setCheckAWT(true);
@@ -476,6 +479,8 @@ public final class InteractiveImageClassifier {
 		
 		private final JList<Polygon>[] lists;
 		
+		private final JSpinner classifierParameterSpinner;
+		
 		private final int windowHalfSize;
 		
 		private final Polygon polygon;
@@ -490,6 +495,7 @@ public final class InteractiveImageClassifier {
 			this.imageView = imageView;
 			this.classifierUpdated = new AtomicBoolean();
 			this.lists = array((JList<Polygon>) newJList(this), (JList<Polygon>) newJList(this));
+			this.classifierParameterSpinner = new JSpinner(new SpinnerNumberModel(2, 0, 49, 1));
 			this.windowHalfSize = windowHalfSize;
 			this.polygon = new Polygon();
 		}
@@ -512,6 +518,10 @@ public final class InteractiveImageClassifier {
 		
 		public final JList<Polygon>[] getLists() {
 			return this.lists;
+		}
+		
+		public final JSpinner getClassifierParameterSpinner() {
+			return this.classifierParameterSpinner;
 		}
 		
 		public final int getWindowHalfSize() {
@@ -563,7 +573,11 @@ public final class InteractiveImageClassifier {
 		public final void updateClassifier() {
 			this.debugPrintBegin("Creating classifier");
 			
-			this.classifier = new SimplifiedNeuralBinaryClassifier(this.getDataset());
+			final double acceptableErrorRate = ((Number) this.getClassifierParameterSpinner().getValue())
+					.doubleValue() / 100.0;
+			
+			this.classifier = new SimplifiedNeuralBinaryClassifier(this.getDataset()
+					, 0.5, acceptableErrorRate, Integer.MAX_VALUE, true, true);
 			
 			this.debugPrintEnd("Creating classifier");
 			
