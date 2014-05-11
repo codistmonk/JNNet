@@ -42,7 +42,6 @@ import javax.swing.JList;
 
 import jgencode.primitivelists.IntList;
 
-import jnnet.BinDataset;
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
@@ -325,19 +324,37 @@ public final class InteractiveImageClassifier {
 		
 		private final IntList pixelAndLabels;
 		
+		private final DatasetStatistics statistics;
+		
 		public ImageDataset(final BufferedImage image, final int windowHalfSize) {
 			this.image = image;
 			this.windowHalfSize = windowHalfSize;
-			this.itemSize = windowHalfSize * windowHalfSize * 4 * 3;
+			this.itemSize = windowHalfSize * windowHalfSize * 4 * 3 + 1;
 			this.pixelAndLabels = new IntList();
+			this.statistics = new DatasetStatistics(this.itemSize - 1);
+		}
+		
+		public final BufferedImage getImage() {
+			return this.image;
+		}
+		
+		public final int getWindowHalfSize() {
+			return this.windowHalfSize;
+		}
+		
+		public final DatasetStatistics getStatistics() {
+			return this.statistics;
 		}
 		
 		public final ImageDataset addItem(final int x, final int y, final int label) {
-			return this.addItem(y * this.image.getWidth() + x, label);
+			return this.addItem(y * this.getImage().getWidth() + x, label);
 		}
 		
 		public final ImageDataset addItem(final int pixel, final int label) {
+			final int itemId = this.getItemCount();
 			this.pixelAndLabels.addAll(pixel, label);
+			
+			this.getStatistics().addItem(this.getItem(itemId));
 			
 			return this;
 		}
@@ -355,9 +372,9 @@ public final class InteractiveImageClassifier {
 		@Override
 		public final double getItemValue(final int itemId, final int valueId) {
 			final int center = this.pixelAndLabels.get(itemId * 2 + 0);
-			final int imageWidth = this.image.getWidth();
-			final int imageHeight = this.image.getHeight();
-			final int tileWidth = this.windowHalfSize * 2;
+			final int imageWidth = this.getImage().getWidth();
+			final int imageHeight = this.getImage().getHeight();
+			final int tileWidth = this.getWindowHalfSize() * 2;
 			final int x = (center % imageWidth) + ((valueId / 3) % tileWidth);
 			final int y = (center / imageWidth) + ((valueId / 3) / tileWidth);
 			
@@ -365,7 +382,7 @@ public final class InteractiveImageClassifier {
 				return 0.0;
 			}
 			
-			final int rgb = this.image.getRGB(x, y);
+			final int rgb = this.getImage().getRGB(x, y);
 			
 			switch (valueId % 3) {
 			case 0:
@@ -383,21 +400,21 @@ public final class InteractiveImageClassifier {
 		public final double[] getItem(final int itemId) {
 			final int pixel = this.pixelAndLabels.get(itemId * 2 + 0);
 			final int label = this.pixelAndLabels.get(itemId * 2 + 1);
-			final int imageWidth = this.image.getWidth();
+			final int imageWidth = this.getImage().getWidth();
 			final int x = pixel % imageWidth;
 			final int y = pixel / imageWidth;
 			
-			return item(this.image, x, y, this.windowHalfSize, label);
+			return item(this.getImage(), x, y, this.getWindowHalfSize(), label);
 		}
 		
 		@Override
 		public final double[] getItemWeights(final int itemId) {
 			final int pixel = this.pixelAndLabels.get(itemId * 2 + 0);
-			final int imageWidth = this.image.getWidth();
+			final int imageWidth = this.getImage().getWidth();
 			final int x = pixel % imageWidth;
 			final int y = pixel / imageWidth;
 			
-			return item(this.image, x, y, this.windowHalfSize, new double[this.getItemSize() - 1]);
+			return item(this.getImage(), x, y, this.getWindowHalfSize(), new double[this.getItemSize() - 1]);
 		}
 		
 		@Override
@@ -463,7 +480,7 @@ public final class InteractiveImageClassifier {
 		
 		private final Polygon polygon;
 		
-		private final BinDataset dataset;
+		private ImageDataset dataset;
 		
 		private BinaryClassifier classifier;
 		
@@ -475,8 +492,6 @@ public final class InteractiveImageClassifier {
 			this.lists = array((JList<Polygon>) newJList(this), (JList<Polygon>) newJList(this));
 			this.windowHalfSize = windowHalfSize;
 			this.polygon = new Polygon();
-			final int itemSize = windowHalfSize * windowHalfSize * 4 * 3 + 1;
-			this.dataset = new BinDataset(itemSize);
 		}
 		
 		public final TicToc getTimer() {
@@ -507,7 +522,13 @@ public final class InteractiveImageClassifier {
 			return this.polygon;
 		}
 		
-		public final BinDataset getDataset() {
+		public final ImageDataset getDataset() {
+			final BufferedImage image = this.getImageView().getImage();
+			
+			if (this.dataset == null || this.dataset.getImage() != image) {
+				this.dataset = new ImageDataset(image, this.getWindowHalfSize());
+			}
+			
 			return this.dataset;
 		}
 		
@@ -520,8 +541,7 @@ public final class InteractiveImageClassifier {
 						
 						@Override
 						public final void pixel(final double x, final double y, final double z) {
-							Context.this.getDataset().addItem(item(Context.this.getImageView().getImage()
-									, (int) x, (int) y, Context.this.getWindowHalfSize(), label));
+							Context.this.getDataset().addItem((int) x, (int) y, label);
 						}
 						
 						/**
