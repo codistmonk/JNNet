@@ -18,6 +18,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -46,14 +47,17 @@ import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 
 import jgencode.primitivelists.IntList;
+
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.InteractiveImageClassifier.ImageDataset.TileTransformer;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -359,15 +363,25 @@ public final class InteractiveImageClassifier {
 			return this.statistics;
 		}
 		
+		public final ImageDataset reset() {
+			this.pixelAndLabels.clear();
+			this.getStatistics().reset();
+			
+			return this;
+		}
+		
 		public final ImageDataset addItem(final int x, final int y, final int label) {
 			return this.addItem(y * this.getImage().getWidth() + x, label);
 		}
 		
 		public final ImageDataset addItem(final int pixel, final int label) {
+			final int n = this.tileTransformers.size();
 			final int itemId = this.getItemCount();
 			this.pixelAndLabels.addAll(pixel, label);
 			
-			this.getStatistics().addItem(this.getItem(itemId));
+			for (int i = 0; i < n; ++i) {
+				this.getStatistics().addItem(this.getItem(itemId + i));
+			}
 			
 			return this;
 		}
@@ -390,11 +404,13 @@ public final class InteractiveImageClassifier {
 			final int center = this.pixelAndLabels.get(untransformedItemId * 2 + 0);
 			final int imageWidth = this.getImage().getWidth();
 			final int imageHeight = this.getImage().getHeight();
-			final int tileWidth = this.getWindowHalfSize() * 2;
-			final int xInTile = (valueId / 3) % tileWidth;
-			final int yInTile = (valueId / 3) / tileWidth;
-			final int x = (center % imageWidth) + tileTransformer.transformXInTile(xInTile, yInTile);
-			final int y = (center / imageWidth) + tileTransformer.transformYInTile(xInTile, yInTile);
+			final int tileSize = this.getWindowHalfSize() * 2;
+			final int xInTile = (valueId / 3) % tileSize;
+			final int yInTile = (valueId / 3) / tileSize;
+			final int x = (center % imageWidth) - this.getWindowHalfSize()
+					+ tileTransformer.transformXInTile(xInTile, yInTile);
+			final int y = (center / imageWidth) - this.getWindowHalfSize()
+					+ tileTransformer.transformYInTile(xInTile, yInTile);
 			
 			if (x < 0 || imageWidth <= x || y < 0 || imageHeight <= y) {
 				return 0.0;
@@ -475,7 +491,7 @@ public final class InteractiveImageClassifier {
 			for (int yInTile = 0, i = 0; yInTile < tileEnd; ++yInTile) {
 				for (int xInTile = 0; xInTile < tileEnd; ++xInTile, i += 3) {
 					final int xx = xStart + tileTransformer.transformXInTile(xInTile, yInTile);
-					final int yy = yStart + tileTransformer.transformXInTile(xInTile, yInTile);
+					final int yy = yStart + tileTransformer.transformYInTile(xInTile, yInTile);
 					
 					if (0 <= xx && xx < w && 0 <= yy && yy < h) {
 						final int rgb = tileTransformer.transformRGB(image.getRGB(xx, yy));
@@ -714,6 +730,8 @@ public final class InteractiveImageClassifier {
 		
 		public final void updateDatasetAndClassifier() {
 			this.debugPrintBegin("Creating dataset");
+			
+			this.getDataset().reset();
 			
 			for (final int label : new int[] { 0, 1 }) {
 				for (final Polygon polygon : elements(Context.this.getLists()[label])) {
