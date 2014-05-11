@@ -31,8 +31,10 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.Box;
@@ -41,15 +43,14 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JSpinner;
-import javax.swing.SpinnerModel;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.event.ChangeListener;
 
 import jgencode.primitivelists.IntList;
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
+import jnnet.draft.InteractiveImageClassifier.ImageDataset.TileTransformer;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -117,7 +118,7 @@ public final class InteractiveImageClassifier {
 						for (int x = 0; x < w; ++x, ++i) {
 							monitor.ping(i + "/" + (w * h) + "\r");
 							
-							if (classifier.accept(item(image, x, y
+							if (classifier.accept(item(image, TileTransformer.Predefined.ID, x, y
 									, context.getWindowHalfSize(), Double.NaN))) {
 								overlay(buffer, x, y, 0x6000FF00);
 							} else {
@@ -329,12 +330,17 @@ public final class InteractiveImageClassifier {
 		
 		private final DatasetStatistics statistics;
 		
+		private final List<TileTransformer> tileTransformers;
+		
 		public ImageDataset(final BufferedImage image, final int windowHalfSize) {
 			this.image = image;
 			this.windowHalfSize = windowHalfSize;
 			this.itemSize = windowHalfSize * windowHalfSize * 4 * 3 + 1;
 			this.pixelAndLabels = new IntList();
 			this.statistics = new DatasetStatistics(this.itemSize - 1);
+			this.tileTransformers = new ArrayList<>();
+			
+			this.tileTransformers.add(TileTransformer.Predefined.ID);
 		}
 		
 		public final BufferedImage getImage() {
@@ -364,7 +370,7 @@ public final class InteractiveImageClassifier {
 		
 		@Override
 		public final int getItemCount() {
-			return this.pixelAndLabels.size() / 2;
+			return this.pixelAndLabels.size() / 2 * this.tileTransformers.size();
 		}
 		
 		@Override
@@ -374,18 +380,23 @@ public final class InteractiveImageClassifier {
 		
 		@Override
 		public final double getItemValue(final int itemId, final int valueId) {
-			final int center = this.pixelAndLabels.get(itemId * 2 + 0);
+			final TileTransformer tileTransformer =
+					this.tileTransformers.get(itemId % this.tileTransformers.size());
+			final int untransformedItemId = itemId / this.tileTransformers.size();
+			final int center = this.pixelAndLabels.get(untransformedItemId * 2 + 0);
 			final int imageWidth = this.getImage().getWidth();
 			final int imageHeight = this.getImage().getHeight();
 			final int tileWidth = this.getWindowHalfSize() * 2;
-			final int x = (center % imageWidth) + ((valueId / 3) % tileWidth);
-			final int y = (center / imageWidth) + ((valueId / 3) / tileWidth);
+			final int xInTile = (valueId / 3) % tileWidth;
+			final int yInTile = (valueId / 3) / tileWidth;
+			final int x = (center % imageWidth) + tileTransformer.transformXInTile(xInTile, yInTile);
+			final int y = (center / imageWidth) + tileTransformer.transformYInTile(xInTile, yInTile);
 			
 			if (x < 0 || imageWidth <= x || y < 0 || imageHeight <= y) {
 				return 0.0;
 			}
 			
-			final int rgb = this.getImage().getRGB(x, y);
+			final int rgb = tileTransformer.transformRGB(this.getImage().getRGB(x, y));
 			
 			switch (valueId % 3) {
 			case 0:
@@ -401,23 +412,30 @@ public final class InteractiveImageClassifier {
 		
 		@Override
 		public final double[] getItem(final int itemId) {
-			final int pixel = this.pixelAndLabels.get(itemId * 2 + 0);
-			final int label = this.pixelAndLabels.get(itemId * 2 + 1);
+			final TileTransformer tileTransformer =
+					this.tileTransformers.get(itemId % this.tileTransformers.size());
+			final int untransformedItemId = itemId / this.tileTransformers.size();
+			final int pixel = this.pixelAndLabels.get(untransformedItemId * 2 + 0);
+			final int label = this.pixelAndLabels.get(untransformedItemId * 2 + 1);
 			final int imageWidth = this.getImage().getWidth();
 			final int x = pixel % imageWidth;
 			final int y = pixel / imageWidth;
 			
-			return item(this.getImage(), x, y, this.getWindowHalfSize(), label);
+			return item(this.getImage(), tileTransformer, x, y, this.getWindowHalfSize(), label);
 		}
 		
 		@Override
 		public final double[] getItemWeights(final int itemId) {
-			final int pixel = this.pixelAndLabels.get(itemId * 2 + 0);
+			final TileTransformer tileTransformer =
+					this.tileTransformers.get(itemId % this.tileTransformers.size());
+			final int untransformedItemId = itemId / this.tileTransformers.size();
+			final int pixel = this.pixelAndLabels.get(untransformedItemId * 2 + 0);
 			final int imageWidth = this.getImage().getWidth();
 			final int x = pixel % imageWidth;
 			final int y = pixel / imageWidth;
 			
-			return item(this.getImage(), x, y, this.getWindowHalfSize(), new double[this.getItemSize() - 1]);
+			return item(this.getImage(), tileTransformer, x, y, this.getWindowHalfSize()
+					, new double[this.getItemSize() - 1]);
 		}
 		
 		@Override
@@ -430,17 +448,17 @@ public final class InteractiveImageClassifier {
 		 */
 		private static final long serialVersionUID = -8970225174892151354L;
 		
-		public static final double[] item(final BufferedImage image
+		public static final double[] item(final BufferedImage image, final TileTransformer tileTransformer
 				, final int x, final int y, final int windowHalfSize, final double label) {
 			final int order = windowHalfSize * windowHalfSize * 4 * 3 + 1;
-			final double[] result = item(image, x, y, windowHalfSize, new double[order]);
+			final double[] result = item(image, tileTransformer, x, y, windowHalfSize, new double[order]);
 			
 			result[order - 1] = label;
 			
 			return result;
 		}
 		
-		public static final double[] item(final BufferedImage image
+		public static final double[] item(final BufferedImage image, final TileTransformer tileTransformer
 				, final int x, final int y, final int windowHalfSize, final double[] result) {
 			final int xEnd = x + windowHalfSize;
 			final int yEnd = y + windowHalfSize;
@@ -462,6 +480,45 @@ public final class InteractiveImageClassifier {
 			}
 			
 			return result;
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-05-11)
+		 */
+		public static abstract interface TileTransformer extends Serializable {
+			
+			public abstract int transformXInTile(int xInTile, int yInTile);
+			
+			public abstract int transformYInTile(int xInTile, int yInTile);
+			
+			public abstract int transformRGB(int rgb);
+			
+			/**
+			 * @author codistmonk (creation 2014-05-11)
+			 */
+			public static enum Predefined implements TileTransformer {
+				
+				ID {
+					
+					@Override
+					public final int transformXInTile(final int xInTile, final int yInTile) {
+						return xInTile;
+					}
+					
+					@Override
+					public final int transformYInTile(final int xInTile, final int yInTile) {
+						return yInTile;
+					}
+					
+					@Override
+					public final int transformRGB(final int rgb) {
+						return rgb;
+					}
+					
+				};
+				
+			}
+			
 		}
 		
 	}
