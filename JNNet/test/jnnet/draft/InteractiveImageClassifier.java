@@ -5,6 +5,8 @@ import static imj2.tools.IMJTools.alpha8;
 import static imj2.tools.IMJTools.blue8;
 import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
+import static java.util.Arrays.fill;
+import static jnnet.draft.InteractiveImageClassifier.ImageDataset.item;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
@@ -13,9 +15,9 @@ import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -28,11 +30,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,18 +39,19 @@ import javax.swing.Box;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JList;
-import javax.swing.ListModel;
+
+import jgencode.primitivelists.IntList;
 
 import jnnet.BinDataset;
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
-import jnnet.draft.CSV2Bin.DataType;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
+
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -270,32 +269,6 @@ public final class InteractiveImageClassifier {
 		image.setRGB(x, y, a8r8g8b8(0xFF, red, green, blue));
 	}
 	
-	public static final double[] item(final BufferedImage image
-			, final int x, final int y, final int windowHalfSize, final double label) {
-		final int order = windowHalfSize * windowHalfSize * 4 * 3 + 1;
-		final double[] result = new double[order];
-		final int xEnd = x + windowHalfSize;
-		final int yEnd = y + windowHalfSize;
-		final int w = image.getWidth();
-		final int h = image.getHeight();
-		
-		for (int yy = y - windowHalfSize, i = 0; yy < yEnd; ++yy) {
-			for (int xx = x - windowHalfSize; xx < xEnd; ++xx, i += 3) {
-				if (0 <= xx && xx < w && 0 <= yy && yy < h) {
-					final int rgb = image.getRGB(xx, yy);
-					
-					result[i + 0] = red8(rgb);
-					result[i + 1] = green8(rgb);
-					result[i + 2] = blue8(rgb);
-				}
-			}
-		}
-		
-		result[order - 1] = label;
-		
-		return result;
-	}
-	
 	/**
 	 * @author codistmonk (creation 2014-05-10)
 	 */
@@ -336,6 +309,140 @@ public final class InteractiveImageClassifier {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = 6578501846544772646L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2014-05-11)
+	 */
+	public static final class ImageDataset implements Dataset {
+		
+		private final BufferedImage image;
+		
+		private final int windowHalfSize;
+		
+		private final int itemSize;
+		
+		private final IntList pixelAndLabels;
+		
+		public ImageDataset(final BufferedImage image, final int windowHalfSize) {
+			this.image = image;
+			this.windowHalfSize = windowHalfSize;
+			this.itemSize = windowHalfSize * windowHalfSize * 4 * 3;
+			this.pixelAndLabels = new IntList();
+		}
+		
+		public final ImageDataset addItem(final int x, final int y, final int label) {
+			return this.addItem(y * this.image.getWidth() + x, label);
+		}
+		
+		public final ImageDataset addItem(final int pixel, final int label) {
+			this.pixelAndLabels.addAll(pixel, label);
+			
+			return this;
+		}
+		
+		@Override
+		public final int getItemCount() {
+			return this.pixelAndLabels.size() / 2;
+		}
+		
+		@Override
+		public final int getItemSize() {
+			return this.itemSize;
+		}
+		
+		@Override
+		public final double getItemValue(final int itemId, final int valueId) {
+			final int center = this.pixelAndLabels.get(itemId * 2 + 0);
+			final int imageWidth = this.image.getWidth();
+			final int imageHeight = this.image.getHeight();
+			final int tileWidth = this.windowHalfSize * 2;
+			final int x = (center % imageWidth) + ((valueId / 3) % tileWidth);
+			final int y = (center / imageWidth) + ((valueId / 3) / tileWidth);
+			
+			if (x < 0 || imageWidth <= x || y < 0 || imageHeight <= y) {
+				return 0.0;
+			}
+			
+			final int rgb = this.image.getRGB(x, y);
+			
+			switch (valueId % 3) {
+			case 0:
+				return red8(rgb);
+			case 1:
+				return green8(rgb);
+			case 2:
+				return blue8(rgb);
+			}
+			
+			throw new IllegalStateException();
+		}
+		
+		@Override
+		public final double[] getItem(final int itemId) {
+			final int pixel = this.pixelAndLabels.get(itemId * 2 + 0);
+			final int label = this.pixelAndLabels.get(itemId * 2 + 1);
+			final int imageWidth = this.image.getWidth();
+			final int x = pixel % imageWidth;
+			final int y = pixel / imageWidth;
+			
+			return item(this.image, x, y, this.windowHalfSize, label);
+		}
+		
+		@Override
+		public final double[] getItemWeights(final int itemId) {
+			final int pixel = this.pixelAndLabels.get(itemId * 2 + 0);
+			final int imageWidth = this.image.getWidth();
+			final int x = pixel % imageWidth;
+			final int y = pixel / imageWidth;
+			
+			return item(this.image, x, y, this.windowHalfSize, new double[this.getItemSize() - 1]);
+		}
+		
+		@Override
+		public final double getItemLabel(final int itemId) {
+			return this.pixelAndLabels.get(itemId * 2 + 1);
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -8970225174892151354L;
+		
+		public static final double[] item(final BufferedImage image
+				, final int x, final int y, final int windowHalfSize, final double label) {
+			final int order = windowHalfSize * windowHalfSize * 4 * 3 + 1;
+			final double[] result = item(image, x, y, windowHalfSize, new double[order]);
+			
+			result[order - 1] = label;
+			
+			return result;
+		}
+		
+		public static final double[] item(final BufferedImage image
+				, final int x, final int y, final int windowHalfSize, final double[] result) {
+			final int xEnd = x + windowHalfSize;
+			final int yEnd = y + windowHalfSize;
+			final int w = image.getWidth();
+			final int h = image.getHeight();
+			
+			fill(result, 0.0);
+			
+			for (int yy = y - windowHalfSize, i = 0; yy < yEnd; ++yy) {
+				for (int xx = x - windowHalfSize; xx < xEnd; ++xx, i += 3) {
+					if (0 <= xx && xx < w && 0 <= yy && yy < h) {
+						final int rgb = image.getRGB(xx, yy);
+						
+						result[i + 0] = red8(rgb);
+						result[i + 1] = green8(rgb);
+						result[i + 2] = blue8(rgb);
+					}
+				}
+			}
+			
+			return result;
+		}
 		
 	}
 	
