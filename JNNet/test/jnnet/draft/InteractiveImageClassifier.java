@@ -24,6 +24,8 @@ import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.DataOutputStream;
@@ -39,6 +41,7 @@ import javax.swing.Box;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JList;
+import javax.swing.ListModel;
 
 import jnnet.BinDataset;
 import jnnet.BinaryClassifier;
@@ -362,7 +365,7 @@ public final class InteractiveImageClassifier {
 			this.timer = new TicToc();
 			this.imageView = imageView;
 			this.classifierUpdated = new AtomicBoolean();
-			this.lists = array(new JList<Polygon>(new DefaultListModel<Polygon>()), new JList<Polygon>(new DefaultListModel<Polygon>()));
+			this.lists = array((JList<Polygon>) newJList(this), (JList<Polygon>) newJList(this));
 			this.windowHalfSize = windowHalfSize;
 			this.polygon = new Polygon();
 			final int itemSize = windowHalfSize * windowHalfSize * 4 * 3 + 1;
@@ -454,6 +457,33 @@ public final class InteractiveImageClassifier {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -5900224225503382429L;
+		
+		public static final JList<?> newJList(final Context context) {
+			final JList<?> result = new JList<>(new DefaultListModel<>());
+			
+			result.addKeyListener(new KeyAdapter() {
+				
+				@Override
+				public final void keyPressed(final KeyEvent event) {
+					switch (event.getKeyCode()) {
+					case KeyEvent.VK_DELETE:
+					case KeyEvent.VK_BACK_SPACE:
+						final DefaultListModel<?> model = (DefaultListModel<?>) result.getModel();
+						
+						for (final Object toRemove : result.getSelectedValuesList()) {
+							model.removeElement(toRemove);
+						}
+						
+						context.getImageView().refreshBuffer();
+						
+						break;
+					}
+				}
+				
+			});
+			
+			return result;
+		}
 		
 	}
 	
