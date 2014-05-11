@@ -460,17 +460,21 @@ public final class InteractiveImageClassifier {
 		
 		public static final double[] item(final BufferedImage image, final TileTransformer tileTransformer
 				, final int x, final int y, final int windowHalfSize, final double[] result) {
-			final int xEnd = x + windowHalfSize;
-			final int yEnd = y + windowHalfSize;
+			final int xStart = x - windowHalfSize;
+			final int yStart = y - windowHalfSize;
 			final int w = image.getWidth();
 			final int h = image.getHeight();
+			final int tileEnd = 2 * windowHalfSize;
 			
 			fill(result, 0.0);
 			
-			for (int yy = y - windowHalfSize, i = 0; yy < yEnd; ++yy) {
-				for (int xx = x - windowHalfSize; xx < xEnd; ++xx, i += 3) {
+			for (int yInTile = 0, i = 0; yInTile < tileEnd; ++yInTile) {
+				for (int xInTile = 0; xInTile < tileEnd; ++xInTile, i += 3) {
+					final int xx = xStart + tileTransformer.transformXInTile(xInTile, yInTile);
+					final int yy = yStart + tileTransformer.transformXInTile(xInTile, yInTile);
+					
 					if (0 <= xx && xx < w && 0 <= yy && yy < h) {
-						final int rgb = image.getRGB(xx, yy);
+						final int rgb = tileTransformer.transformRGB(image.getRGB(xx, yy));
 						
 						result[i + 0] = red8(rgb);
 						result[i + 1] = green8(rgb);
