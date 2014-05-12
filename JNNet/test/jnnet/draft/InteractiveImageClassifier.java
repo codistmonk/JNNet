@@ -18,10 +18,10 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
@@ -33,31 +33,34 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.Box;
+import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.JSpinner;
+import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
 import javax.swing.SpinnerNumberModel;
 
 import jgencode.primitivelists.IntList;
-
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.InteractiveImageClassifier.ImageDataset.TileTransformer;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -71,15 +74,40 @@ public final class InteractiveImageClassifier {
 		throw new IllegalInstantiationException();
 	}
 	
+	public static final BufferedImage fill(final BufferedImage image, final Color color) {
+		final Graphics2D g = image.createGraphics();
+		
+		g.setColor(color);
+		g.fillRect(0, 0, image.getWidth(), image.getHeight());
+		g.dispose();
+		
+		return image;
+	}
+	
+	public static final ImageIcon newIcon16(final Color color) {
+		return new ImageIcon(fill(new BufferedImage(16, 16, BufferedImage.TYPE_3BYTE_BGR), color));
+	}
+	
 	/**
 	 * @param commandLineArguments
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final Context context = new Context(new SimpleImageView(), 32);
+		final JPanel mainPanel = new JPanel(new BorderLayout());
 		final JButton addPolygonToClass0Button = new JButton("Class 0");
 		final JButton addPolygonToClass1Button = new JButton("Class 1");
-		final JButton trainAndClassifyButton = new JButton("Train and classify");
+		final JButton trainAndClassifyButton = new JButton("Classify");
+		final JToolBar toolBar = new JToolBar();
+		final JToggleButton clearExamplesButton = new JToggleButton(newIcon16(Color.GRAY));
+		final JToggleButton negativeExamplesButton = new JToggleButton(newIcon16(Color.RED));
+		final JToggleButton positiveExamplesButton = new JToggleButton(newIcon16(Color.GREEN));
+		final ButtonGroup buttonGroup = new ButtonGroup();
+		
+		buttonGroup.add(clearExamplesButton);
+		buttonGroup.add(negativeExamplesButton);
+		buttonGroup.add(positiveExamplesButton);
+		buttonGroup.setSelected(clearExamplesButton.getModel(), true);
 		
 		new MouseHandler(null) {
 			
@@ -191,17 +219,26 @@ public final class InteractiveImageClassifier {
 		
 		SwingTools.useSystemLookAndFeel();
 		SwingTools.setCheckAWT(false);
-		show(horizontalSplit(context.getImageView()
+		
+		toolBar.add(clearExamplesButton);
+		toolBar.add(negativeExamplesButton);
+		toolBar.add(positiveExamplesButton);
+		toolBar.addSeparator();
+		toolBar.add(new JPanel());
+		toolBar.add(new JLabel("acceptableErrorRate:"));
+		toolBar.add(context.getClassifierParameterSpinner());
+		toolBar.add(trainAndClassifyButton);
+		
+		mainPanel.add(toolBar, BorderLayout.NORTH);
+		mainPanel.add(horizontalSplit(context.getImageView()
 				, verticalBox(scrollable(context.getLists()[0])
 						, addPolygonToClass0Button
 						, Box.createVerticalGlue()
 						, scrollable(context.getLists()[1])
 						, addPolygonToClass1Button
-						, Box.createVerticalGlue()
-						, horizontalBox(new JLabel("acceptableErrorRate:")
-							, context.getClassifierParameterSpinner(), trainAndClassifyButton)
-				))
-				, InteractiveImageClassifier.class.getSimpleName(), false);
+				)), BorderLayout.CENTER);
+		
+		show(mainPanel, InteractiveImageClassifier.class.getSimpleName(), false);
 		SwingTools.setCheckAWT(true);
 	}
 	
@@ -486,7 +523,7 @@ public final class InteractiveImageClassifier {
 			final int h = image.getHeight();
 			final int tileEnd = 2 * windowHalfSize;
 			
-			fill(result, 0.0);
+			Arrays.fill(result, 0.0);
 			
 			for (int yInTile = 0, i = 0; yInTile < tileEnd; ++yInTile) {
 				for (int xInTile = 0; xInTile < tileEnd; ++xInTile, i += 3) {
