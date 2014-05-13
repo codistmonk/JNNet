@@ -7,9 +7,7 @@ import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static java.util.Arrays.fill;
 import static jnnet.draft.InteractiveImageClassifier.ImageDataset.item;
-import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
 import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
@@ -20,6 +18,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -38,10 +37,12 @@ import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -57,15 +58,17 @@ import javax.swing.JToolBar;
 import javax.swing.SpinnerNumberModel;
 
 import jgencode.primitivelists.IntList;
+
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.InteractiveImageClassifier.ImageDataset.TileTransformer;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
+
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -193,10 +196,9 @@ public final class InteractiveImageClassifier {
 					@Override
 					public final void pixel(final double x, final double y, final double z) {
 						if (0 <= label) {
-							context.getDataset().addItem((int) x, (int) y, label);
+							context.getDataset().addPixelItems((int) x, (int) y, label);
 						} else {
-							// TODO
-//							context.getDataset().removeItem((int) x, (int) y);
+							context.getDataset().removePixelItems((int) x, (int) y);
 						}
 					}
 					
@@ -279,17 +281,26 @@ public final class InteractiveImageClassifier {
 				}
 				
 				{
-					final int[] pixelAndLabels = context.getDataset().getPixelAndLabels();
-					final int n = pixelAndLabels.length;
-					
-					for (int i = 0; i < n; i += 2) {
-						final int pixel = pixelAndLabels[i + 0];
-						final int label = pixelAndLabels[i + 1];
-						final int x = pixel % w;
-						final int y = pixel / w;
-						
-						buffer.setRGB(x, y, label == 0 ? Color.RED.getRGB() : Color.GREEN.getRGB());
+					for (int y = 0; y < h; ++y) {
+						for (int x = 0; x < w; ++x) {
+							if (context.getDataset().contains(x, y)) {
+								final int label = context.getDataset().getPixelLabel(x, y);
+								
+								buffer.setRGB(x, y, label == 0 ? Color.RED.getRGB() : Color.GREEN.getRGB());
+							}
+						}
 					}
+//					final int[] pixelAndLabels = context.getDataset().getPixelAndLabels();
+//					final int n = pixelAndLabels.length;
+//					
+//					for (int i = 0; i < n; i += 2) {
+//						final int pixel = pixelAndLabels[i + 0];
+//						final int label = pixelAndLabels[i + 1];
+//						final int x = pixel % w;
+//						final int y = pixel / w;
+//						
+//						buffer.setRGB(x, y, label == 0 ? Color.RED.getRGB() : Color.GREEN.getRGB());
+//					}
 				}
 				
 				if (0 <= mouseLocation.x) {
@@ -467,6 +478,14 @@ public final class InteractiveImageClassifier {
 		
 		private final int itemSize;
 		
+		private final BitSet pixels;
+		
+		private final BitSet labels;
+		
+		private final AtomicLong constructionTimestamp;
+		
+		private final AtomicLong usageTimestamp;
+		
 		private final IntList pixelAndLabels;
 		
 		private final DatasetStatistics statistics;
@@ -478,6 +497,10 @@ public final class InteractiveImageClassifier {
 			this.windowHalfSize = windowHalfSize;
 			final int tileSize = windowHalfSize * 2;
 			this.itemSize = tileSize * tileSize * 3 + 1;
+			this.pixels = new BitSet();
+			this.labels = new BitSet();
+			this.constructionTimestamp = new AtomicLong();
+			this.usageTimestamp = new AtomicLong();
 			this.pixelAndLabels = new IntList();
 			this.statistics = new DatasetStatistics(this.itemSize - 1);
 			this.tileTransformers = new ArrayList<>();
@@ -488,7 +511,54 @@ public final class InteractiveImageClassifier {
 			this.tileTransformers.add(new TileRotation270(tileSize));
 		}
 		
+		public final boolean contains(final int x, final int y) {
+			return this.contains(this.getPixel(x, y));
+		}
+		
+		public final boolean contains(final int pixel) {
+			return this.pixels.get(pixel);
+		}
+		
+		public final int getPixelLabel(final int x, final int y) {
+			return this.getPixelLabel(this.getPixel(x, y));
+		}
+		
+		public final int getPixelLabel(final int pixel) {
+			return this.labels.get(pixel) ? 1 : 0;
+		}
+		
+		public final int getPixel(final int x, final int y) {
+			return y * this.getImage().getWidth() + x;
+		}
+		
 		public final int[] getPixelAndLabels() {
+			final long timestamp = this.constructionTimestamp.get();
+			
+			if (this.usageTimestamp.getAndSet(timestamp) != timestamp) {
+				this.pixelAndLabels.resize(this.pixels.cardinality());
+				this.pixelAndLabels.clear();
+				this.getStatistics().reset();
+				
+				final int w = this.getImage().getWidth();
+				final int n = w * this.getImage().getHeight();
+				
+				for (int pixel = 0; pixel < n; ++pixel) {
+					if (this.contains(pixel)) {
+						final int x = pixel % w;
+						final int y = pixel / w;
+						final int label = this.getPixelLabel(pixel);
+						
+						this.pixelAndLabels.addAll(pixel, label);
+						
+						for (final TileTransformer tileTransformer : this.tileTransformers) {
+							this.getStatistics().addItem(item(this.getImage(), tileTransformer, x, y, this.getWindowHalfSize(), label));
+						}
+					}
+				}
+				
+				this.getStatistics().printTo(System.out);
+			}
+			
 			return this.pixelAndLabels.toArray();
 		}
 		
@@ -511,25 +581,34 @@ public final class InteractiveImageClassifier {
 			return this;
 		}
 		
-		public final ImageDataset addItem(final int x, final int y, final int label) {
-			return this.addItem(y * this.getImage().getWidth() + x, label);
+		public final ImageDataset addPixelItems(final int x, final int y, final int label) {
+			return this.addPixelItems(this.getPixel(x, y), label);
 		}
 		
-		public final ImageDataset addItem(final int pixel, final int label) {
-			final int n = this.tileTransformers.size();
-			final int itemId = this.getItemCount();
-			this.pixelAndLabels.addAll(pixel, label);
+		public final ImageDataset addPixelItems(final int pixel, final int label) {
+			this.constructionTimestamp.incrementAndGet();
 			
-			for (int i = 0; i < n; ++i) {
-				this.getStatistics().addItem(this.getItem(itemId + i));
-			}
+			this.pixels.set(pixel);
+			this.labels.set(pixel, label == 1);
+			
+			return this;
+		}
+		
+		public final ImageDataset removePixelItems(final int x, final int y) {
+			return this.removePixelItems(this.getPixel(x, y));
+		}
+		
+		public final ImageDataset removePixelItems(final int pixel) {
+			this.constructionTimestamp.incrementAndGet();
+			
+			this.pixels.clear(pixel);
 			
 			return this;
 		}
 		
 		@Override
 		public final int getItemCount() {
-			return this.pixelAndLabels.size() / 2 * this.tileTransformers.size();
+			return this.getPixelAndLabels().length / 2 * this.tileTransformers.size();
 		}
 		
 		@Override
@@ -542,7 +621,7 @@ public final class InteractiveImageClassifier {
 			final TileTransformer tileTransformer =
 					this.tileTransformers.get(itemId % this.tileTransformers.size());
 			final int untransformedItemId = itemId / this.tileTransformers.size();
-			final int center = this.pixelAndLabels.get(untransformedItemId * 2 + 0);
+			final int center = this.getPixelAndLabels()[untransformedItemId * 2 + 0];
 			final int imageWidth = this.getImage().getWidth();
 			final int imageHeight = this.getImage().getHeight();
 			final int tileSize = this.getWindowHalfSize() * 2;
@@ -576,8 +655,8 @@ public final class InteractiveImageClassifier {
 			final TileTransformer tileTransformer =
 					this.tileTransformers.get(itemId % this.tileTransformers.size());
 			final int untransformedItemId = itemId / this.tileTransformers.size();
-			final int pixel = this.pixelAndLabels.get(untransformedItemId * 2 + 0);
-			final int label = this.pixelAndLabels.get(untransformedItemId * 2 + 1);
+			final int pixel = this.getPixelAndLabels()[untransformedItemId * 2 + 0];
+			final int label = this.getPixelAndLabels()[untransformedItemId * 2 + 1];
 			final int imageWidth = this.getImage().getWidth();
 			final int x = pixel % imageWidth;
 			final int y = pixel / imageWidth;
@@ -590,7 +669,7 @@ public final class InteractiveImageClassifier {
 			final TileTransformer tileTransformer =
 					this.tileTransformers.get(itemId % this.tileTransformers.size());
 			final int untransformedItemId = itemId / this.tileTransformers.size();
-			final int pixel = this.pixelAndLabels.get(untransformedItemId * 2 + 0);
+			final int pixel = this.getPixelAndLabels()[untransformedItemId * 2 + 0];
 			final int imageWidth = this.getImage().getWidth();
 			final int x = pixel % imageWidth;
 			final int y = pixel / imageWidth;
@@ -601,7 +680,7 @@ public final class InteractiveImageClassifier {
 		
 		@Override
 		public final double getItemLabel(final int itemId) {
-			return this.pixelAndLabels.get(itemId / this.tileTransformers.size() * 2 + 1);
+			return this.getPixelAndLabels()[itemId / this.tileTransformers.size() * 2 + 1];
 		}
 		
 		/**
@@ -880,7 +959,7 @@ public final class InteractiveImageClassifier {
 						
 						@Override
 						public final void pixel(final double x, final double y, final double z) {
-							Context.this.getDataset().addItem((int) x, (int) y, label);
+							Context.this.getDataset().addPixelItems((int) x, (int) y, label);
 						}
 						
 						/**
