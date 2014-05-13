@@ -8,12 +8,8 @@ import static imj2.tools.IMJTools.red8;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static jnnet.draft.InteractiveImageClassifier.ImageDataset.item;
-import static net.sourceforge.aprog.swing.SwingTools.horizontalSplit;
-import static net.sourceforge.aprog.swing.SwingTools.scrollable;
 import static net.sourceforge.aprog.swing.SwingTools.show;
-import static net.sourceforge.aprog.swing.SwingTools.verticalBox;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
-import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static pixel3d.PolygonTools.X;
@@ -29,8 +25,6 @@ import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
@@ -44,7 +38,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
@@ -103,8 +96,6 @@ public final class InteractiveImageClassifier {
 	public static final void main(final String[] commandLineArguments) {
 		final Context context = new Context(new SimpleImageView(), 32);
 		final JPanel mainPanel = new JPanel(new BorderLayout());
-		final JButton addPolygonToClass0Button = new JButton("Class 0");
-		final JButton addPolygonToClass1Button = new JButton("Class 1");
 		final JButton trainAndClassifyButton = new JButton("Classify");
 		final JToolBar toolBar = new JToolBar();
 		final JToggleButton clearExamplesButton = new JToggleButton(newIcon16(Color.GRAY));
@@ -135,8 +126,6 @@ public final class InteractiveImageClassifier {
 			
 			@Override
 			public final void mousePressed(final MouseEvent event) {
-				context.getPolygon().reset();
-				
 				this.updateDataset(mouseLocation);
 				
 				context.getImageView().refreshBuffer();
@@ -145,8 +134,9 @@ public final class InteractiveImageClassifier {
 			@Override
 			public final void mouseDragged(final MouseEvent event) {
 				final Point location = (Point) mouseLocation.clone();
+				
 				mouseLocation.setLocation(event.getPoint());
-//				context.getPolygon().addPoint(event.getX(), event.getY());
+				
 				PolygonTools.renderSegment(new Processor() {
 					
 					@Override
@@ -161,6 +151,7 @@ public final class InteractiveImageClassifier {
 					private static final long serialVersionUID = 2789309737021733183L;
 					
 				}, location.x, location.y, 0.0, mouseLocation.x, mouseLocation.y, 0.0);
+				
 				context.getImageView().refreshBuffer();
 			}
 			
@@ -262,45 +253,14 @@ public final class InteractiveImageClassifier {
 					
 				};
 				
-				forEachPixelIn(context.getPolygon(), setPixelColorInBuffer);
-				
-				{
-					g.setColor(Color.RED);
-					
-					for (final Polygon polygon : elements(context.getLists()[0])) {
-						g.drawPolygon(polygon);
-					}
-				}
-				
-				{
-					g.setColor(Color.GREEN);
-					
-					for (final Polygon polygon : elements(context.getLists()[1])) {
-						g.drawPolygon(polygon);
-					}
-				}
-				
-				{
-					for (int y = 0; y < h; ++y) {
-						for (int x = 0; x < w; ++x) {
-							if (context.getDataset().contains(x, y)) {
-								final int label = context.getDataset().getPixelLabel(x, y);
-								
-								buffer.setRGB(x, y, label == 0 ? Color.RED.getRGB() : Color.GREEN.getRGB());
-							}
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						if (context.getDataset().contains(x, y)) {
+							final int label = context.getDataset().getPixelLabel(x, y);
+							
+							overlay(buffer, x, y, label == 0 ? 0x80FF0000 : 0x8000FF00);
 						}
 					}
-//					final int[] pixelAndLabels = context.getDataset().getPixelAndLabels();
-//					final int n = pixelAndLabels.length;
-//					
-//					for (int i = 0; i < n; i += 2) {
-//						final int pixel = pixelAndLabels[i + 0];
-//						final int label = pixelAndLabels[i + 1];
-//						final int x = pixel % w;
-//						final int y = pixel / w;
-//						
-//						buffer.setRGB(x, y, label == 0 ? Color.RED.getRGB() : Color.GREEN.getRGB());
-//					}
 				}
 				
 				if (0 <= mouseLocation.x) {
@@ -317,8 +277,6 @@ public final class InteractiveImageClassifier {
 			
 		});
 		
-		addPolygonToClass0Button.addActionListener(new AddPolygonToListAction(context, 0));
-		addPolygonToClass1Button.addActionListener(new AddPolygonToListAction(context, 1));
 		trainAndClassifyButton.addActionListener(new ActionListener() {
 			
 			@Override
@@ -341,13 +299,7 @@ public final class InteractiveImageClassifier {
 		toolBar.add(trainAndClassifyButton);
 		
 		mainPanel.add(toolBar, BorderLayout.NORTH);
-		mainPanel.add(horizontalSplit(context.getImageView()
-				, verticalBox(scrollable(context.getLists()[0])
-						, addPolygonToClass0Button
-						, Box.createVerticalGlue()
-						, scrollable(context.getLists()[1])
-						, addPolygonToClass1Button
-				)), BorderLayout.CENTER);
+		mainPanel.add(context.getImageView(), BorderLayout.CENTER);
 		
 		show(mainPanel, InteractiveImageClassifier.class.getSimpleName(), false);
 		SwingTools.setCheckAWT(true);
@@ -422,49 +374,6 @@ public final class InteractiveImageClassifier {
 		final int blue = (blue8(rgb) * beta + blue8(argb) * alpha) / 255;
 		
 		image.setRGB(x, y, a8r8g8b8(0xFF, red, green, blue));
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-05-10)
-	 */
-	public static final class AddPolygonToListAction implements ActionListener, Serializable {
-		
-		private final Context context;
-		
-		private final int label;
-		
-		public AddPolygonToListAction(final Context context, final int label) {
-			this.context = context;
-			this.label = label;
-		}
-		
-		public final Context getContext() {
-			return this.context;
-		}
-		
-		@Override
-		public final void actionPerformed(final ActionEvent event) {
-			final Context context = this.getContext();
-			
-			if (3 <= context.getPolygon().npoints) {
-				final int label = this.label;
-				
-				final DefaultListModel<Polygon> model =
-						(DefaultListModel<Polygon>) context.getLists()[label].getModel();
-				
-				model.addElement(new Polygon(context.getPolygon().xpoints
-						, context.getPolygon().ypoints, context.getPolygon().npoints));
-				
-				context.getPolygon().reset();
-				context.getImageView().refreshBuffer();
-			}
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = 6578501846544772646L;
-		
 	}
 	
 	/**
@@ -883,27 +792,20 @@ public final class InteractiveImageClassifier {
 		
 		private final AtomicBoolean classifierUpdated;
 		
-		private final JList<Polygon>[] lists;
-		
 		private final JSpinner classifierParameterSpinner;
 		
 		private final int windowHalfSize;
-		
-		private final Polygon polygon;
 		
 		private ImageDataset dataset;
 		
 		private BinaryClassifier classifier;
 		
-		@SuppressWarnings("unchecked")
 		public Context(final SimpleImageView imageView, final int windowHalfSize) {
 			this.timer = new TicToc();
 			this.imageView = imageView;
 			this.classifierUpdated = new AtomicBoolean();
-			this.lists = array((JList<Polygon>) newJList(this), (JList<Polygon>) newJList(this));
 			this.classifierParameterSpinner = new JSpinner(new SpinnerNumberModel(2, 0, 49, 1));
 			this.windowHalfSize = windowHalfSize;
-			this.polygon = new Polygon();
 		}
 		
 		public final TicToc getTimer() {
@@ -922,20 +824,12 @@ public final class InteractiveImageClassifier {
 			return this.imageView;
 		}
 		
-		public final JList<Polygon>[] getLists() {
-			return this.lists;
-		}
-		
 		public final JSpinner getClassifierParameterSpinner() {
 			return this.classifierParameterSpinner;
 		}
 		
 		public final int getWindowHalfSize() {
 			return this.windowHalfSize;
-		}
-		
-		public final Polygon getPolygon() {
-			return this.polygon;
 		}
 		
 		public final ImageDataset getDataset() {
@@ -951,29 +845,10 @@ public final class InteractiveImageClassifier {
 		public final void updateDatasetAndClassifier() {
 			this.debugPrintBegin("Creating dataset");
 			
-			this.getDataset().reset();
-			
-			for (final int label : new int[] { 0, 1 }) {
-				for (final Polygon polygon : elements(Context.this.getLists()[label])) {
-					forEachPixelIn(polygon, new Processor() {
-						
-						@Override
-						public final void pixel(final double x, final double y, final double z) {
-							Context.this.getDataset().addPixelItems((int) x, (int) y, label);
-						}
-						
-						/**
-						 * {@value}.
-						 */
-						private static final long serialVersionUID = 5310081319263789851L;
-						
-					});
-				}
-			}
+			this.getDataset().getPixelAndLabels();
+			this.getDataset().getStatistics().printTo(System.out);
 			
 			this.debugPrintEnd("Creating dataset");
-			
-			this.getDataset().getStatistics().printTo(System.out);
 			
 			this.updateClassifier();
 		}
@@ -1006,33 +881,6 @@ public final class InteractiveImageClassifier {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -5900224225503382429L;
-		
-		public static final JList<?> newJList(final Context context) {
-			final JList<?> result = new JList<>(new DefaultListModel<>());
-			
-			result.addKeyListener(new KeyAdapter() {
-				
-				@Override
-				public final void keyPressed(final KeyEvent event) {
-					switch (event.getKeyCode()) {
-					case KeyEvent.VK_DELETE:
-					case KeyEvent.VK_BACK_SPACE:
-						final DefaultListModel<?> model = (DefaultListModel<?>) result.getModel();
-						
-						for (final Object toRemove : result.getSelectedValuesList()) {
-							model.removeElement(toRemove);
-						}
-						
-						context.getImageView().refreshBuffer();
-						
-						break;
-					}
-				}
-				
-			});
-			
-			return result;
-		}
 		
 	}
 	
