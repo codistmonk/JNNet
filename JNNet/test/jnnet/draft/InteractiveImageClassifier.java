@@ -65,6 +65,7 @@ import jnnet.draft.InteractiveImageClassifier.ImageDataset.TileTransformer;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
+import net.sourceforge.aprog.tools.Tools;
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -132,6 +133,21 @@ public final class InteractiveImageClassifier {
 			@Override
 			public final void mousePressed(final MouseEvent event) {
 				context.getPolygon().reset();
+				
+				PolygonTools.renderDisc(new Processor() {
+					
+					/**
+					 * {@value}.
+					 */
+					private static final long serialVersionUID = 5573155945922132926L;
+					
+					@Override
+					public final void pixel(final double x, final double y, final double z) {
+						context.getDataset().addItem((int) x, (int) y, 0);
+					}
+					
+				}, mouseLocation.x, mouseLocation.y, 0.0, brushSize[0]);
+				
 				context.getImageView().refreshBuffer();
 			}
 			
@@ -225,6 +241,20 @@ public final class InteractiveImageClassifier {
 					
 					for (final Polygon polygon : elements(context.getLists()[1])) {
 						g.drawPolygon(polygon);
+					}
+				}
+				
+				{
+					final int[] pixelAndLabels = context.getDataset().getPixelAndLabels();
+					final int n = pixelAndLabels.length;
+					
+					for (int i = 0; i < n; i += 2) {
+						final int pixel = pixelAndLabels[i + 0];
+						final int label = pixelAndLabels[i + 1];
+						final int x = pixel % w;
+						final int y = pixel / w;
+						
+						buffer.setRGB(x, y, label == 0 ? Color.RED.getRGB() : Color.GREEN.getRGB());
 					}
 				}
 				
@@ -422,6 +452,10 @@ public final class InteractiveImageClassifier {
 			this.tileTransformers.add(new TileRotation90(tileSize));
 			this.tileTransformers.add(new TileRotation180(tileSize));
 			this.tileTransformers.add(new TileRotation270(tileSize));
+		}
+		
+		public final int[] getPixelAndLabels() {
+			return this.pixelAndLabels.toArray();
 		}
 		
 		public final BufferedImage getImage() {
