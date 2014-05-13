@@ -491,6 +491,10 @@ public final class InteractiveImageClassifier {
 		}
 		
 		public final ImageDataset addPixelItems(final int x, final int y, final int label) {
+			if (!this.canContain(x, y)) {
+				return this;
+			}
+			
 			return this.addPixelItems(this.getPixel(x, y), label);
 		}
 		
@@ -504,7 +508,15 @@ public final class InteractiveImageClassifier {
 		}
 		
 		public final ImageDataset removePixelItems(final int x, final int y) {
+			if (!this.canContain(x, y)) {
+				return this;
+			}
+			
 			return this.removePixelItems(this.getPixel(x, y));
+		}
+		
+		public final boolean canContain(final int x, final int y) {
+			return 0 <= x && x < this.getImage().getWidth() && 0 <= y && y < this.getImage().getHeight();
 		}
 		
 		public final ImageDataset removePixelItems(final int pixel) {
