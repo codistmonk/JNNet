@@ -134,27 +134,30 @@ public final class InteractiveImageClassifier {
 			public final void mousePressed(final MouseEvent event) {
 				context.getPolygon().reset();
 				
-				PolygonTools.renderDisc(new Processor() {
-					
-					/**
-					 * {@value}.
-					 */
-					private static final long serialVersionUID = 5573155945922132926L;
-					
-					@Override
-					public final void pixel(final double x, final double y, final double z) {
-						context.getDataset().addItem((int) x, (int) y, 0);
-					}
-					
-				}, mouseLocation.x, mouseLocation.y, 0.0, brushSize[0]);
+				this.updateDataset(mouseLocation);
 				
 				context.getImageView().refreshBuffer();
 			}
 			
 			@Override
 			public final void mouseDragged(final MouseEvent event) {
+				final Point location = (Point) mouseLocation.clone();
 				mouseLocation.setLocation(event.getPoint());
 //				context.getPolygon().addPoint(event.getX(), event.getY());
+				PolygonTools.renderSegment(new Processor() {
+					
+					@Override
+					public final void pixel(final double x, final double y, final double z) {
+						location.setLocation(x, y);
+						updateDataset(location);
+					}
+					
+					/**
+					 * {@value}.
+					 */
+					private static final long serialVersionUID = 2789309737021733183L;
+					
+				}, location.x, location.y, 0.0, mouseLocation.x, mouseLocation.y, 0.0);
 				context.getImageView().refreshBuffer();
 			}
 			
@@ -167,6 +170,37 @@ public final class InteractiveImageClassifier {
 				}
 				
 				context.getImageView().refreshBuffer();
+			}
+			
+			final void updateDataset(final Point location) {
+				final int label;
+				
+				if (buttonGroup.getSelection() == negativeExamplesButton.getModel()) {
+					label = 0;
+				} else if (buttonGroup.getSelection() == positiveExamplesButton.getModel()) {
+					label = 1;
+				} else {
+					label = -1;
+				}
+				
+				PolygonTools.renderDisc(new Processor() {
+					
+					/**
+					 * {@value}.
+					 */
+					private static final long serialVersionUID = 5573155945922132926L;
+					
+					@Override
+					public final void pixel(final double x, final double y, final double z) {
+						if (0 <= label) {
+							context.getDataset().addItem((int) x, (int) y, label);
+						} else {
+							// TODO
+//							context.getDataset().removeItem((int) x, (int) y);
+						}
+					}
+					
+				}, location.x, location.y, 0.0, brushSize[0]);
 			}
 			
 			/**
