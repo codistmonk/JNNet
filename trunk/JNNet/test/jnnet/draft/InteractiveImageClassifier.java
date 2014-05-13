@@ -5,6 +5,8 @@ import static imj2.tools.IMJTools.alpha8;
 import static imj2.tools.IMJTools.blue8;
 import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Arrays.fill;
 import static jnnet.draft.InteractiveImageClassifier.ImageDataset.item;
 import static net.sourceforge.aprog.swing.SwingTools.horizontalBox;
@@ -24,12 +26,14 @@ import imj2.tools.SimpleImageView;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -103,6 +107,8 @@ public final class InteractiveImageClassifier {
 		final JToggleButton negativeExamplesButton = new JToggleButton(newIcon16(Color.RED));
 		final JToggleButton positiveExamplesButton = new JToggleButton(newIcon16(Color.GREEN));
 		final ButtonGroup buttonGroup = new ButtonGroup();
+		final Point mouseLocation = new Point(-1, -1);
+		final int[] brushSize = { 8 };
 		
 		buttonGroup.add(clearExamplesButton);
 		buttonGroup.add(negativeExamplesButton);
@@ -112,6 +118,18 @@ public final class InteractiveImageClassifier {
 		new MouseHandler(null) {
 			
 			@Override
+			public final void mouseExited(final MouseEvent event) {
+				mouseLocation.x = -1;
+				context.getImageView().refreshBuffer();
+			}
+			
+			@Override
+			public final void mouseMoved(final MouseEvent event) {
+				mouseLocation.setLocation(event.getPoint());
+				context.getImageView().refreshBuffer();
+			}
+			
+			@Override
 			public final void mousePressed(final MouseEvent event) {
 				context.getPolygon().reset();
 				context.getImageView().refreshBuffer();
@@ -119,7 +137,19 @@ public final class InteractiveImageClassifier {
 			
 			@Override
 			public final void mouseDragged(final MouseEvent event) {
-				context.getPolygon().addPoint(event.getX(), event.getY());
+				mouseLocation.setLocation(event.getPoint());
+//				context.getPolygon().addPoint(event.getX(), event.getY());
+				context.getImageView().refreshBuffer();
+			}
+			
+			@Override
+			public final void mouseWheelMoved(final MouseWheelEvent event) {
+				if (event.getWheelRotation() < 0) {
+					brushSize[0] = max(1, brushSize[0] - 1);
+				} else {
+					brushSize[0] = min(64, brushSize[0] + 1);
+				}
+				
 				context.getImageView().refreshBuffer();
 			}
 			
@@ -196,6 +226,12 @@ public final class InteractiveImageClassifier {
 					for (final Polygon polygon : elements(context.getLists()[1])) {
 						g.drawPolygon(polygon);
 					}
+				}
+				
+				if (0 <= mouseLocation.x) {
+					g.setColor(Color.WHITE);
+					g.drawOval(mouseLocation.x - brushSize[0] / 2, mouseLocation.y - brushSize[0] / 2
+							, brushSize[0], brushSize[0]);
 				}
 			}
 			
