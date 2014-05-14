@@ -27,7 +27,7 @@ public final class ConsoleMonitor implements Serializable {
 		this.ping(".");
 	}
 	
-	public final void ping(final String text) {
+	public final synchronized void ping(final String text) {
 		if (this.periodMilliseconds <= this.timer.toc()) {
 			System.out.print(text);
 			this.newLineNeeded.set(true);

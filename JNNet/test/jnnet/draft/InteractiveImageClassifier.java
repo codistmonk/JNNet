@@ -42,7 +42,9 @@ import java.util.BitSet;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.swing.AbstractAction;
@@ -65,6 +67,7 @@ import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
+import jnnet.SimplifiedNeuralBinaryClassifierTest.TaskManager;
 import jnnet.draft.CSV2Bin.DataType;
 import jnnet.draft.InteractiveImageClassifier.ImageDataset.TileTransformer;
 import net.sourceforge.aprog.swing.SwingTools;
@@ -75,6 +78,7 @@ import net.sourceforge.aprog.tools.Tools;
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
+import pixel3d.TiledRenderer.Executor;
 
 /**
  * @author codistmonk (creation 2014-05-10)
@@ -215,7 +219,7 @@ public final class InteractiveImageClassifier {
 		
 		context.getImageView().getPainters().add(new Painter<SimpleImageView>() {
 			
-			private final BitSet classification = new BitSet();
+			private final BitSet[] classification = { null };
 			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
@@ -224,33 +228,61 @@ public final class InteractiveImageClassifier {
 				final BufferedImage buffer = component.getBufferImage();
 				final int w = buffer.getWidth();
 				final int h = buffer.getHeight();
+				
+				if (0 == context.getDataset().getItemCount()) {
+					this.classification[0] = null;
+				}
+				
 				final BinaryClassifier classifier = context.getClassifier();
 				
 				if (classifier != null && context.getClassifierUpdated().getAndSet(false)) {
 					context.debugPrintBegin("Classifying");
 					
-					this.classification.clear();
-					final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
-					
-					for (int y = 0, i = 0; y < h; ++y) {
-						for (int x = 0; x < w; ++x, ++i) {
-							monitor.ping(i + "/" + (w * h) + "\r");
-							
-							if (classifier.accept(item(image, TileTransformer.Predefined.ID, x, y
-									, context.getWindowHalfSize(), Double.NaN))) {
-								this.classification.set(i);
-							}
-						}
+					if (this.classification[0] == null) {
+						this.classification[0] = new BitSet();
 					}
+					
+					this.classification[0].clear();
+					
+					final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+					final TaskManager taskManager = new TaskManager();
+					final AtomicInteger count = new AtomicInteger();
+					
+					for (int y0 = 0; y0 < h; ++y0) {
+						final int y = y0;
+						final int pixel0 = y * w;
+						
+						taskManager.submit(new Runnable() {
+							
+							@Override
+							public final void run() {
+								for (int x = 0; x < w; ++x) {
+									monitor.ping(count.incrementAndGet() + "/" + (w * h) + "\r");
+									
+									if (classifier.accept(item(image, TileTransformer.Predefined.ID, x, y
+											, context.getWindowHalfSize(), Double.NaN))) {
+										synchronized (classification[0]) {
+											classification[0].set(pixel0 + x);
+										}
+									}
+								}
+							}
+							
+						});
+					}
+					
+					taskManager.join();
 					
 					monitor.pause();
 					
 					context.debugPrintEnd("Classifying");
 				}
 				
-				for (int y = 0, i = 0; y < h; ++y) {
-					for (int x = 0; x < w; ++x, ++i) {
-						overlay(buffer, x, y, this.classification.get(i) ? 0x6000FF00 : 0x60FF0000);
+				if (this.classification[0] != null) {
+					for (int y = 0, i = 0; y < h; ++y) {
+						for (int x = 0; x < w; ++x, ++i) {
+							overlay(buffer, x, y, this.classification[0].get(i) ? 0x6000FF00 : 0x60FF0000);
+						}
 					}
 				}
 				
@@ -565,7 +597,7 @@ public final class InteractiveImageClassifier {
 		
 		@Override
 		public final int getItemCount() {
-			return this.getPixelAndLabels().length / 2 * this.tileTransformers.size();
+			return this.pixels.cardinality() * this.tileTransformers.size();
 		}
 		
 		@Override
