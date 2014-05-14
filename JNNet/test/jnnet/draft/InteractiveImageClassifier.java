@@ -215,6 +215,8 @@ public final class InteractiveImageClassifier {
 		
 		context.getImageView().getPainters().add(new Painter<SimpleImageView>() {
 			
+			private final BitSet classification = new BitSet();
+			
 			@Override
 			public final void paint(final Graphics2D g, final SimpleImageView component,
 					final int width, final int height) {
@@ -227,6 +229,7 @@ public final class InteractiveImageClassifier {
 				if (classifier != null && context.getClassifierUpdated().getAndSet(false)) {
 					context.debugPrintBegin("Classifying");
 					
+					this.classification.clear();
 					final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
 					
 					for (int y = 0, i = 0; y < h; ++y) {
@@ -235,9 +238,7 @@ public final class InteractiveImageClassifier {
 							
 							if (classifier.accept(item(image, TileTransformer.Predefined.ID, x, y
 									, context.getWindowHalfSize(), Double.NaN))) {
-								overlay(buffer, x, y, 0x6000FF00);
-							} else {
-								overlay(buffer, x, y, 0x60FF0000);
+								this.classification.set(i);
 							}
 						}
 					}
@@ -245,6 +246,12 @@ public final class InteractiveImageClassifier {
 					monitor.pause();
 					
 					context.debugPrintEnd("Classifying");
+				}
+				
+				for (int y = 0, i = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x, ++i) {
+						overlay(buffer, x, y, this.classification.get(i) ? 0x6000FF00 : 0x60FF0000);
+					}
 				}
 				
 				final Processor setPixelColorInBuffer = new Processor() {
