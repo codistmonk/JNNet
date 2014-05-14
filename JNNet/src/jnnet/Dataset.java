@@ -62,7 +62,7 @@ public abstract interface Dataset extends Serializable {
 				out.println("@attribute x" + i + " numeric");
 			}
 			
-			out.println("@attribute class { 0, 1 }");
+			out.println("@attribute class { 0.0, 1.0 }");
 			
 			out.println("@data");
 			
