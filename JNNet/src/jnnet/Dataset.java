@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import jnnet.draft.CSV2Bin.DataType;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
 /**
@@ -45,8 +47,46 @@ public abstract interface Dataset extends Serializable {
 			throw new IllegalInstantiationException();
 		}
 		
+		public static final void writeARFF(final Dataset dataset, final PrintStream out) {
+			final TicToc timer = new TicToc();
+			final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+			
+			System.out.println("Exporting dataset as ARFF... " + new Date(timer.tic()));
+			
+			out.println("@relation relation");
+			
+			final int dimension = dataset.getItemSize() - 1;
+			
+			for (int i = 0; i < dimension; ++i) {
+				monitor.ping("Writing ARFF header " + (i + 1) + " / " + dimension + "\r");
+				out.println("@attribute x" + i + " numeric");
+			}
+			
+			out.println("@attribute class { 0, 1 }");
+			
+			out.println("@data");
+			
+			final int n = dataset.getItemCount();
+			
+			for (int i = 0; i < n; ++i) {
+				monitor.ping("Writing ARFF data " + (i + 1) + " / " + n + "\r");
+				out.println(join(",", dataset.getItem(i)));
+			}
+			
+			monitor.pause();
+			
+			System.out.println("Exporting dataset as ARFF done in " + timer.toc() + " ms");
+			
+			out.close();
+		}
+		
 		public static final void writeBin(final Dataset dataset
 				, final DataType dataType, final DataOutputStream out) {
+			final TicToc timer = new TicToc();
+			final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+			
+			System.out.println("Exporting dataset as Bin... " + new Date(timer.tic()));
+			
 			try {
 				out.writeByte(dataType.ordinal());
 				out.writeInt(dataset.getItemSize());
@@ -54,13 +94,48 @@ public abstract interface Dataset extends Serializable {
 				final int n = dataset.getItemCount();
 				
 				for (int i = 0; i < n; ++i) {
+					monitor.ping("Writing Bin data " + (i + 1) + " / " + n + "\r");
+					
 					for (final double value : dataset.getItem(i)) {
 						dataType.write(value, out);
 					}
 				}
+				
+				monitor.pause();
+				
+				System.out.println("Exporting dataset as Bin done in " + timer.toc() + " ms");
+				
+				out.close();
 			} catch (final IOException exception) {
 				throw unchecked(exception);
 			}
+		}
+		
+		/**
+		 * Creates a new string by concatenating the representations of the <code>objects</code>
+		 * and using the specified <code>separator</code>.
+		 * 
+		 * @param separator
+		 * <br>Not null
+		 * @param elements
+		 * <br>Not null
+		 * @return
+		 * <br>Not null
+		 * <br>New
+		 */
+		public static final String join(final String separator, final double... elements) {
+			final StringBuilder resultBuilder = new StringBuilder();
+			final int n = elements.length;
+			
+			if (0 < n) {
+				resultBuilder.append(elements[0]);
+				
+				for (int i = 1; i < n; ++i) {
+					resultBuilder.append(separator).append(elements[i]);
+				}
+			}
+			
+			return resultBuilder.toString();
 		}
 		
 	}

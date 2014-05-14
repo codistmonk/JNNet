@@ -9,17 +9,19 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static jnnet.draft.InteractiveImageClassifier.ImageDataset.item;
 import static net.sourceforge.aprog.swing.SwingTools.show;
+import static net.sourceforge.aprog.swing.SwingTools.I18N.item;
+import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Polygon;
@@ -28,6 +30,11 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,30 +45,33 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.swing.AbstractAction;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JMenu;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JSpinner;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SpinnerNumberModel;
 
 import jgencode.primitivelists.IntList;
-
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
+import jnnet.draft.CSV2Bin.DataType;
 import jnnet.draft.InteractiveImageClassifier.ImageDataset.TileTransformer;
-
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.swing.SwingTools.I18N;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
-
+import net.sourceforge.aprog.tools.Tools;
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
@@ -289,9 +299,28 @@ public final class InteractiveImageClassifier {
 		SwingTools.useSystemLookAndFeel();
 		SwingTools.setCheckAWT(false);
 		
+		final JPopupMenu exportMenu = new JPopupMenu();
+		
+		exportMenu.add(item("Bin...", context, "exportDatasetAsBin"));
+		exportMenu.add(item("ARFF...", context, "exportDatasetAsARFF"));
+		
 		toolBar.add(clearExamplesButton);
 		toolBar.add(negativeExamplesButton);
 		toolBar.add(positiveExamplesButton);
+		toolBar.addSeparator();
+		toolBar.add(new AbstractAction("Export") {
+			
+			@Override
+			public final void actionPerformed(final ActionEvent event) {
+				exportMenu.show((Component) event.getSource(), 0, 0);
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = 84824159907894088L;
+			
+		});
 		toolBar.addSeparator();
 		toolBar.add(new JPanel());
 		toolBar.add(new JLabel("acceptableErrorRate:"));
@@ -887,6 +916,22 @@ public final class InteractiveImageClassifier {
 		
 		public final void debugPrintEnd(final String operation) {
 			System.out.println(debug(DEBUG_STACK_OFFSET + 1, operation, "done in", this.getTimer().toc(), "ms"));
+		}
+		
+		public final void exportDatasetAsARFF() {
+			try {
+				Dataset.IO.writeARFF(this.getDataset(), new PrintStream(new BufferedOutputStream(new FileOutputStream("dataset.arff"))));
+			} catch (final FileNotFoundException exception) {
+				throw Tools.unchecked(exception);
+			}
+		}
+		
+		public final void exportDatasetAsBin() {
+			try {
+				Dataset.IO.writeBin(this.getDataset(), DataType.BYTE, new DataOutputStream(new BufferedOutputStream(new FileOutputStream("dataset.bin"))));
+			} catch (final FileNotFoundException exception) {
+				throw Tools.unchecked(exception);
+			}
 		}
 		
 		/**
