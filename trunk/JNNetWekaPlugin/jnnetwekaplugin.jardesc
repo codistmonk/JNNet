@@ -16,5 +16,6 @@
         <javaElement handleIdentifier="=Aprog/src"/>
         <file path="/JNNetWekaPlugin/.classpath"/>
         <javaElement handleIdentifier="=JNNet/src&lt;jnnet"/>
+        <javaElement handleIdentifier="=JGenCode/src"/>
     </selectedElements>
 </jardesc>
