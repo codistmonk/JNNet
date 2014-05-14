@@ -166,6 +166,15 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		return item.length <= n ? item : copyOf(item, n);
 	}
 	
+	@Override
+	public final String toString() {
+		return this.getInputDimension()
+				+ " -> " + this.getHyperplanes().length / (this.getInputDimension() + 1) + " (step)"
+				+ " -> " + this.getClusters().size() + " (step)"
+				+ " -> " + 1 + " (step)"
+				;
+	}
+
 	/**
 	 * {@value}.
 	 */
