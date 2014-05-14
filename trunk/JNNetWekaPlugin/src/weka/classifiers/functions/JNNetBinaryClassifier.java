@@ -11,6 +11,7 @@ import java.util.Vector;
 import jnnet.BinaryClassifier;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
+
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.WekaDataset;
 import weka.core.Capabilities;
@@ -106,6 +107,15 @@ public final class JNNetBinaryClassifier extends Classifier implements Supervise
 				copyOf(convert(this.sourceLabelIndex, instance.toDoubleArray()), instance.numAttributes() - 1)) ? 1.0 : 0.0;
 		
 		return result;
+	}
+	
+	@Override
+	public final String toString() {
+		if (this.classifier == null) {
+			return super.toString();
+		}
+		
+		return "Feedforward Neural network: " + this.classifier;
 	}
 	
 	@Override
