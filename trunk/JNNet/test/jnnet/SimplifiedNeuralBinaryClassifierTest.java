@@ -11,7 +11,6 @@ import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
-import imj2.tools.MultiThreadTools;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -24,7 +23,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
@@ -39,11 +37,11 @@ import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.BinaryClassifier.EvaluationMonitor;
 import jnnet.draft.InvertClassifier;
+
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 import net.sourceforge.aprog.tools.SystemProperties;
 import net.sourceforge.aprog.tools.TicToc;
-import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
 
