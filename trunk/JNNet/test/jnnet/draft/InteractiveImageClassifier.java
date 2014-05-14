@@ -10,12 +10,12 @@ import static java.lang.Math.min;
 import static jnnet.draft.InteractiveImageClassifier.ImageDataset.item;
 import static net.sourceforge.aprog.swing.SwingTools.show;
 import static net.sourceforge.aprog.swing.SwingTools.I18N.item;
-import static net.sourceforge.aprog.swing.SwingTools.I18N.menu;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
+
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -42,7 +42,6 @@ import java.util.BitSet;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,7 +53,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JMenu;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JSpinner;
@@ -63,6 +61,7 @@ import javax.swing.JToolBar;
 import javax.swing.SpinnerNumberModel;
 
 import jgencode.primitivelists.IntList;
+
 import jnnet.BinaryClassifier;
 import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
@@ -70,15 +69,15 @@ import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.SimplifiedNeuralBinaryClassifierTest.TaskManager;
 import jnnet.draft.CSV2Bin.DataType;
 import jnnet.draft.InteractiveImageClassifier.ImageDataset.TileTransformer;
+
 import net.sourceforge.aprog.swing.SwingTools;
-import net.sourceforge.aprog.swing.SwingTools.I18N;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
+
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
-import pixel3d.TiledRenderer.Executor;
 
 /**
  * @author codistmonk (creation 2014-05-10)
@@ -88,6 +87,8 @@ public final class InteractiveImageClassifier {
 	private InteractiveImageClassifier() {
 		throw new IllegalInstantiationException();
 	}
+	
+	public static final int GRID = 2;
 	
 	public static final BufferedImage fill(final BufferedImage image, final Color color) {
 		final Graphics2D g = image.createGraphics();
@@ -200,6 +201,11 @@ public final class InteractiveImageClassifier {
 					
 					@Override
 					public final void pixel(final double x, final double y, final double z) {
+						if ((((int) x) % GRID) != 0 || (((int) y) % GRID) != 0) {
+							return;
+						}
+						
+						
 						if (0 <= label) {
 							context.getDataset().addPixelItems((int) x, (int) y, label);
 						} else {
@@ -248,7 +254,7 @@ public final class InteractiveImageClassifier {
 					final TaskManager taskManager = new TaskManager();
 					final AtomicInteger count = new AtomicInteger();
 					
-					for (int y0 = 0; y0 < h; ++y0) {
+					for (int y0 = 0; y0 < h; y0 += GRID) {
 						final int y = y0;
 						final int pixel0 = y * w;
 						
@@ -256,7 +262,7 @@ public final class InteractiveImageClassifier {
 							
 							@Override
 							public final void run() {
-								for (int x = 0; x < w; ++x) {
+								for (int x = 0; x < w; x += GRID) {
 									monitor.ping(count.incrementAndGet() + "/" + (w * h) + "\r");
 									
 									if (classifier.accept(item(image, TileTransformer.Predefined.ID, x, y
@@ -279,9 +285,9 @@ public final class InteractiveImageClassifier {
 				}
 				
 				if (this.classification[0] != null) {
-					for (int y = 0, i = 0; y < h; ++y) {
-						for (int x = 0; x < w; ++x, ++i) {
-							overlay(buffer, x, y, this.classification[0].get(i) ? 0x6000FF00 : 0x60FF0000);
+					for (int y = 0; y < h; y += GRID) {
+						for (int x = 0, pixel = y * w; x < w; x += GRID, pixel += GRID) {
+							overlay(buffer, x, y, this.classification[0].get(pixel) ? 0x6000FF00 : 0x60FF0000);
 						}
 					}
 				}
@@ -302,8 +308,8 @@ public final class InteractiveImageClassifier {
 					
 				};
 				
-				for (int y = 0; y < h; ++y) {
-					for (int x = 0; x < w; ++x) {
+				for (int y = 0; y < h; y += GRID) {
+					for (int x = 0; x < w; x += GRID) {
 						if (context.getDataset().contains(x, y)) {
 							final int label = context.getDataset().getPixelLabel(x, y);
 							
@@ -512,6 +518,8 @@ public final class InteractiveImageClassifier {
 			final long timestamp = this.constructionTimestamp.get();
 			
 			if (this.usageTimestamp.getAndSet(timestamp) != timestamp) {
+				final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+				
 				this.pixelAndLabels.resize(this.pixels.cardinality());
 				this.pixelAndLabels.clear();
 				this.getStatistics().reset();
@@ -520,6 +528,8 @@ public final class InteractiveImageClassifier {
 				final int n = w * this.getImage().getHeight();
 				
 				for (int pixel = 0; pixel < n; ++pixel) {
+					monitor.ping((pixel + 1) + " / " + n);
+					
 					if (this.contains(pixel)) {
 						final int x = pixel % w;
 						final int y = pixel / w;
@@ -532,6 +542,8 @@ public final class InteractiveImageClassifier {
 						}
 					}
 				}
+				
+				monitor.pause();
 				
 				this.getStatistics().printTo(System.out);
 			}
