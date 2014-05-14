@@ -5,9 +5,7 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
 import java.io.FileReader;
-import java.util.Arrays;
 
-import jnnet.JNNetTools;
 import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
@@ -29,6 +27,17 @@ public final class JNNetBinaryClassifierTest {
 		final Instances data = newWekaDataset();
 		
 		plugin.buildClassifier(data);
+	}
+	
+	@Test
+	public final void testToString() throws Exception {
+		final JNNetBinaryClassifier plugin = new JNNetBinaryClassifier();
+		final Instances data = newWekaDataset();
+		
+		plugin.buildClassifier(data);
+		
+		assertEquals("Feedforward Neural network: 1 -> 1 (step) -> 1 (step) -> 1 (step)"
+				, plugin.toString());
 	}
 	
 	@Test
