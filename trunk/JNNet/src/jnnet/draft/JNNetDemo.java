@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -81,15 +82,23 @@ public final class JNNetDemo {
 			makeBox(trainingItems, random, new double[] { 0.0 }, +0.0, -  s, +  s, +0.0, k);
 		} else if (trainingSetIndex == 2) {
 			final double scale = 20.0;
-			final Scanner scanner = new Scanner(Tools.getResourceAsStream("jnnet/2spirals.txt"));
+			final Scanner scanner = new Scanner(Tools.getResourceAsStream("jnnet/data/2spirals.txt"));
 			
 			while (scanner.hasNext()) {
-				final Scanner line = new Scanner(scanner.nextLine());
-				final double x = line.nextDouble() * scale;
-				final double y = line.nextDouble() * scale;
-				final double label = line.nextDouble();
+				final String s = scanner.nextLine().trim();
+				final Scanner line = new Scanner(s);
 				
-				trainingItems.add(new TrainingItem(inputs(x, y), outputs(label == 1.0 ? 1.0 : 0.0)));
+				line.useLocale(Locale.ENGLISH);
+				
+				try {
+					final double x = line.nextDouble() * scale;
+					final double y = line.nextDouble() * scale;
+					final double label = line.nextDouble();
+					
+					trainingItems.add(new TrainingItem(inputs(x, y), outputs(label == 1.0 ? 1.0 : 0.0)));
+				} finally {
+					line.close();
+				}
 			}
 			
 			debugPrint(trainingItems.size());
@@ -126,14 +135,14 @@ public final class JNNetDemo {
 		
 		debugPrint("error:", evaluator.evaluate());
 		
-		evaluate(network, +20.0, +20.0);
-		debugPrint(network);
-		evaluate(network, -20.0, +20.0);
-		debugPrint(network);
-		evaluate(network, -20.0, -20.0);
-		debugPrint(network);
-		evaluate(network, +20.0, -20.0);
-		debugPrint(network);
+//		evaluate(network, +20.0, +20.0);
+//		debugPrint(network);
+//		evaluate(network, -20.0, +20.0);
+//		debugPrint(network);
+//		evaluate(network, -20.0, -20.0);
+//		debugPrint(network);
+//		evaluate(network, +20.0, -20.0);
+//		debugPrint(network);
 		
 		timer.tic();
 		
@@ -169,14 +178,14 @@ public final class JNNetDemo {
 				}
 			});
 			
-			if (newError == 0.0 || newError - error == 0.0) {
+			if (newError <= 0.05 || newError - error == 0.0) {
 				break;
 			}
 			
 			error = newError;
 		}
 		
-		debugPrint(network);
+//		debugPrint(network);
 	}
 	
 	public static final double[] evaluate(final Network network, final double... inputs) {
