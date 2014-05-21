@@ -35,14 +35,26 @@ public final class ReorderingDataset implements Dataset {
 		this.statistics.printTo(System.out);
 	}
 	
-	public final ReorderingDataset shuffle() {
+	public final DatasetStatistics getStatistics() {
+		return this.statistics;
+	}
+	
+	public final ReorderingDataset shuffle(final int chunkSize) {
 		final int n = this.getItemCount();
 		
-		for (int i = 0; i < n; ++i) {
-			swap(this.indices, i, RANDOM.nextInt(n));
+		for (int i = 0; i < n; i += chunkSize) {
+			final int j = RANDOM.nextInt(n / chunkSize);
+			
+			for (int k = 0; k < chunkSize; ++k) {
+				swap(this.indices, i + k, j + k);
+			}
 		}
 		
 		return this;
+	}
+	
+	public final ReorderingDataset shuffle() {
+		return this.shuffle(1);
 	}
 	
 	public final ReorderingDataset subset(final int start, final int count) {
