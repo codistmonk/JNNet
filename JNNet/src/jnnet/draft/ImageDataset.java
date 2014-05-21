@@ -114,7 +114,7 @@ public final class ImageDataset implements Dataset {
 			final int n = w * this.getImage().getHeight();
 			
 			for (int pixel = 0; pixel < n; ++pixel) {
-				monitor.ping((pixel + 1) + " / " + n);
+				monitor.ping((pixel + 1) + " / " + n + "\r");
 				
 				if (this.contains(pixel)) {
 					final int x = pixel % w;
