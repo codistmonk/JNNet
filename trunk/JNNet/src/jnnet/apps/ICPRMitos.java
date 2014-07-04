@@ -1,4 +1,4 @@
-package jnnet;
+package jnnet.apps;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.sqrt;
@@ -22,6 +22,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.TreeSet;
 
+import jnnet.BinDataset;
+import jnnet.BinaryClassifier;
+import jnnet.Dataset;
+import jnnet.ReorderingDataset;
+import jnnet.SimpleConfusionMatrix;
+import jnnet.SimplifiedNeuralBinaryClassifier;
+import jnnet.SimplifiedNeuralBinaryClassifierTest;
 import jnnet.SimplifiedNeuralBinaryClassifierTest.TaskManager;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
