@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet.apps;
 
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
 
-import jnnet.draft.MNISTImporter.IDX.DataType;
+import jnnet.apps.MNISTImporter.IDX.DataType;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;

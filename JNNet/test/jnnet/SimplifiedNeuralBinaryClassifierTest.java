@@ -190,8 +190,12 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		final int crossValidationFolds = 6;
 		
 		debugPrint("Loading full dataset started", new Date(timer.tic()));
-		final ReorderingDataset all = new ReorderingDataset(new BinDataset("F:/icpr2014_mitos_atypia/A.bin")).shuffle();
+		final BinDataset dataset = new BinDataset("E:/icpr2014_mitos_atypia/A.bin");
 		debugPrint("Loading full dataset done in", timer.toc(), "ms");
+		
+		debugPrint("Shuffling dataset started", new Date(timer.tic()));
+		final ReorderingDataset all = new ReorderingDataset(dataset).shuffle();
+		debugPrint("Shuffling dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
 		final Dataset testData = all.subset(all.getItemCount() - testItems, testItems);
@@ -224,9 +228,9 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		final int[] bestClassifierParameter = { 0 };
 		final double[] bestSensitivity = { 0.0 };
-		final TaskManager taskManager = new TaskManager();
+		final TaskManager taskManager = new TaskManager(0.25);
 		
-		for (int classifierParameter0 = 40; 0 <= classifierParameter0; classifierParameter0 -= 2) {
+		for (int classifierParameter0 = 10; 0 <= classifierParameter0; classifierParameter0 -= 1) {
 			final int classifierParameter = classifierParameter0;
 			
 			taskManager.submit(new Runnable() {
@@ -457,7 +461,17 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 	 */
 	public static final class TaskManager implements Serializable {
 		
+		private final double maximumCPULoad;
+		
 		private ExecutorService executor;
+		
+		public TaskManager() {
+			this(0.5);
+		}
+		
+		public TaskManager(final double maximumCPULoad) {
+			this.maximumCPULoad = maximumCPULoad;
+		}
 		
 		public final TaskManager submit(final Runnable task) {
 			this.getExecutor().submit(task);
@@ -479,7 +493,8 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		
 		private final ExecutorService getExecutor() {
 			if (this.executor == null) {
-				this.executor = Executors.newFixedThreadPool(max(1, SystemProperties.getAvailableProcessorCount() / 2));
+				this.executor = Executors.newFixedThreadPool(max(1
+						, (int) (SystemProperties.getAvailableProcessorCount() * this.maximumCPULoad)));
 			}
 			
 			return this.executor;

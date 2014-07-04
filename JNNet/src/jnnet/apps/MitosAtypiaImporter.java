@@ -1,4 +1,4 @@
-package jnnet.draft;
+package jnnet.apps;
 
 import static java.lang.Double.parseDouble;
 import static net.sourceforge.aprog.tools.MathTools.square;
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
 
 import jnnet.ConsoleMonitor;
-
+import jnnet.draft.MosaicBuilder;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
