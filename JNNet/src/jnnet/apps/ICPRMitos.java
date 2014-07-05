@@ -7,6 +7,7 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -30,6 +31,7 @@ import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.SimplifiedNeuralBinaryClassifierTest;
 import jnnet.SimplifiedNeuralBinaryClassifierTest.TaskManager;
+import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -67,30 +69,77 @@ public final class ICPRMitos {
 		
 		if (!testRoot.isEmpty()) {
 			final BinaryClassifier classifier = readObject(classifierFileName);
-			final Collection<String> images = new TreeSet<>();
+			final int channelCount = 3;
+			final int windowSize = (int) sqrt(classifier.getInputDimension() / channelCount);
 			
-			try {
-				Files.walkFileTree(FileSystems.getDefault().getPath(testRoot), new SimpleFileVisitor<Path>() {
-					
-					@Override
-					public final FileVisitResult visitFile(final Path file,
-							final BasicFileAttributes attrs) throws IOException {
-						final String filePath = file.toString();
-						
-						if (filePath.endsWith(".png") && file.getParent().endsWith("frames/x40")) {
-							images.add(filePath.substring(0, filePath.length() - "Aa.png".length()));
-						}
-						
-						return super.visitFile(file, attrs);
-					}
-					
-				});
-			} catch (final IOException exception) {
-				exception.printStackTrace();
+			if (windowSize * windowSize * channelCount != classifier.getInputDimension()) {
+				throw new IllegalArgumentException("notSquare: " + classifier.getInputDimension() / channelCount);
 			}
 			
-			debugPrint(images);
+			final int windowHalfSize = windowSize / 2;
+			final BufferedImage window = new BufferedImage(windowSize, windowSize, BufferedImage.TYPE_3BYTE_BGR);
+			final Collection<String> imageBases = collectImageBases(testRoot);
+			final int strideX = 2;
+			final int strideY = strideX;
+			
+			debugPrint(imageBases);
+			
+			for (final String imageBase : imageBases) {
+				final VirtualImage40 image = new VirtualImage40(imageBase);
+				
+				debugPrint(imageBase, image.getWidth(), image.getHeight());
+				
+				for (final String quad0 : array("A", "B")) {
+					for (final String quad1 : array("a", "b")) {
+						final String tileId = quad0 + quad1;
+						final BufferedImage tile = image.getTile(tileId);
+						final int tileWidth = tile.getWidth();
+						final int tileHeight = tile.getHeight();
+						
+						for (int y = 0; y < tileHeight; y += strideY) {
+							for (int x = 0; x < tileWidth; x += strideX) {
+								debugPrint(tileId, x, y);
+								getPixels(image, tileId, x - windowHalfSize, y - windowHalfSize, window);
+							}
+						}
+					}
+				}
+			}
 		}
+	}
+	
+	public static final void getPixels(final VirtualImage40 source, final String tileId, final int x, final int y, final BufferedImage target) {
+		for (int yy = 0; yy < target.getHeight(); ++yy) {
+			for (int xx = 0; xx < target.getWidth(); ++xx) {
+				target.setRGB(xx, yy, source.getRGB(tileId, x + xx, y + yy));
+			}
+		}
+	}
+	
+	public static final Collection<String> collectImageBases(final String rootDirectory) {
+		final Collection<String> result = new TreeSet<>();
+		
+		try {
+			Files.walkFileTree(FileSystems.getDefault().getPath(rootDirectory), new SimpleFileVisitor<Path>() {
+				
+				@Override
+				public final FileVisitResult visitFile(final Path file,
+						final BasicFileAttributes attrs) throws IOException {
+					final String filePath = file.toString();
+					
+					if (filePath.endsWith(".png") && file.getParent().endsWith("frames/x40")) {
+						result.add(filePath.substring(0, filePath.length() - "Aa.png".length()));
+					}
+					
+					return super.visitFile(file, attrs);
+				}
+				
+			});
+		} catch (final IOException exception) {
+			exception.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 	public static final void train(final String trainingFileName, final int shuffleChunkSize, final int crossValidationFolds

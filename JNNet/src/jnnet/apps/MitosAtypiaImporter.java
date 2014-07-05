@@ -404,7 +404,7 @@ public final class MitosAtypiaImporter {
 			} catch (final IllegalArgumentException exception) {
 				ignore(exception);
 				
-				System.err.println(debug(DEBUG_STACK_OFFSET, tileId, x, y));
+//				System.err.println(debug(DEBUG_STACK_OFFSET, tileId, x, y));
 				
 				return 0;
 			}
