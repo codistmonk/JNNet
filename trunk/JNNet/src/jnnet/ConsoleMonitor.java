@@ -8,6 +8,7 @@ import net.sourceforge.aprog.tools.TicToc;
 /**
  * @author codistmonk (creation 2014-04-07)
  */
+@Deprecated
 public final class ConsoleMonitor implements Serializable {
 	
 	private final TicToc timer;
