@@ -1,11 +1,15 @@
 package jnnet.apps;
 
+import static imj2.tools.IMJTools.blue8;
+import static imj2.tools.IMJTools.green8;
+import static imj2.tools.IMJTools.red8;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
+import imj2.tools.IMJTools;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -32,6 +36,7 @@ import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.SimplifiedNeuralBinaryClassifierTest;
 import jnnet.SimplifiedNeuralBinaryClassifierTest.TaskManager;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
+import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -77,7 +82,8 @@ public final class ICPRMitos {
 			}
 			
 			final int windowHalfSize = windowSize / 2;
-			final BufferedImage window = new BufferedImage(windowSize, windowSize, BufferedImage.TYPE_3BYTE_BGR);
+//			final BufferedImage window = new BufferedImage(windowSize, windowSize, BufferedImage.TYPE_3BYTE_BGR);
+			final double[] window = new double[windowSize * windowSize * channelCount];
 			final Collection<String> imageBases = collectImageBases(testRoot);
 			final int strideX = 2;
 			final int strideY = strideX;
@@ -99,7 +105,11 @@ public final class ICPRMitos {
 						for (int y = 0; y < tileHeight; y += strideY) {
 							for (int x = 0; x < tileWidth; x += strideX) {
 								debugPrint(tileId, x, y);
-								getPixels(image, tileId, x - windowHalfSize, y - windowHalfSize, window);
+								getPixels(image, tileId, x - windowHalfSize, y - windowHalfSize, window, windowSize);
+								
+								if (classifier.accept(window)) {
+									debugPrint("MITOSIS DETECTED!");
+								}
 							}
 						}
 					}
@@ -108,10 +118,26 @@ public final class ICPRMitos {
 		}
 	}
 	
-	public static final void getPixels(final VirtualImage40 source, final String tileId, final int x, final int y, final BufferedImage target) {
+	public static final void getPixels(final VirtualImage40 source, final String tileId, final int x, final int y
+			, final BufferedImage target) {
 		for (int yy = 0; yy < target.getHeight(); ++yy) {
 			for (int xx = 0; xx < target.getWidth(); ++xx) {
 				target.setRGB(xx, yy, source.getRGB(tileId, x + xx, y + yy));
+			}
+		}
+	}
+	
+	public static final void getPixels(final VirtualImage40 source, final String tileId, final int x, final int y
+			, final double[] target, final int windowSize) {
+		final int channelCount = 3;
+		
+		for (int yy = 0; yy < windowSize; ++yy) {
+			for (int xx = 0; xx < windowSize; ++xx) {
+				final int rgb = source.getRGB(tileId, x + xx, y + yy);
+				final int pixelOffsetInTarget = (yy * windowSize + xx) * channelCount;
+				target[pixelOffsetInTarget + 0] = red8(rgb);
+				target[pixelOffsetInTarget + 1] = green8(rgb);
+				target[pixelOffsetInTarget + 2] = blue8(rgb);
 			}
 		}
 	}
