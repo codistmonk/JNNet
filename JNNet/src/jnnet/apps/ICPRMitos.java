@@ -8,10 +8,14 @@ import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.readObject;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
 import imj2.tools.IMJTools;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -27,6 +31,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.TreeSet;
 
+import javax.imageio.ImageIO;
+
 import jnnet.BinDataset;
 import jnnet.BinaryClassifier;
 import jnnet.Dataset;
@@ -38,6 +44,7 @@ import jnnet.SimplifiedNeuralBinaryClassifierTest.TaskManager;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
+import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
@@ -56,7 +63,7 @@ public final class ICPRMitos {
 	 * @param commandLineArguments
 	 * <br>Must not be null
 	 */
-	public static final void main(final String[] commandLineArguments) {
+	public static final void main(final String[] commandLineArguments) throws Exception {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String trainingFileName = arguments.get("training", "");
 		final int trainingFolds = arguments.get("trainingFolds", 6)[0];
@@ -66,6 +73,7 @@ public final class ICPRMitos {
 		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.25"));
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
 		final String testRoot = arguments.get("test", "");
+		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
 		
 		if (!trainingFileName.isEmpty() && false) {
 			train(trainingFileName, trainingShuffleChunkSize, trainingFolds, trainingTestItems
@@ -74,46 +82,98 @@ public final class ICPRMitos {
 		
 		if (!testRoot.isEmpty()) {
 			final BinaryClassifier classifier = readObject(classifierFileName);
-			final int channelCount = 3;
-			final int windowSize = (int) sqrt(classifier.getInputDimension() / channelCount);
-			
-			if (windowSize * windowSize * channelCount != classifier.getInputDimension()) {
-				throw new IllegalArgumentException("notSquare: " + classifier.getInputDimension() / channelCount);
-			}
-			
-			final int windowHalfSize = windowSize / 2;
-//			final BufferedImage window = new BufferedImage(windowSize, windowSize, BufferedImage.TYPE_3BYTE_BGR);
-			final double[] window = new double[windowSize * windowSize * channelCount];
 			final Collection<String> imageBases = collectImageBases(testRoot);
-			final int strideX = 2;
+			final int strideX = 4;
 			final int strideY = strideX;
 			
 			debugPrint(imageBases);
 			
+			final TaskManager taskManager = new TaskManager(0.25);
+			
 			for (final String imageBase : imageBases) {
-				final VirtualImage40 image = new VirtualImage40(imageBase);
+				taskManager.submit(new Runnable() {
+					
+					@Override
+					public final void run() {
+						try {
+							process(imageBase, strideX, strideY, classifier, restartTest);
+						} catch (final IOException exception) {
+							throw unchecked(exception);
+						}
+					}
+					
+				});
+			}
+			
+			taskManager.join();
+		}
+	}
+	
+	public static final int getWindowSize(final BinaryClassifier classifier, final int channelCount) {
+		final int result = (int) sqrt(classifier.getInputDimension() / channelCount);
+		
+		if (result * result * channelCount != classifier.getInputDimension()) {
+			throw new IllegalArgumentException("notSquare: " + classifier.getInputDimension() / channelCount);
+		}
+		
+		return result;
+	}
+	
+	public static final void process(final String imageBase, final int strideX, final int strideY
+			, final BinaryClassifier classifier, final boolean restart) throws IOException {
+		final TicToc timer = new TicToc();
+		final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+		final int channelCount = 3;
+		final int windowSize = getWindowSize(classifier, channelCount);
+		final int windowHalfSize = windowSize / 2;
+		final double[] window = new double[windowSize * windowSize * channelCount];
+		final VirtualImage40 image = new VirtualImage40(imageBase);
+		final String virtualImageName = new File(imageBase).getName();
+		
+		debugPrint(imageBase, image.getWidth(), image.getHeight());
+		
+		for (final String quad0 : array("A", "B", "C", "D")) {
+			for (final String quad1 : array("a", "b", "c", "d")) {
+				final String tileId = quad0 + quad1;
+				final String tileFileId = virtualImageName + tileId;
+				final String resultPath = new File(imageBase).getParent() + "/mitosis/" + tileFileId + "_mitosis.png";
+				final File resultFile = new File(resultPath);
 				
-				debugPrint(imageBase, image.getWidth(), image.getHeight());
+				if (!restart && resultFile.isFile()) {
+					continue;
+				}
 				
-				for (final String quad0 : array("A", "B")) {
-					for (final String quad1 : array("a", "b")) {
-						final String tileId = quad0 + quad1;
-						final BufferedImage tile = image.getTile(tileId);
-						final int tileWidth = tile.getWidth();
-						final int tileHeight = tile.getHeight();
+				debugPrint("Processing tile", tileFileId, "started...", new Date(timer.tic()));
+				
+				final BufferedImage tile = image.getTile(tileId);
+				final int tileWidth = tile.getWidth();
+				final int tileHeight = tile.getHeight();
+				final BufferedImage tileCopy = new BufferedImage(tileWidth, tileHeight, tile.getType());
+				final Graphics2D g = tileCopy.createGraphics();
+				
+				tile.copyData(tileCopy.getRaster());
+				g.setColor(Color.YELLOW);
+				
+				for (int y = 0; y < tileHeight; y += strideY) {
+					for (int x = 0; x < tileWidth; x += strideX) {
+						monitor.ping(tileFileId + " " + x + " " + y + "\r");
 						
-						for (int y = 0; y < tileHeight; y += strideY) {
-							for (int x = 0; x < tileWidth; x += strideX) {
-								debugPrint(tileId, x, y);
-								getPixels(image, tileId, x - windowHalfSize, y - windowHalfSize, window, windowSize);
-								
-								if (classifier.accept(window)) {
-									debugPrint("MITOSIS DETECTED!");
-								}
-							}
+						getPixels(image, tileId, x - windowHalfSize, y - windowHalfSize, window, windowSize);
+						
+						if (classifier.accept(window)) {
+//							debugPrint("Mitosis detected in", tileFileId, "at", x, y);
+							g.fillRect(x - strideX / 2, y - strideY / 2, strideX, strideY);
 						}
 					}
 				}
+				
+				monitor.pause();
+				
+				debugPrint("Processing tile", tileFileId, "done in", timer.toc(), "ms");
+				
+				resultFile.getParentFile().mkdirs();
+				
+				ImageIO.write(tileCopy, "png", resultFile);
 			}
 		}
 	}
