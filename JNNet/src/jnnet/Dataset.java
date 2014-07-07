@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jnnet.draft.CSV2Bin.DataType;
 
+import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;

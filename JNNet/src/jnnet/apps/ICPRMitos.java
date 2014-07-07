@@ -10,17 +10,14 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
-import imj2.tools.IMJTools;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
@@ -39,16 +36,14 @@ import jnnet.Dataset;
 import jnnet.ReorderingDataset;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
-import jnnet.SimplifiedNeuralBinaryClassifierTest;
 import jnnet.SimplifiedNeuralBinaryClassifierTest.TaskManager;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
-import net.sourceforge.aprog.swing.SwingTools;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-07-04)
@@ -88,7 +83,7 @@ public final class ICPRMitos {
 			
 			debugPrint(imageBases);
 			
-			final TaskManager taskManager = new TaskManager(0.25);
+			final TaskManager taskManager = new TaskManager(0.75);
 			
 			for (final String imageBase : imageBases) {
 				taskManager.submit(new Runnable() {

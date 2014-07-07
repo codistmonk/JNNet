@@ -33,8 +33,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
-import jnnet.ConsoleMonitor;
 import jnnet.draft.MosaicBuilder;
+
+import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 

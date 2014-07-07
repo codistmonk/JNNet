@@ -15,7 +15,6 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
 import static pixel3d.PolygonTools.X;
 import static pixel3d.PolygonTools.Y;
-
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -41,6 +40,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.swing.AbstractAction;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
@@ -56,7 +56,6 @@ import javax.swing.JToolBar;
 import javax.swing.SpinnerNumberModel;
 
 import jnnet.BinaryClassifier;
-import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.SimplifiedNeuralBinaryClassifierTest.TaskManager;
@@ -64,10 +63,10 @@ import jnnet.draft.CSV2Bin.DataType;
 import jnnet.draft.ImageDataset.TileTransformer;
 
 import net.sourceforge.aprog.swing.SwingTools;
+import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
-
 import pixel3d.MouseHandler;
 import pixel3d.PolygonTools;
 import pixel3d.PolygonTools.Processor;
