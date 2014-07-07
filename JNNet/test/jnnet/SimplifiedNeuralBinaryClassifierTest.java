@@ -1,6 +1,5 @@
 package jnnet;
 
-import static java.lang.Math.max;
 import static java.lang.Math.sqrt;
 import static jnnet.JNNetTools.rgb;
 import static jnnet.draft.ProjectiveClassifier.preview;
@@ -9,22 +8,16 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.getCallerClass;
 import static net.sourceforge.aprog.tools.Tools.ignore;
-import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 import javax.imageio.ImageIO;
 
 import jnnet.BinDataset;
@@ -40,7 +33,7 @@ import jnnet.draft.InvertClassifier;
 
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.SystemProperties;
+import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
@@ -453,57 +446,6 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -3549752842564996266L;
-		
-	}
-	
-	/**
-	 * @author codistmonk (creation 2014-05-08)
-	 */
-	public static final class TaskManager implements Serializable {
-		
-		private final double maximumCPULoad;
-		
-		private ExecutorService executor;
-		
-		public TaskManager() {
-			this(0.5);
-		}
-		
-		public TaskManager(final double maximumCPULoad) {
-			this.maximumCPULoad = maximumCPULoad;
-		}
-		
-		public final TaskManager submit(final Runnable task) {
-			this.getExecutor().submit(task);
-			
-			return this;
-		}
-		
-		public final void join() {
-			this.executor.shutdown();
-			
-			try {
-				this.executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-			} catch (final InterruptedException exception) {
-				throw unchecked(exception);
-			}
-			
-			this.executor = null;
-		}
-		
-		private final ExecutorService getExecutor() {
-			if (this.executor == null) {
-				this.executor = Executors.newFixedThreadPool(max(1
-						, (int) (SystemProperties.getAvailableProcessorCount() * this.maximumCPULoad)));
-			}
-			
-			return this.executor;
-		}
-		
-		/**
-		 * {@value}.
-		 */
-		private static final long serialVersionUID = 3623189981603208763L;
 		
 	}
 	
