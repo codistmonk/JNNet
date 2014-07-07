@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.imageio.ImageIO;
 
+import net.sourceforge.aprog.tools.ConsoleMonitor;
 import jgencode.primitivelists.IntList;
-import jnnet.ConsoleMonitor;
 import jnnet.Dataset;
 
 /**

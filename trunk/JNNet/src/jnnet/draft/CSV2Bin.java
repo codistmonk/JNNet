@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Scanner;
 
-import jnnet.ConsoleMonitor;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
+import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 
