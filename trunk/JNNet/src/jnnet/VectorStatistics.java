@@ -1,6 +1,5 @@
 package jnnet;
 
-import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.instances;
 
