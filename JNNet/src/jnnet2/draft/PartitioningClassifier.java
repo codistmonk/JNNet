@@ -1,15 +1,25 @@
 package jnnet2.draft;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import jgencode.primitivelists.LongList;
+import net.sourceforge.aprog.tools.Tools;
+import nsphere.LDATest;
 
+import org.ojalgo.matrix.BasicMatrix;
+import org.ojalgo.matrix.MatrixBuilder;
+import org.ojalgo.matrix.PrimitiveMatrix;
+import org.ojalgo.matrix.decomposition.Eigenvalue;
+import org.ojalgo.matrix.store.MatrixStore;
+
+import jgencode.primitivelists.LongList;
 import jnnet.draft.LinearConstraintSystem;
 import jnnet2.core.Classifier;
 import jnnet2.core.Dataset;
@@ -32,11 +42,12 @@ public final class PartitioningClassifier implements Classifier {
 		this.clusters = new TreeMap<>();
 		this.inputSize = trainingDataset.getItemSize() - 1;
 		this.defaultLabel = Double.NaN;
-		// TODO Auto-generated constructor stub
 		
 		final List<Subset> todo = new ArrayList<>();
 		
-		todo.add(new Subset(trainingDataset).finish());
+		todo.add(new Subset(trainingDataset));
+		
+		// TODO
 	}
 	
 	@Override
@@ -97,6 +108,10 @@ public final class PartitioningClassifier implements Classifier {
 		
 		private final double[] counts;
 		
+		private BasicMatrix centersCovarianceBasicMatrix;
+		
+		private BasicMatrix covarianceBasicMatrix;
+		
 		public Subset(final Dataset dataset) {
 			final int n = dataset.getItemSize() - 1;
 			final int classCount = dataset.getLabelStatistics().getLabelCount();
@@ -124,23 +139,53 @@ public final class PartitioningClassifier implements Classifier {
 			copyUpperHalfToLowerHalf(this.covarianceMatrix, n);
 		}
 		
-		public final Subset finish() {
-			final int n = this.centers.length;
-			
-			for (int i = 0; i < n; ++i) {
-				final double[] center = this.centers[i];
-				final double count = this.counts[i];
+		public final double[] getHyperplane() {
+			{
+				final int n = this.centers.length;
 				
-				for (int j = 0; j < this.dimension; ++j) {
-					center[j] /= count;
+				for (int i = 0; i < n; ++i) {
+					final double[] center = this.centers[i];
+					final double count = this.counts[i];
+					
+					for (int j = 0; j < this.dimension; ++j) {
+						center[j] /= count;
+					}
+					
+					updateCovarianceMatrixUpperHalf(this.centersCovarianceMatrix, center, this.dimension);
 				}
 				
-				updateCovarianceMatrixUpperHalf(this.centersCovarianceMatrix, center, this.dimension);
+				copyUpperHalfToLowerHalf(this.centersCovarianceMatrix, this.dimension);
 			}
 			
-			copyUpperHalfToLowerHalf(this.centersCovarianceMatrix, this.dimension);
+			this.centersCovarianceBasicMatrix = LDATest.matrix(this.dimension, this.centersCovarianceMatrix);
+			this.covarianceBasicMatrix = LDATest.matrix(this.dimension, this.covarianceMatrix);
 			
-			return this;
+			try {
+				final Method getComputedEigenvalue = this.centersCovarianceBasicMatrix.getClass().getSuperclass().getDeclaredMethod("getComputedEigenvalue");
+				getComputedEigenvalue.setAccessible(true);
+				final Eigenvalue<Double> eigenvalue = (Eigenvalue<Double>) getComputedEigenvalue.invoke(this.centersCovarianceBasicMatrix);
+				final MatrixStore<Double> eigenvectors = eigenvalue.getV();
+				final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(this.dimension);
+				
+				for (int i = 0; i < this.dimension; ++i) {
+					builder.set(i, eigenvectors.get(i, 0));
+				}
+				
+				final BasicMatrix hyperplaneDirection = this.covarianceBasicMatrix.solve(builder.build());
+				final double[] result = new double[this.dimension + 1];
+				
+				for (int i = 0; i < this.dimension; ++i) {
+					result[1 + i] = hyperplaneDirection.doubleValue(i);
+				}
+				
+				// TODO compute offset
+				
+				Tools.debugPrint(Arrays.toString(result));
+				
+				return result;
+			} catch (final Exception exception) {
+				throw Tools.unchecked(exception);
+			}
 		}
 		
 		/**
