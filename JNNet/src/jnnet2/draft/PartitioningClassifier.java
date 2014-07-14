@@ -6,12 +6,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
 
 import net.sourceforge.aprog.tools.Tools;
+
 import nsphere.LDATest;
 
 import org.ojalgo.matrix.BasicMatrix;
@@ -22,10 +23,11 @@ import org.ojalgo.matrix.store.MatrixStore;
 
 import jgencode.primitivelists.LongList;
 import jgencode.primitivelists.LongList.Processor;
+
 import jnnet.draft.LinearConstraintSystem;
+
 import jnnet2.core.Classifier;
 import jnnet2.core.Dataset;
-import jnnet2.core.LabelStatistics;
 
 /**
  * @author codistmonk (creation 2014-07-08)
@@ -53,8 +55,55 @@ public final class PartitioningClassifier implements Classifier {
 		while (!todo.isEmpty()) {
 			final Subset subset = todo.remove(0);
 			final double[] hyperplane = subset.getHyperplane();
-			// TODO
+			
+			this.hyperplanes.add(hyperplane);
+			
+			final LongList below = new LongList();
+			final BitSet belowClasses = new BitSet();
+			final LongList above = new LongList();
+			final BitSet aboveClasses = new BitSet();
+			final double[] item = new double[trainingDataset.getItemSize()];
+			
+			subset.getItemIds().forEach(new Processor() {
+				
+				@Override
+				public final boolean process(final long itemId) {
+					if (evaluate(hyperplane, trainingDataset.getItem(itemId, item)) < 0.0) {
+						below.add(itemId);
+						belowClasses.set(trainingDataset.getLabelStatistics().getLabelId(item[inputSize]));
+					} else {
+						above.add(itemId);
+						aboveClasses.set(trainingDataset.getLabelStatistics().getLabelId(item[inputSize]));
+					}
+					
+					return true;
+				}
+				
+			});
+			
+			if (2 <= belowClasses.cardinality()) {
+				todo.add(new Subset(trainingDataset, below));
+			}
+			
+			if (2 <= aboveClasses.cardinality()) {
+				todo.add(new Subset(trainingDataset, above));
+			}
 		}
+		
+		// TODO clusters
+		
+		Tools.debugPrint(this.hyperplanes.size());
+	}
+	
+	public static final double evaluate(final double[] hyperplane, final double[] item) {
+		double result = hyperplane[0];
+		final int n = hyperplane.length;
+		
+		for (int i = 1; i < n; ++i) {
+			result += hyperplane[i] * item[i - 1];
+		}
+		
+		return result;
 	}
 	
 	@Override
@@ -133,6 +182,10 @@ public final class PartitioningClassifier implements Classifier {
 			this.updateCovarianceMatrices();
 		}
 		
+		public final LongList getItemIds() {
+			return this.itemIds;
+		}
+		
 		public final double[] getHyperplane() {
 			this.centersCovarianceBasicMatrix = LDATest.matrix(this.dimension, this.centersCovarianceMatrix);
 			this.covarianceBasicMatrix = LDATest.matrix(this.dimension, this.covarianceMatrix);
@@ -143,6 +196,7 @@ public final class PartitioningClassifier implements Classifier {
 			try {
 				final Method getComputedEigenvalue = this.centersCovarianceBasicMatrix.getClass().getSuperclass().getDeclaredMethod("getComputedEigenvalue");
 				getComputedEigenvalue.setAccessible(true);
+				@SuppressWarnings("unchecked")
 				final Eigenvalue<Double> eigenvalue = (Eigenvalue<Double>) getComputedEigenvalue.invoke(this.centersCovarianceBasicMatrix);
 				final MatrixStore<Double> eigenvectors = eigenvalue.getV();
 				final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(this.dimension);
@@ -158,7 +212,20 @@ public final class PartitioningClassifier implements Classifier {
 					result[1 + i] = hyperplaneDirection.doubleValue(i);
 				}
 				
-				// TODO compute offset
+				{
+					final double[] center = new double[this.dimension];
+					final int classCount = this.centers.length;
+					
+					for (final double[] classCenter : this.centers) {
+						LinearConstraintSystem.Abstract.add(1.0, classCenter, 0, 1.0, center, 0, center, 0, this.dimension);
+					}
+					
+					for (int i = 0; i < this.dimension; ++i) {
+						center[i] /= classCount;
+					}
+					
+					result[0] = -LinearConstraintSystem.Abstract.dot(center, 0, result, 1, this.dimension);
+				}
 				
 				Tools.debugPrint(Arrays.toString(result));
 				
@@ -222,12 +289,23 @@ public final class PartitioningClassifier implements Classifier {
 				
 				copyUpperHalfToLowerHalf(this.covarianceMatrix, n);
 			}
+			
+			{
+				final int n2 = this.centersCovarianceMatrix.length;
+				
+				for (int i = 0; i < n2; ++i) {
+					this.centersCovarianceMatrix[i] += RANDOM.nextDouble() * 1.0E-9;
+					this.covarianceMatrix[i] += RANDOM.nextDouble() * 1.0E-9;
+				}
+			}
 		}
 		
 		/**
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -6201954999928411597L;
+		
+		public static final Random RANDOM = new Random(0L);
 		
 		public static final void updateCovarianceMatrixUpperHalf(final double[] covarianceMatrix
 				, final double[] item, final int dimension) {
