@@ -1,7 +1,10 @@
 package jnnet2.draft;
 
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
+import static net.sourceforge.aprog.tools.Tools.debugError;
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -29,6 +32,7 @@ import jgencode.primitivelists.LongList;
 import jgencode.primitivelists.LongList.Processor;
 
 import jnnet.draft.LinearConstraintSystem;
+
 import jnnet2.core.Classifier;
 import jnnet2.core.Dataset;
 
@@ -143,12 +147,16 @@ public final class PartitioningClassifier implements Classifier {
 				
 			});
 			
+			debugPrint(subset.getItemIds());
+			
 			if (2 <= belowClasses.cardinality()) {
 				todo.add(new Subset(trainingDataset, below));
+				debugPrint(below);
 			}
 			
 			if (2 <= aboveClasses.cardinality()) {
 				todo.add(new Subset(trainingDataset, above));
+				debugPrint(above);
 			}
 		}
 	}
@@ -202,32 +210,34 @@ public final class PartitioningClassifier implements Classifier {
 			
 			this.readDataset(dataset);
 			this.updateCovarianceMatrices();
+			
+			if (!isFinite(this.centersCovarianceMatrix)) {
+				debugError(Arrays.toString(this.centersCovarianceMatrix));
+				throw new IllegalStateException();
+			}
 		}
 		
 		public final LongList getItemIds() {
 			return this.itemIds;
 		}
 		
+		public static final boolean isFinite(final double... array) {
+			for (final double value : array) {
+				if (!Double.isFinite(value)) {
+					return false;
+				}
+			}
+			
+			return true;
+		}
+		
 		public final double[] getHyperplane() {
 			this.centersCovarianceBasicMatrix = LDATest.matrix(this.dimension, this.centersCovarianceMatrix);
 			this.covarianceBasicMatrix = LDATest.matrix(this.dimension, this.covarianceMatrix);
 			
-			Tools.debugPrint(this.centersCovarianceBasicMatrix);
-			Tools.debugPrint(this.covarianceBasicMatrix);
-			
 			try {
-				final Method getComputedEigenvalue = this.centersCovarianceBasicMatrix.getClass().getSuperclass().getDeclaredMethod("getComputedEigenvalue");
-				getComputedEigenvalue.setAccessible(true);
-				@SuppressWarnings("unchecked")
-				final Eigenvalue<Double> eigenvalue = (Eigenvalue<Double>) getComputedEigenvalue.invoke(this.centersCovarianceBasicMatrix);
-				final MatrixStore<Double> eigenvectors = eigenvalue.getV();
-				final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(this.dimension);
-				
-				for (int i = 0; i < this.dimension; ++i) {
-					builder.set(i, eigenvectors.get(i, 0));
-				}
-				
-				final BasicMatrix hyperplaneDirection = this.covarianceBasicMatrix.solve(builder.build());
+				final BasicMatrix principalComponent = computePrincipalComponent(this.centersCovarianceBasicMatrix);
+				final BasicMatrix hyperplaneDirection = this.covarianceBasicMatrix.solve(principalComponent);
 				final double[] result = new double[this.dimension + 1];
 				
 				for (int i = 0; i < this.dimension; ++i) {
@@ -235,26 +245,35 @@ public final class PartitioningClassifier implements Classifier {
 				}
 				
 				{
-					final double[] center = new double[this.dimension];
-					final int classCount = this.centers.length;
-					
-					for (final double[] classCenter : this.centers) {
-						LinearConstraintSystem.Abstract.add(1.0, classCenter, 0, 1.0, center, 0, center, 0, this.dimension);
-					}
-					
-					for (int i = 0; i < this.dimension; ++i) {
-						center[i] /= classCount;
-					}
+					final double[] center = this.computeCenter();
 					
 					result[0] = -LinearConstraintSystem.Abstract.dot(center, 0, result, 1, this.dimension);
 				}
-				
-				Tools.debugPrint(Arrays.toString(result));
 				
 				return result;
 			} catch (final Exception exception) {
 				throw Tools.unchecked(exception);
 			}
+		}
+		
+		private final double[] computeCenter() {
+			final double[] center = new double[this.dimension];
+			int classCount = 0;
+			
+			for (final double count : this.counts) {
+				if (0.0 < count) {
+					++classCount;
+				}
+			}
+			
+			for (final double[] classCenter : this.centers) {
+				LinearConstraintSystem.Abstract.add(1.0, classCenter, 0, 1.0, center, 0, center, 0, this.dimension);
+			}
+			
+			for (int i = 0; i < this.dimension; ++i) {
+				center[i] /= classCount;
+			}
+			return center;
 		}
 		
 		private final void readDataset(final Dataset dataset) {
@@ -299,11 +318,13 @@ public final class PartitioningClassifier implements Classifier {
 					final double[] center = this.centers[i];
 					final double count = this.counts[i];
 					
-					for (int j = 0; j < n; ++j) {
-						center[j] /= count;
+					if (0.0 < count) {
+						for (int j = 0; j < n; ++j) {
+							center[j] /= count;
+						}
+						
+						updateCovarianceMatrixUpperHalf(this.centersCovarianceMatrix, center, n);
 					}
-					
-					updateCovarianceMatrixUpperHalf(this.centersCovarianceMatrix, center, n);
 				}
 				
 				copyUpperHalfToLowerHalf(this.centersCovarianceMatrix, n);
@@ -320,12 +341,12 @@ public final class PartitioningClassifier implements Classifier {
 				copyUpperHalfToLowerHalf(this.covarianceMatrix, n);
 			}
 			
-			{
+			if (true) {
 				final int n2 = this.centersCovarianceMatrix.length;
 				
-				for (int i = 0; i < n2; ++i) {
-					this.centersCovarianceMatrix[i] += RANDOM.nextDouble() * 1.0E-9;
-					this.covarianceMatrix[i] += RANDOM.nextDouble() * 1.0E-9;
+				for (int i = 0; i < n; ++i) {
+					this.centersCovarianceMatrix[i * n + i] += 1.0E-9;
+					this.covarianceMatrix[i * n + i] += 1.0E-9;
 				}
 			}
 		}
@@ -363,6 +384,34 @@ public final class PartitioningClassifier implements Classifier {
 			}
 			
 			return result;
+		}
+		
+		public static final BasicMatrix computePrincipalComponent(final BasicMatrix covarianceMatrix) {
+			try {
+				final int n = covarianceMatrix.getRowDim();
+				final Method getComputedEigenvalue = covarianceMatrix.getClass().getSuperclass().getDeclaredMethod("getComputedEigenvalue");
+				getComputedEigenvalue.setAccessible(true);
+				@SuppressWarnings("unchecked")
+				final Eigenvalue<Double> eigenvalue = (Eigenvalue<Double>) getComputedEigenvalue.invoke(covarianceMatrix);
+				final MatrixStore<Double> eigenvalues = eigenvalue.getD();
+				final MatrixStore<Double> eigenvectors = eigenvalue.getV();
+				final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(n);
+				int principalComponentIndex = 0;
+				
+				for (int i = 1; i < n; ++i) {
+					if (eigenvalues.get(principalComponentIndex, principalComponentIndex) < eigenvalues.get(i, i)) {
+						principalComponentIndex = i;
+					}
+				}
+				
+				for (int i = 0; i < n; ++i) {
+					builder.set(i, eigenvectors.get(i, principalComponentIndex));
+				}
+				
+				return builder.build();
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
 		}
 		
 	}
