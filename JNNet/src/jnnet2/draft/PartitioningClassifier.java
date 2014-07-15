@@ -1,5 +1,8 @@
 package jnnet2.draft;
 
+import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
+import static net.sourceforge.aprog.tools.Tools.getOrCreate;
+
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -11,8 +14,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 
+import net.sourceforge.aprog.tools.Factory;
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.Tools;
-
 import nsphere.LDATest;
 
 import org.ojalgo.matrix.BasicMatrix;
@@ -23,9 +27,7 @@ import org.ojalgo.matrix.store.MatrixStore;
 
 import jgencode.primitivelists.LongList;
 import jgencode.primitivelists.LongList.Processor;
-
 import jnnet.draft.LinearConstraintSystem;
-
 import jnnet2.core.Classifier;
 import jnnet2.core.Dataset;
 
@@ -49,6 +51,7 @@ public final class PartitioningClassifier implements Classifier {
 		this.defaultLabel = Double.NaN;
 		
 		final List<Subset> todo = new ArrayList<>();
+		final double[] item = new double[trainingDataset.getItemSize()];
 		
 		todo.add(new Subset(trainingDataset, Subset.idRange(trainingDataset.getItemCount())));
 		
@@ -62,7 +65,6 @@ public final class PartitioningClassifier implements Classifier {
 			final BitSet belowClasses = new BitSet();
 			final LongList above = new LongList();
 			final BitSet aboveClasses = new BitSet();
-			final double[] item = new double[trainingDataset.getItemSize()];
 			
 			subset.getItemIds().forEach(new Processor() {
 				
@@ -90,9 +92,31 @@ public final class PartitioningClassifier implements Classifier {
 			}
 		}
 		
-		// TODO clusters
 		
-		Tools.debugPrint(this.hyperplanes.size());
+		{
+			final int hyperplaneCount = this.hyperplanes.size();
+			final long itemCount = trainingDataset.getItemCount();
+			
+			Tools.debugPrint(hyperplaneCount);
+			
+			for (long itemId = 0L; itemId < itemCount; ++itemId) {
+				trainingDataset.getItem(itemId, item);
+				getOrCreate(this.clusters, item[this.inputSize], (Factory) HASH_SET_FACTORY).add(this.encode(item));
+			}
+		}
+	}
+	
+	public final BitSet encode(final double[] item) {
+		final int hyperplaneCount = this.hyperplanes.size();
+		final BitSet result = new BitSet(hyperplaneCount);
+		
+		for (int bit = 0; bit < hyperplaneCount; ++bit) {
+			if (0.0 <= evaluate(this.hyperplanes.get(bit), item)) {
+				result.set(bit);
+			}
+		}
+		
+		return result;
 	}
 	
 	public static final double evaluate(final double[] hyperplane, final double[] item) {
