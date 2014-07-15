@@ -15,8 +15,8 @@ import java.util.Random;
 import java.util.TreeMap;
 
 import net.sourceforge.aprog.tools.Factory;
-import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.Tools;
+
 import nsphere.LDATest;
 
 import org.ojalgo.matrix.BasicMatrix;
@@ -27,6 +27,7 @@ import org.ojalgo.matrix.store.MatrixStore;
 
 import jgencode.primitivelists.LongList;
 import jgencode.primitivelists.LongList.Processor;
+
 import jnnet.draft.LinearConstraintSystem;
 import jnnet2.core.Classifier;
 import jnnet2.core.Dataset;
@@ -50,81 +51,20 @@ public final class PartitioningClassifier implements Classifier {
 		this.inputSize = trainingDataset.getItemSize() - 1;
 		this.defaultLabel = Double.NaN;
 		
-		final List<Subset> todo = new ArrayList<>();
-		final double[] item = new double[trainingDataset.getItemSize()];
+		this.computeHyperplanes(trainingDataset);
+		this.computeClusters(trainingDataset);
 		
-		todo.add(new Subset(trainingDataset, Subset.idRange(trainingDataset.getItemCount())));
-		
-		while (!todo.isEmpty()) {
-			final Subset subset = todo.remove(0);
-			final double[] hyperplane = subset.getHyperplane();
-			
-			this.hyperplanes.add(hyperplane);
-			
-			final LongList below = new LongList();
-			final BitSet belowClasses = new BitSet();
-			final LongList above = new LongList();
-			final BitSet aboveClasses = new BitSet();
-			
-			subset.getItemIds().forEach(new Processor() {
-				
-				@Override
-				public final boolean process(final long itemId) {
-					if (evaluate(hyperplane, trainingDataset.getItem(itemId, item)) < 0.0) {
-						below.add(itemId);
-						belowClasses.set(trainingDataset.getLabelStatistics().getLabelId(item[inputSize]));
-					} else {
-						above.add(itemId);
-						aboveClasses.set(trainingDataset.getLabelStatistics().getLabelId(item[inputSize]));
-					}
-					
-					return true;
-				}
-				
-			});
-			
-			if (2 <= belowClasses.cardinality()) {
-				todo.add(new Subset(trainingDataset, below));
-			}
-			
-			if (2 <= aboveClasses.cardinality()) {
-				todo.add(new Subset(trainingDataset, above));
-			}
-		}
-		
-		
-		{
-			final int hyperplaneCount = this.hyperplanes.size();
-			final long itemCount = trainingDataset.getItemCount();
-			
-			Tools.debugPrint(hyperplaneCount);
-			
-			for (long itemId = 0L; itemId < itemCount; ++itemId) {
-				trainingDataset.getItem(itemId, item);
-				getOrCreate(this.clusters, item[this.inputSize], (Factory) HASH_SET_FACTORY).add(this.encode(item));
-			}
-		}
+		// TODO remove redundant hyperplanes
 	}
 	
-	public final BitSet encode(final double[] item) {
+	public final BitSet encode(final double... item) {
 		final int hyperplaneCount = this.hyperplanes.size();
 		final BitSet result = new BitSet(hyperplaneCount);
 		
 		for (int bit = 0; bit < hyperplaneCount; ++bit) {
-			if (0.0 <= evaluate(this.hyperplanes.get(bit), item)) {
+			if (0.0 <= hDot(this.hyperplanes.get(bit), item)) {
 				result.set(bit);
 			}
-		}
-		
-		return result;
-	}
-	
-	public static final double evaluate(final double[] hyperplane, final double[] item) {
-		double result = hyperplane[0];
-		final int n = hyperplane.length;
-		
-		for (int i = 1; i < n; ++i) {
-			result += hyperplane[i] * item[i - 1];
 		}
 		
 		return result;
@@ -137,14 +77,7 @@ public final class PartitioningClassifier implements Classifier {
 	
 	@Override
 	public final double getLabelFor(final double... input) {
-		final int n = this.hyperplanes.size();
-		final BitSet cluster = new BitSet(n);
-		
-		for (int bit = 0; bit < n; ++bit) {
-			if (0 <= dotH(this.hyperplanes.get(bit), input)) {
-				cluster.set(bit);
-			}
-		}
+		final BitSet cluster = this.encode(input);
 		
 		for (final Map.Entry<Double, Collection<BitSet>> entry : this.clusters.entrySet()) {
 			if (entry.getValue().contains(cluster)) {
@@ -155,12 +88,77 @@ public final class PartitioningClassifier implements Classifier {
 		return this.defaultLabel;
 	}
 	
+	@SuppressWarnings("unchecked")
+	private final void computeClusters(final Dataset trainingDataset) {
+		final int hyperplaneCount = this.hyperplanes.size();
+		final double[] item = new double[trainingDataset.getItemSize()];
+		final long itemCount = trainingDataset.getItemCount();
+		
+		Tools.debugPrint(hyperplaneCount);
+		
+		for (long itemId = 0L; itemId < itemCount; ++itemId) {
+			trainingDataset.getItem(itemId, item);
+			getOrCreate(this.clusters, item[this.inputSize]
+					, (Factory<Collection<BitSet>>) (Object) HASH_SET_FACTORY).add(this.encode(item));
+		}
+	}
+	
+	private final void computeHyperplanes(final Dataset trainingDataset) {
+		final List<Subset> todo = new ArrayList<>();
+		final double[] item = new double[trainingDataset.getItemSize()];
+		
+		todo.add(new Subset(trainingDataset, Subset.idRange(trainingDataset.getItemCount())));
+		
+		while (!todo.isEmpty()) {
+			final Subset subset = todo.remove(0);
+			final double[] hyperplane = subset.getHyperplane();
+			final int labelOffset = this.inputSize;
+			
+			this.hyperplanes.add(hyperplane);
+			
+			final LongList below = new LongList();
+			final BitSet belowClasses = new BitSet();
+			final LongList above = new LongList();
+			final BitSet aboveClasses = new BitSet();
+			
+			subset.getItemIds().forEach(new Processor() {
+				
+				@Override
+				public final boolean process(final long itemId) {
+					if (hDot(hyperplane, trainingDataset.getItem(itemId, item)) < 0.0) {
+						below.add(itemId);
+						belowClasses.set(trainingDataset.getLabelStatistics().getLabelId(item[labelOffset]));
+					} else {
+						above.add(itemId);
+						aboveClasses.set(trainingDataset.getLabelStatistics().getLabelId(item[labelOffset]));
+					}
+					
+					return true;
+				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = -7017451880265708569L;
+				
+			});
+			
+			if (2 <= belowClasses.cardinality()) {
+				todo.add(new Subset(trainingDataset, below));
+			}
+			
+			if (2 <= aboveClasses.cardinality()) {
+				todo.add(new Subset(trainingDataset, above));
+			}
+		}
+	}
+	
 	/**
 	 * {@value}.
 	 */
 	private static final long serialVersionUID = 3548531675332877719L;
 	
-	public static final double dotH(final double[] hyperplane, final double[] input) {
+	public static final double hDot(final double[] hyperplane, final double[] input) {
 		final int n = hyperplane.length;
 		double result = hyperplane[0];
 		
@@ -262,6 +260,9 @@ public final class PartitioningClassifier implements Classifier {
 		private final void readDataset(final Dataset dataset) {
 			final int n = this.dimension;
 			final double[] item = new double[dataset.getItemSize()];
+			final double[] covarianceMatrix = this.covarianceMatrix;
+			final double[][] centers = this.centers;
+			final double[] counts = this.counts;
 			
 			this.itemIds.forEach(new Processor() {
 				
@@ -279,6 +280,11 @@ public final class PartitioningClassifier implements Classifier {
 					
 					return true;
 				}
+				
+				/**
+				 * {@value}.
+				 */
+				private static final long serialVersionUID = 8636877199939323311L;
 				
 			});
 		}
