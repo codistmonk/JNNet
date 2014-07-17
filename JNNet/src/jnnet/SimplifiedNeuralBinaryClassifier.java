@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jgencode.primitivelists.DoubleList;
+
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;
@@ -404,6 +405,11 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 			final double[] cluster0 = statistics[0].getMeans();
 			final double[] cluster1 = statistics[1].getMeans();
 			final double[] neuronWeights = add(cluster1, 1.0, cluster0, -1.0);
+//			final double[][] covariances = computeCovariances(dataset, ids);
+//			final BasicMatrix s0 = matrix(inputDimension, covariances[0]);
+//			final BasicMatrix s1 = matrix(inputDimension, covariances[1]);
+//			final BasicMatrix s = s0.add(s1);
+//			final double[] neuronWeights = toArray(s.solve(columnVector(neuronWeights)));
 			
 			if (Arrays.equals(cluster0, cluster1)) {
 				for (int i = 0; i < inputDimension; ++i) {
