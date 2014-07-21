@@ -10,19 +10,14 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
-import imj2.core.Image;
-import imj2.core.Image2D;
-import imj2.core.TiledImage2D;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -34,7 +29,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -49,13 +43,13 @@ import jnnet.ReorderingDataset;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-07-04)
@@ -84,7 +78,7 @@ public final class ICPRMitos {
 		
 		if (!trainingFileName.isEmpty()) {
 			debugPrint(trainingFileName);
-			debugPrint(new VirtualDataset(trainingFileName, 32).getItemCount());
+			debugPrint(new VirtualImageDataset(trainingFileName, 32).getItemCount());
 //			train(trainingFileName, trainingShuffleChunkSize, trainingFolds, trainingTestItems
 //					, trainingParameters, classifierFileName, maximumCPULoad);
 		}
@@ -366,7 +360,7 @@ public final class ICPRMitos {
 	/**
 	 * @author codistmonk (creation 2014-07-21)
 	 */
-	public static final class VirtualDataset implements Dataset {
+	public static final class VirtualImageDataset implements Dataset {
 		
 		private final List<Item> items;
 		
@@ -378,7 +372,7 @@ public final class ICPRMitos {
 		
 		private final int chunkSize;
 		
-		public VirtualDataset(final String root, final int windowSize) {
+		public VirtualImageDataset(final String root, final int windowSize) {
 			this.items = new ArrayList<>();
 			this.channelCount = 3;
 			this.windowSize = windowSize;
@@ -438,8 +432,10 @@ public final class ICPRMitos {
 			debugPrint("Collecting explicit data points done in", timer.toc(), "ms");
 			debugPrint("Collecting implicit data points...", new Date(timer.tic()));
 			
+			final int stride = 2 * windowSize;
+			
 			for (final String imageBase : imageBases) {
-				debugPrint(imageBase);
+				debugPrint(this.getItemCount(), imageBase);
 				
 				final VirtualImage40 image = new VirtualImage40(imageBase);
 				final Point point = new Point();
@@ -450,12 +446,10 @@ public final class ICPRMitos {
 						final int w = tile.getWidth();
 						final int h = tile.getHeight();
 						
-						for (point.y = 0; point.y < h; point.y += windowSize) {
-							for (point.x = 0; point.x < w; point.x += windowSize) {
-								for (final Point explicitPoint : explicitPoints) {
-									if (windowSize < point.distance(explicitPoint)) {
-										this.addDataPoints(image, q0, q1, q1, point.x, point.y);
-									}
+						for (point.y = 0; point.y < h; point.y += stride) {
+							for (point.x = 0; point.x < w; point.x += stride) {
+								if (isFarEnough(point, explicitPoints, windowSize)) {
+									this.addDataPoints(image, q0, q1, q1, point.x, point.y);
 								}
 							}
 						}
@@ -529,6 +523,17 @@ public final class ICPRMitos {
 		 * {@value}.
 		 */
 		private static final long serialVersionUID = -7992966595032877103L;
+		
+		public static final boolean isFarEnough(final Point pointToTest,
+				final Collection<Point> pointsToAvoid, final double farEnough) {
+			for (final Point explicitPoint : pointsToAvoid) {
+				if (pointToTest.distance(explicitPoint) < farEnough) {
+					return false;
+				}
+			}
+			
+			return true;
+		}
 		
 		public static final Scanner newEnglishScanner(final Object argument) {
 			final Scanner result;
