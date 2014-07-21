@@ -304,8 +304,10 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 			}
 			
 			@Override
-			public final double[] getItem(final int itemId) {
-				return copyOfRange(data, itemId * this.getItemSize(), (itemId + 1) * this.getItemSize());
+			public final double[] getItem(final int itemId, final double[] result) {
+				System.arraycopy(data, itemId * this.getItemSize(), result, 0, this.getItemSize());
+				
+				return result;
 			}
 			
 			@Override

@@ -224,8 +224,10 @@ public final class CSVDataset implements Dataset {
 	}
 	
 	@Override
-	public final double[] getItem(final int itemId) {
-		return copyOfRange(this.getData_(), itemId * this.getItemSize(), (itemId + 1) * this.getItemSize());
+	public final double[] getItem(final int itemId, final double[] result) {
+		System.arraycopy(this.getData_(), itemId * this.getItemSize(), result, 0, this.getItemSize());
+		
+		return result;
 	}
 	
 	@Override
