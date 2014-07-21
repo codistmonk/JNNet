@@ -10,12 +10,18 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
+import imj2.core.Image;
+import imj2.core.Image2D;
+import imj2.core.TiledImage2D;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Serializable;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -26,7 +32,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Scanner;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
@@ -37,13 +48,13 @@ import jnnet.ReorderingDataset;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-07-04)
@@ -70,9 +81,11 @@ public final class ICPRMitos {
 		final String testRoot = arguments.get("test", "");
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
 		
-		if (!trainingFileName.isEmpty() && false) {
-			train(trainingFileName, trainingShuffleChunkSize, trainingFolds, trainingTestItems
-					, trainingParameters, classifierFileName, maximumCPULoad);
+		if (!trainingFileName.isEmpty()) {
+			debugPrint(trainingFileName);
+			debugPrint(new VirtualDataset(trainingFileName, 32).getItemCount());
+//			train(trainingFileName, trainingShuffleChunkSize, trainingFolds, trainingTestItems
+//					, trainingParameters, classifierFileName, maximumCPULoad);
 		}
 		
 		if (!testRoot.isEmpty()) {
@@ -348,5 +361,184 @@ public final class ICPRMitos {
 			}
 		}
 	}
-
+	
+	/**
+	 * @author codistmonk (creation 2014-07-21)
+	 */
+	public static final class VirtualDataset implements Dataset {
+		
+		private final List<Item> items;
+		
+		private final int channelCount;
+		
+		private final int windowSize;
+		
+		private final int itemSize;
+		
+		public VirtualDataset(final String root, final int windowSize) {
+			this.items = new ArrayList<>();
+			this.channelCount = 3;
+			this.windowSize = windowSize;
+			this.itemSize = windowSize * windowSize * channelCount;
+			
+			final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
+			final Collection<String> imageBases = collectImageBases(root);
+			
+			for (final String imageBase : imageBases) {
+				final VirtualImage40 image = new VirtualImage40(imageBase);
+				final Matcher matcher = pattern.matcher(imageBase);
+				
+				if (matcher.matches()) {
+					final String csvBase = matcher.group(1) + "mitosis" + matcher.group(3);
+					
+					for (char q0 = 'A'; q0 <= 'D'; ++q0) {
+						for (char q1 = 'a'; q1 <= 'd'; ++q1) {
+							final File mitosisFile = new File(csvBase + q0 + q1 + "_mitosis.csv");
+							final File notMitosisFile = new File(csvBase + q0 + q1 + "_not_mitosis.csv");
+							
+							for (final File file : array(mitosisFile, notMitosisFile)) {
+								debugPrint(file, file.exists(), image.getWidth(), image.getHeight());
+								
+								try (final Scanner scanner = newEnglishScanner(file)) {
+									while (scanner.hasNext()) {
+										try (final Scanner lineScanner = newEnglishScanner(scanner.nextLine())) {
+											lineScanner.useDelimiter(",");
+											
+											final int x = lineScanner.nextInt();
+											final int y = lineScanner.nextInt();
+											final double label = lineScanner.nextDouble();
+											
+											debugPrint(x, y, label);
+											
+											if (label < 0.5) {
+												this.items.add(new Item(image, q0, q1, x, y, 0.0));
+											} else {
+												this.items.add(new Item(image, q0, q1, x, y, 1.0));
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		@Override
+		public final int getItemCount() {
+			return this.items.size();
+		}
+		
+		@Override
+		public final int getItemSize() {
+			return this.itemSize;
+		}
+		
+		@Override
+		public final double getItemValue(final int itemId, final int valueId) {
+			final Item item = this.items.get(itemId);
+			final int dx = (valueId / this.channelCount) % this.windowSize - this.windowSize / 2;
+			final int dy = (valueId / this.channelCount) / this.windowSize - this.windowSize / 2;
+			final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), item.getX() + dx, item.getY() + dy);
+			
+			return (rgb >> ((valueId % this.channelCount) * Byte.SIZE)) & 0xFF;
+		}
+		
+		@Override
+		public final double[] getItem(final int itemId, final double[] result) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+		
+		@Override
+		public double[] getItemWeights(int itemId) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+		
+		@Override
+		public final double getItemLabel(final int itemId) {
+			return this.items.get(itemId).getLabel();
+		}
+		
+		/**
+		 * {@value}.
+		 */
+		private static final long serialVersionUID = -7992966595032877103L;
+		
+		public static final Scanner newEnglishScanner(final Object argument) {
+			final Scanner result;
+			
+			try {
+				result = Scanner.class.getConstructor(argument.getClass()).newInstance(argument);
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+			
+			result.useLocale(Locale.ENGLISH);
+			
+			return result;
+		}
+		
+		/**
+		 * @author codistmonk (creation 2014-07-21)
+		 */
+		public static final class Item implements Serializable {
+			
+			private final VirtualImage40 image;
+			
+			private final char q0;
+			
+			private final char q1;
+			
+			private final int x;
+			
+			private final int y;
+			
+			private final double label;
+			
+			public Item(final VirtualImage40 image, final char q0, final char q1
+					, final int x, final int y, final double label) {
+				this.image = image;
+				this.q0 = q0;
+				this.q1 = q1;
+				this.x = x;
+				this.y = y;
+				this.label = label;
+			}
+			
+			public final VirtualImage40 getImage() {
+				return this.image;
+			}
+			
+			public final char getQ0() {
+				return this.q0;
+			}
+			
+			public final char getQ1() {
+				return this.q1;
+			}
+			
+			public final int getX() {
+				return this.x;
+			}
+			
+			public final int getY() {
+				return this.y;
+			}
+			
+			public final double getLabel() {
+				return this.label;
+			}
+			
+			/**
+			 * {@value}.
+			 */
+			private static final long serialVersionUID = -104545303635490290L;
+			
+		}
+		
+	}
+	
 }

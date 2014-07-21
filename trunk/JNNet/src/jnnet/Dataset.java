@@ -33,7 +33,11 @@ public abstract interface Dataset extends Serializable {
 	
 	public abstract double getItemValue(int itemId, int valueId);
 	
-	public abstract double[] getItem(int itemId);
+	public abstract double[] getItem(int itemId, double[] result);
+	
+	public default double[] getItem(int itemId) {
+		return this.getItem(itemId, new double[this.getItemSize()]);
+	}
 	
 	public abstract double[] getItemWeights(int itemId);
 	

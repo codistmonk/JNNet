@@ -89,8 +89,8 @@ public final class ReorderingDataset implements Dataset {
 	}
 
 	@Override
-	public final double[] getItem(final int itemId) {
-		return this.source.getItem(this.getSourceItemId(itemId));
+	public final double[] getItem(final int itemId, final double[] result) {
+		return this.source.getItem(this.getSourceItemId(itemId), result);
 	}
 	
 	@Override

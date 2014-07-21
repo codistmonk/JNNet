@@ -242,7 +242,7 @@ public final class ImageDataset implements Dataset {
 	}
 	
 	@Override
-	public final double[] getItem(final int itemId) {
+	public final double[] getItem(final int itemId, final double[] result) {
 		final TileTransformer tileTransformer =
 				this.tileTransformers.get(itemId % this.tileTransformers.size());
 		final int untransformedItemId = itemId / this.tileTransformers.size();
@@ -252,7 +252,7 @@ public final class ImageDataset implements Dataset {
 		final int x = pixel % imageWidth;
 		final int y = pixel / imageWidth;
 		
-		return item(this.getImage(), tileTransformer, x, y, this.getWindowHalfSize(), label);
+		return item(this.getImage(), tileTransformer, x, y, this.getWindowHalfSize(), label, result);
 	}
 	
 	@Override
@@ -285,6 +285,15 @@ public final class ImageDataset implements Dataset {
 		final double[] result = item(image, tileTransformer, x, y, windowHalfSize, new double[order]);
 		
 		result[order - 1] = label;
+		
+		return result;
+	}
+	
+	public static final double[] item(final BufferedImage image, final TileTransformer tileTransformer
+			, final int x, final int y, final int windowHalfSize, final double label, final double[] result) {
+		item(image, tileTransformer, x, y, windowHalfSize, result);
+		
+		result[result.length - 1] = label;
 		
 		return result;
 	}

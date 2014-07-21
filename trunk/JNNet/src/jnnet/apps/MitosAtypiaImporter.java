@@ -21,6 +21,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
 
 import jnnet.draft.MosaicBuilder;
-
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
@@ -307,7 +307,7 @@ public final class MitosAtypiaImporter {
 		
 		private final String basePath;
 		
-		private final BufferedImage[][] tiles;
+		private final WeakReference<BufferedImage>[][] tiles;
 		
 		private final int width;
 		
@@ -315,16 +315,31 @@ public final class MitosAtypiaImporter {
 		
 		public VirtualImage40(final String basePath) {
 			this.basePath = basePath;
-			this.tiles = new BufferedImage[4][4];
+			this.tiles = new WeakReference[4][4];
+			
+			int width = 0;
+			int height = 0;
 			
 			for (int quad0 = 0; quad0 <= 3; ++quad0) {
 				for (int quad1 = 0; quad1 <= 3; ++quad1) {
-					this.tiles[quad0][quad1] = readTile(quad0, quad1);
+//					this.tiles[quad0][quad1] = readTile(quad0, quad1);
+					final BufferedImage tile = readTile(quad0, quad1);
+					this.tiles[quad0][quad1] = new WeakReference<BufferedImage>(tile);
+					
+					if (quad0 < 2 && quad1 < 2) {
+						width += tile.getWidth();
+					}
+					
+					if ((quad0 & 1) == 0 && (quad1 & 1) == 0) {
+						height += tile.getHeight();
+					}
 				}
 			}
 			
-			this.width = this.tiles[0][0].getWidth() + this.tiles[0][1].getWidth() + this.tiles[1][0].getWidth() + this.tiles[1][1].getWidth();
-			this.height = this.tiles[0][0].getHeight() + this.tiles[0][2].getHeight() + this.tiles[2][0].getHeight() + this.tiles[2][2].getHeight();
+//			this.width = this.tiles[0][0].getWidth() + this.tiles[0][1].getWidth() + this.tiles[1][0].getWidth() + this.tiles[1][1].getWidth();
+//			this.height = this.tiles[0][0].getHeight() + this.tiles[0][2].getHeight() + this.tiles[2][0].getHeight() + this.tiles[2][2].getHeight();
+			this.width = width;
+			this.height = height;
 		}
 		
 		public final int getWidth() {
@@ -339,38 +354,43 @@ public final class MitosAtypiaImporter {
 			final int quad0 = tileId.charAt(tileId.length() - 2) - 'A';
 			final int quad1 = tileId.charAt(tileId.length() - 1) - 'a';
 			
-			return this.tiles[quad0][quad1];
+			return this.getTile(quad0, quad1);
 		}
 		
 		public final int getRGB(final String tileId, final int x, final int y) {
-			int quad0 = tileId.charAt(tileId.length() - 2) - 'A';
-			int quad1 = tileId.charAt(tileId.length() - 1) - 'a';
+			return this.getRGB(tileId.charAt(tileId.length() - 2), tileId.charAt(tileId.length() - 1)
+					, x, y);
+		}
+		
+		public final int getRGB(final char quad0, final char quad1, final int x, final int y) {
+			int q0 = quad0 - 'A';
+			int q1 = quad1 - 'a';
 			
-			BufferedImage tile = this.tiles[quad0][quad1];
+			BufferedImage tile = this.getTile(q0, q1);
 			int w = tile.getWidth();
 			int h = tile.getHeight();
 			
 			try {
 				if (x < 0) {
-					if (quad1 == 1 || quad1 == 3) {
-						--quad1;
+					if (q1 == 1 || q1 == 3) {
+						--q1;
 					} else {
-						++quad1;
+						++q1;
 						
-						if (quad0 == 1 || quad0 == 3) {
-							--quad0;
+						if (q0 == 1 || q0 == 3) {
+							--q0;
 						} else {
 							throw new IllegalArgumentException();
 						}
 					}
 				} else if (w <= x) {
-					if (quad1 == 0 || quad1 == 2) {
-						++quad1;
+					if (q1 == 0 || q1 == 2) {
+						++q1;
 					} else {
-						--quad1;
+						--q1;
 						
-						if (quad0 == 0 || quad0 == 2) {
-							++quad0;
+						if (q0 == 0 || q0 == 2) {
+							++q0;
 						} else {
 							throw new IllegalArgumentException();
 						}
@@ -378,25 +398,25 @@ public final class MitosAtypiaImporter {
 				}
 				
 				if (y < 0) {
-					if (quad1 == 2 || quad1 == 3) {
-						--quad1;
+					if (q1 == 2 || q1 == 3) {
+						--q1;
 					} else {
-						++quad1;
+						++q1;
 						
-						if (quad0 == 2 || quad0 == 3) {
-							--quad0;
+						if (q0 == 2 || q0 == 3) {
+							--q0;
 						} else {
 							throw new IllegalArgumentException();
 						}
 					}
 				} else if (h <= y) {
-					if (quad1 == 0 || quad1 == 1) {
-						++quad1;
+					if (q1 == 0 || q1 == 1) {
+						++q1;
 					} else {
-						--quad1;
+						--q1;
 						
-						if (quad0 == 0 || quad0 == 1) {
-							++quad0;
+						if (q0 == 0 || q0 == 1) {
+							++q0;
 						} else {
 							throw new IllegalArgumentException();
 						}
@@ -410,11 +430,22 @@ public final class MitosAtypiaImporter {
 				return 0;
 			}
 			
-			tile = this.tiles[quad0][quad1];
+			tile = this.getTile(q0, q1);
 			w = tile.getWidth();
 			h = tile.getHeight();
 			
 			return tile.getRGB((w + x) % w, (h + y) % h);
+		}
+		
+		private final BufferedImage getTile(final int quad0, final int quad1) {
+			BufferedImage result = this.tiles[quad0][quad1].get();
+			
+			if (result == null) {
+				result = this.readTile(quad0, quad1);
+				this.tiles[quad0][quad1] = new WeakReference<BufferedImage>(result);
+			}
+			
+			return result;
 		}
 		
 		private final BufferedImage readTile(final int quad0, final int quad1) {
