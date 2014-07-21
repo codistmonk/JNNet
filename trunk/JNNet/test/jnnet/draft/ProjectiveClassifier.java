@@ -121,7 +121,7 @@ public final class ProjectiveClassifier implements BinaryClassifier {
 	
 	public static final BufferedImage preview(final CSVDataset dataset, final int thumbnailSize) {
 		final int step = dataset.getItemSize();
-		final double[] data = dataset.getData_();
+		final double[] data = dataset.getData();
 		final int n = data.length;
 		final int inputDimension = dataset.getItemSize() - 1;
 		final int w = inputDimension * (thumbnailSize + 1) - 1;

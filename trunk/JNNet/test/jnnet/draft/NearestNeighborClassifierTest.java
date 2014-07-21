@@ -59,7 +59,7 @@ public final class NearestNeighborClassifierTest {
 		debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 		
 		if (showClassifier && classifier.getInputDimension() == 2) {
-			show(classifier, 256, 16.0, trainingData.getData_());
+			show(classifier, 256, 16.0, trainingData.getData());
 		}
 		
 		assertEquals(0, confusionMatrix.getTotalErrorCount());
@@ -77,7 +77,7 @@ final class NearestNeighborClassifier implements BinaryClassifier {
 	private final int inputDimension;
 	
 	public NearestNeighborClassifier(final CSVDataset trainingData) {
-		this.prototypes = trainingData.getData_();
+		this.prototypes = trainingData.getData();
 		this.inputDimension= trainingData.getItemSize() - 1;
 	}
 	

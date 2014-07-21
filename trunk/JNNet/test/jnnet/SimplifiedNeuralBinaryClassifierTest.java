@@ -95,7 +95,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 //			debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 			
 			if (showClassifier && classifier.getInputDimension() == 2) {
-				show(classifier, 256, 16.0, trainingData.getData_());
+				show(classifier, 256, 16.0, trainingData.getData());
 			}
 		}
 		
@@ -114,7 +114,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 		debugPrint("Loading training dataset done in", timer.toc(), "ms");
 		
 		if (false) {
-			final double[] data = trainingData.getData_();
+			final double[] data = trainingData.getData();
 			final int n = data.length;
 			final int step = trainingData.getItemSize();
 			
@@ -162,7 +162,7 @@ public final class SimplifiedNeuralBinaryClassifierTest {
 			debugPrint("Evaluating classifier on test set done in", timer.toc(), "ms");
 			
 			if (showClassifier && classifier.getInputDimension() == 2) {
-				show(classifier, 256, 16.0, trainingData.getData_());
+				show(classifier, 256, 16.0, trainingData.getData());
 			}
 		}
 		

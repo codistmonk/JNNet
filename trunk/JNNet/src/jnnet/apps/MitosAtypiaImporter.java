@@ -351,10 +351,7 @@ public final class MitosAtypiaImporter {
 		}
 		
 		public final BufferedImage getTile(final String tileId) {
-			final int quad0 = tileId.charAt(tileId.length() - 2) - 'A';
-			final int quad1 = tileId.charAt(tileId.length() - 1) - 'a';
-			
-			return this.getTile(quad0, quad1);
+			return this.getTile(tileId.charAt(tileId.length() - 2), tileId.charAt(tileId.length() - 1));
 		}
 		
 		public final int getRGB(final String tileId, final int x, final int y) {
@@ -435,6 +432,10 @@ public final class MitosAtypiaImporter {
 			h = tile.getHeight();
 			
 			return tile.getRGB((w + x) % w, (h + y) % h);
+		}
+		
+		public final BufferedImage getTile(final char quad0, final char quad1) {
+			return this.getTile(quad0 - 'A', quad1 - 'a');
 		}
 		
 		private final BufferedImage getTile(final int quad0, final int quad1) {

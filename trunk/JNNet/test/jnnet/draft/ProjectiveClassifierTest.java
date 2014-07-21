@@ -74,7 +74,7 @@ public final class ProjectiveClassifierTest {
 		}
 		
 		if (showClassifier && classifier.getInputDimension() == 2) {
-			SimplifiedNeuralBinaryClassifierTest.show(classifier, 256, 16.0, trainingData.getData_());
+			SimplifiedNeuralBinaryClassifierTest.show(classifier, 256, 16.0, trainingData.getData());
 		}
 		
 //		assertEquals(0, confusionMatrix.getTotalErrorCount());
