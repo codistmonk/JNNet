@@ -16,6 +16,7 @@ import imj2.core.TiledImage2D;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -96,7 +97,7 @@ public final class ICPRMitos {
 			
 			debugPrint(imageBases);
 			
-			final TaskManager taskManager = new TaskManager(0.75);
+			final TaskManager taskManager = new TaskManager(maximumCPULoad);
 			
 			for (final String imageBase : imageBases) {
 				taskManager.submit(new Runnable() {
@@ -375,14 +376,21 @@ public final class ICPRMitos {
 		
 		private final int itemSize;
 		
+		private final int chunkSize;
+		
 		public VirtualDataset(final String root, final int windowSize) {
 			this.items = new ArrayList<>();
 			this.channelCount = 3;
 			this.windowSize = windowSize;
-			this.itemSize = windowSize * windowSize * channelCount;
+			this.itemSize = windowSize * windowSize * this.channelCount;
+			int chunkSize = 0;
 			
 			final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
 			final Collection<String> imageBases = collectImageBases(root);
+			final Collection<Point> explicitPoints = new ArrayList<>();
+			final TicToc timer = new TicToc();
+			
+			debugPrint("Collecting explicit data points...", new Date(timer.tic()));
 			
 			for (final String imageBase : imageBases) {
 				final VirtualImage40 image = new VirtualImage40(imageBase);
@@ -406,14 +414,17 @@ public final class ICPRMitos {
 											
 											final int x = lineScanner.nextInt();
 											final int y = lineScanner.nextInt();
-											final double label = lineScanner.nextDouble();
+											final double label = lineScanner.nextDouble() < 0.5 ? 0.0 : 1.0;
 											
 											debugPrint(x, y, label);
 											
-											if (label < 0.5) {
-												this.items.add(new Item(image, q0, q1, x, y, 0.0));
-											} else {
-												this.items.add(new Item(image, q0, q1, x, y, 1.0));
+											explicitPoints.add(new Point(x, y));
+											
+											final int transformCount = this.addDataPoints(
+													image, q0, q1, x, y, label);
+											
+											if (chunkSize == 0) {
+												chunkSize = transformCount;
 											}
 										}
 									}
@@ -423,6 +434,43 @@ public final class ICPRMitos {
 					}
 				}
 			}
+			
+			debugPrint("Collecting explicit data points done in", timer.toc(), "ms");
+			debugPrint("Collecting implicit data points...", new Date(timer.tic()));
+			
+			for (final String imageBase : imageBases) {
+				debugPrint(imageBase);
+				
+				final VirtualImage40 image = new VirtualImage40(imageBase);
+				final Point point = new Point();
+				
+				for (char q0 = 'A'; q0 <= 'D'; ++q0) {
+					for (char q1 = 'a'; q1 <= 'd'; ++q1) {
+						final BufferedImage tile = image.getTile(q0, q1);
+						final int w = tile.getWidth();
+						final int h = tile.getHeight();
+						
+						for (point.y = 0; point.y < h; point.y += windowSize) {
+							for (point.x = 0; point.x < w; point.x += windowSize) {
+								for (final Point explicitPoint : explicitPoints) {
+									if (windowSize < point.distance(explicitPoint)) {
+										this.addDataPoints(image, q0, q1, q1, point.x, point.y);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			debugPrint("Collecting implicit data points done in", timer.toc(), "ms");
+			debugPrint("Collecting data points done in", timer.getTotalTime(), "ms");
+			
+			this.chunkSize = chunkSize;
+		}
+		
+		public final int getChunkSize() {
+			return this.chunkSize;
 		}
 		
 		@Override
@@ -460,6 +508,21 @@ public final class ICPRMitos {
 		@Override
 		public final double getItemLabel(final int itemId) {
 			return this.items.get(itemId).getLabel();
+		}
+		
+		private final int addDataPoints(final VirtualImage40 image, char q0, char q1,
+				final int x, final int y, final double label) {
+			int result = 0;
+			
+			for (int dy = -1; dy <= 1; ++dy) {
+				for (int dx = -1; dx <= 1; ++dx) {
+					for (int i = 0; i < 4; ++i, ++result) {
+						this.items.add(new Item(image, q0, q1, x, y, label));
+					}
+				}
+			}
+			
+			return result;
 		}
 		
 		/**

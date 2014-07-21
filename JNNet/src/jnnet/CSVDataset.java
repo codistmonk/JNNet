@@ -147,7 +147,7 @@ public final class CSVDataset implements Dataset {
 					}
 				}
 				{
-					final double[] data = this.getData_();
+					final double[] data = this.getData();
 					final int n = data.length;
 					
 					for (int i = 0; i < n; i += this.itemSize) {
@@ -204,7 +204,7 @@ public final class CSVDataset implements Dataset {
 		return this.statistics;
 	}
 	
-	public final double[] getData_() {
+	public final double[] getData() {
 		return this.data.toArray();
 	}
 	
@@ -220,19 +220,19 @@ public final class CSVDataset implements Dataset {
 	
 	@Override
 	public final int getItemCount() {
-		return this.getData_().length / this.getItemSize();
+		return this.getData().length / this.getItemSize();
 	}
 	
 	@Override
 	public final double[] getItem(final int itemId, final double[] result) {
-		System.arraycopy(this.getData_(), itemId * this.getItemSize(), result, 0, this.getItemSize());
+		System.arraycopy(this.getData(), itemId * this.getItemSize(), result, 0, this.getItemSize());
 		
 		return result;
 	}
 	
 	@Override
 	public final double[] getItemWeights(final int itemId) {
-		return copyOfRange(this.getData_(), itemId * this.getItemSize(), (itemId + 1) * this.getItemSize() - 1);
+		return copyOfRange(this.getData(), itemId * this.getItemSize(), (itemId + 1) * this.getItemSize() - 1);
 	}
 	
 	@Override

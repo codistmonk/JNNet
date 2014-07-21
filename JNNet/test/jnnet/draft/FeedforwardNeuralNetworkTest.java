@@ -338,7 +338,7 @@ public final class FeedforwardNeuralNetworkTest {
 		}
 		
 		if (showNetwork) {
-			show(network, 512, 20.0, trainingData.getData_());
+			show(network, 512, 20.0, trainingData.getData());
 		}
 		
 		assertEquals(0L, totalTrainingErrorCount);
