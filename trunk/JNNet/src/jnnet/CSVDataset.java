@@ -1,7 +1,6 @@
 package jnnet;
 
 import static java.lang.Double.parseDouble;
-import static java.util.Arrays.copyOfRange;
 import static jnnet.JNNetTools.ATOMIC_INTEGER_FACTORY;
 import static jnnet.JNNetTools.reserve;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
@@ -21,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import jgencode.primitivelists.DoubleList;
+
 import net.sourceforge.aprog.tools.TicToc;
 
 /**
@@ -231,8 +231,10 @@ public final class CSVDataset implements Dataset {
 	}
 	
 	@Override
-	public final double[] getItemWeights(final int itemId) {
-		return copyOfRange(this.getData(), itemId * this.getItemSize(), (itemId + 1) * this.getItemSize() - 1);
+	public final double[] getItemWeights(final int itemId, final double[] result) {
+		System.arraycopy(this.getData(), itemId * this.getItemSize(), result, 0, this.getItemSize() - 1);
+		
+		return result;
 	}
 	
 	@Override

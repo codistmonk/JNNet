@@ -256,7 +256,7 @@ public final class ImageDataset implements Dataset {
 	}
 	
 	@Override
-	public final double[] getItemWeights(final int itemId) {
+	public final double[] getItemWeights(final int itemId, final double[] result) {
 		final TileTransformer tileTransformer =
 				this.tileTransformers.get(itemId % this.tileTransformers.size());
 		final int untransformedItemId = itemId / this.tileTransformers.size();
@@ -265,8 +265,7 @@ public final class ImageDataset implements Dataset {
 		final int x = pixel % imageWidth;
 		final int y = pixel / imageWidth;
 		
-		return item(this.getImage(), tileTransformer, x, y, this.getWindowHalfSize()
-				, new double[this.getItemSize() - 1]);
+		return item(this.getImage(), tileTransformer, x, y, this.getWindowHalfSize(), result);
 	}
 	
 	@Override

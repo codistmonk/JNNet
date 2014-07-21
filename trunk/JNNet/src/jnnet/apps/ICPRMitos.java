@@ -489,14 +489,70 @@ public final class ICPRMitos {
 		
 		@Override
 		public final double[] getItem(final int itemId, final double[] result) {
-			// TODO Auto-generated method stub
-			return null;
+			this.getItemWeights(itemId, result);
+			
+			result[this.getItemSize() - 1] = this.getItemLabel(itemId);
+			
+			return result;
 		}
 		
 		@Override
-		public double[] getItemWeights(int itemId) {
-			// TODO Auto-generated method stub
-			return null;
+		public final double[] getItemWeights(final int itemId, final double[] result) {
+			final Item item = this.items.get(itemId);
+			final int x0 = item.getX() - this.windowSize / 2;
+			final int x1 = x0 + this.windowSize;
+			final int y0 = item.getY() - this.windowSize / 2;
+			final int y1 = y0 + this.windowSize;
+			int i = -1;
+			
+			switch (itemId % 4) {
+			case 0:
+				for (int y = y0; y < y1; ++y) {
+					for (int x = x0; x < x1; ++x) {
+						final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), x, y);
+						result[++i] = red8(rgb);
+						result[++i] = green8(rgb);
+						result[++i] = blue8(rgb);
+					}
+				}
+				
+				break;
+			case 1:
+				for (int x = x1 - 1; x0 <= x; --x) {
+					for (int y = y0; y < y1; ++y) {
+						final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), x, y);
+						result[++i] = red8(rgb);
+						result[++i] = green8(rgb);
+						result[++i] = blue8(rgb);
+					}
+				}
+				
+				break;
+			case 2:
+				for (int y = y1 - 1; y0 <= y; --y) {
+					for (int x = x1 - 1; x0 <= x; --x) {
+						final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), x, y);
+						result[++i] = red8(rgb);
+						result[++i] = green8(rgb);
+						result[++i] = blue8(rgb);
+					}
+				}
+				
+				break;
+			case 3:
+				for (int x = x0; x < x1; ++x) {
+					for (int y = y1 - 1; y0 <= y; --y) {
+						final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), x, y);
+						result[++i] = red8(rgb);
+						result[++i] = green8(rgb);
+						result[++i] = blue8(rgb);
+					}
+				}
+				
+				break;
+			}
+			
+			return result;
 		}
 		
 		@Override

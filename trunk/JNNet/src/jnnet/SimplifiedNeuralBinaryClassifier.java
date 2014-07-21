@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jgencode.primitivelists.DoubleList;
-
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;
@@ -311,8 +310,10 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 			}
 			
 			@Override
-			public final double[] getItemWeights(final int itemId) {
-				return copyOfRange(data, itemId * this.getItemSize(), (itemId + 1) * this.getItemSize() - 1);
+			public final double[] getItemWeights(final int itemId, final double[] result) {
+				System.arraycopy(data, itemId * this.getItemSize(), result, 0, this.getItemSize() - 1);
+				
+				return result;
 			}
 			
 			@Override

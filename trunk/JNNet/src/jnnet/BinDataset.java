@@ -112,8 +112,10 @@ public final class BinDataset implements Dataset {
 	}
 	
 	@Override
-	public final double[] getItemWeights(final int itemId) {
-		return copyOfRange(this.data.toArray(), itemId * this.getItemSize(), (itemId + 1) * this.getItemSize() - 1);
+	public final double[] getItemWeights(final int itemId, final double[] result) {
+		System.arraycopy(this.data.toArray(), itemId * this.getItemSize(), result, 0, this.getItemSize() - 1);
+		
+		return result;
 	}
 	
 	@Override
