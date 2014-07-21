@@ -94,8 +94,8 @@ public final class ReorderingDataset implements Dataset {
 	}
 	
 	@Override
-	public final double[] getItemWeights(final int itemId) {
-		return this.source.getItemWeights(this.getSourceItemId(itemId));
+	public final double[] getItemWeights(final int itemId, final double[] result) {
+		return this.source.getItemWeights(this.getSourceItemId(itemId), result);
 	}
 	
 	@Override
