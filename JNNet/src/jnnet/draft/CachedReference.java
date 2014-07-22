@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2014-07-22)
  * 
@@ -20,12 +22,18 @@ public final class CachedReference<T> implements Serializable, Comparable<Cached
 	public CachedReference(final T referent) {
 		this.referent = referent;
 		
-		synchronized (cache) {
-			cache.add(this);
+		if (referent != null) {
+			synchronized (cache) {
+				cache.add(this);
+			}
 		}
 	}
 	
 	public final T get() {
+		if (this.referent == null) {
+			return null;
+		}
+		
 		synchronized (cache) {
 			++this.usageCount;
 			
@@ -36,7 +44,7 @@ public final class CachedReference<T> implements Serializable, Comparable<Cached
 	@Override
 	public final int compareTo(final CachedReference<?> that) {
 		synchronized (cache) {
-			return Long.compare(this.usageCount, that.usageCount);
+			return -Long.compare(this.usageCount, that.usageCount);
 		}
 	}
 	
@@ -51,7 +59,7 @@ public final class CachedReference<T> implements Serializable, Comparable<Cached
 	 */
 	private static final long serialVersionUID = 416637597373736132L;
 	
-	private static final List<CachedReference<?>> cache = new CacheReducer().getCache();
+	private static final List<CachedReference<?>> cache = new CacheReducer(0.25).getCache();
 	
 	public static final int getCacheSize() {
 		synchronized (cache) {
@@ -87,17 +95,22 @@ public final class CachedReference<T> implements Serializable, Comparable<Cached
 		
 		@Override
 		protected final void finalize() throws Throwable {
+			final Runtime runtime = Runtime.getRuntime();
+			
 			try {
 				synchronized (this.getCache()) {
-					Collections.sort((List) this.getCache());
-					
-					final int n = (int) (this.getCache().size() * this.reductionRatio);
-					
-					for (int i = 0; i < n; ++i) {
-						this.getCache().get(i).clear();
+					if (runtime.freeMemory() < runtime.totalMemory() * this.reductionRatio) {
+						Collections.sort((List) this.getCache());
+						
+						final int oldEnd = this.getCache().size();
+						final int newEnd = (int) (oldEnd * (1.0 - this.reductionRatio));
+						
+						for (int i = newEnd; i < oldEnd; ++i) {
+							this.getCache().get(i).clear();
+						}
+						
+						this.getCache().subList(newEnd, oldEnd).clear();
 					}
-					
-					this.getCache().subList(0, n).clear();
 				}
 				
 				new WeakReference<>(new CacheReducer(this.getCache(), this.reductionRatio));

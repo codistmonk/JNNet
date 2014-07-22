@@ -6,6 +6,8 @@ import static jnnet.JNNetTools.swap;
 
 import java.util.Random;
 
+import net.sourceforge.aprog.tools.ConsoleMonitor;
+
 /**
  * @author codistmonk (creation 2014-04-09)
  */
@@ -24,13 +26,19 @@ public final class ReorderingDataset implements Dataset {
 	public ReorderingDataset(final Dataset source, final int[] indices) {
 		System.out.println(this.getClass().getName());
 		
+		final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+		
 		this.source = source;
 		this.indices = indices;
 		this.statistics = new DatasetStatistics(source.getItemSize() - 1);
 		
-		for (final int itemId : indices) {
-			this.statistics.addItem(source.getItem(itemId));
+		for (int i = 0; i < indices.length; ++i) {
+			monitor.ping(i + "/" + indices.length + "\r");
+			
+			this.statistics.addItem(source.getItem(indices[i]));
 		}
+		
+		monitor.pause();
 		
 		this.statistics.printTo(System.out);
 	}
@@ -43,7 +51,7 @@ public final class ReorderingDataset implements Dataset {
 		final int n = this.getItemCount();
 		
 		for (int i = 0; i < n; i += chunkSize) {
-			final int j = RANDOM.nextInt(n / chunkSize);
+			final int j = chunkSize * RANDOM.nextInt(n / chunkSize);
 			
 			for (int k = 0; k < chunkSize; ++k) {
 				swap(this.indices, i + k, j + k);
