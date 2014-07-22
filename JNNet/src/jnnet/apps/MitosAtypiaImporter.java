@@ -307,7 +307,7 @@ public final class MitosAtypiaImporter {
 		
 		private final String basePath;
 		
-		private final WeakReference<BufferedImage>[][] tiles;
+		private transient WeakReference<BufferedImage>[][] tiles;
 		
 		private final int width;
 		
@@ -438,7 +438,18 @@ public final class MitosAtypiaImporter {
 			return this.getTile(quad0 - 'A', quad1 - 'a');
 		}
 		
+		@SuppressWarnings("unchecked")
 		private final BufferedImage getTile(final int quad0, final int quad1) {
+			if (this.tiles == null) {
+				this.tiles = new WeakReference[4][4];
+				
+				for (final WeakReference<BufferedImage>[] row : this.tiles) {
+					for (int i = 0; i < row.length; ++i) {
+						row[i] = new WeakReference<BufferedImage>(null);
+					}
+				}
+			}
+			
 			BufferedImage result = this.tiles[quad0][quad1].get();
 			
 			if (result == null) {

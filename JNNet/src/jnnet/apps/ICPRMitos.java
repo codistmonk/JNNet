@@ -67,6 +67,7 @@ public final class ICPRMitos {
 	public static final void main(final String[] commandLineArguments) throws Exception {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String trainingFileName = arguments.get("training", "");
+		final String trainingRoot = arguments.get("trainingRoot", "");
 		final int trainingFolds = arguments.get("trainingFolds", 6)[0];
 		final int trainingTestItems = arguments.get("trainingTestItems", 10000)[0];
 		final int trainingShuffleChunkSize = arguments.get("trainingShuffleChunkSize", 4)[0];
@@ -77,10 +78,13 @@ public final class ICPRMitos {
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
 		
 		if (!trainingFileName.isEmpty()) {
-			debugPrint(trainingFileName);
-			debugPrint(new VirtualImageDataset(trainingFileName, 32).getItemCount());
-//			train(trainingFileName, trainingShuffleChunkSize, trainingFolds, trainingTestItems
-//					, trainingParameters, classifierFileName, maximumCPULoad);
+			if (trainingFileName.endsWith(".jo") && !new File(trainingFileName).exists()) {
+				debugPrint(trainingRoot, "->", trainingFileName);
+				writeObject(new VirtualImageDataset(trainingRoot, 32), trainingFileName);
+			}
+			
+			train(trainingFileName, trainingShuffleChunkSize, trainingFolds, trainingTestItems
+					, trainingParameters, classifierFileName, maximumCPULoad);
 		}
 		
 		if (!testRoot.isEmpty()) {
@@ -236,7 +240,15 @@ public final class ICPRMitos {
 		final TicToc timer = new TicToc();
 		
 		debugPrint("Loading full dataset started", new Date(timer.tic()));
-		final BinDataset dataset = new BinDataset(trainingFileName);
+		final Dataset dataset;
+		
+		if (trainingFileName.endsWith(".jo")) {
+			dataset = readObject(trainingFileName);
+		} else if (trainingFileName.endsWith(".bin")) {
+			dataset = new BinDataset(trainingFileName);
+		} else {
+			throw new IllegalArgumentException();
+		}
 		debugPrint("Loading full dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Shuffling dataset started", new Date(timer.tic()));
@@ -376,7 +388,7 @@ public final class ICPRMitos {
 			this.items = new ArrayList<>();
 			this.channelCount = 3;
 			this.windowSize = windowSize;
-			this.itemSize = windowSize * windowSize * this.channelCount;
+			this.itemSize = windowSize * windowSize * this.channelCount + 1;
 			int chunkSize = 0;
 			
 			final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
@@ -449,7 +461,7 @@ public final class ICPRMitos {
 						for (point.y = 0; point.y < h; point.y += stride) {
 							for (point.x = 0; point.x < w; point.x += stride) {
 								if (isFarEnough(point, explicitPoints, windowSize)) {
-									this.addDataPoints(image, q0, q1, q1, point.x, point.y);
+									this.addDataPoints(image, q0, q1, point.x, point.y, 0.0);
 								}
 							}
 						}
