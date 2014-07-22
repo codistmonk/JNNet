@@ -7,6 +7,7 @@ import static java.lang.Double.parseDouble;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.gc;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
@@ -42,6 +43,7 @@ import jnnet.Dataset;
 import jnnet.ReorderingDataset;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
+import jnnet.draft.CachedReference;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
 
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
@@ -65,6 +67,21 @@ public final class ICPRMitos {
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
+		if (true) {
+			new CachedReference<>(1);
+			new CachedReference<>(2);
+			new CachedReference<>(3);
+			new CachedReference<>(4);
+			
+			debugPrint(CachedReference.getCacheSize());
+			gc(1L);
+			debugPrint(CachedReference.getCacheSize());
+			gc(1L);
+			debugPrint(CachedReference.getCacheSize());
+			
+//			return;
+		}
+		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String trainingFileName = arguments.get("training", "");
 		final String trainingRoot = arguments.get("trainingRoot", "");
@@ -510,61 +527,7 @@ public final class ICPRMitos {
 		
 		@Override
 		public final double[] getItemWeights(final int itemId, final double[] result) {
-			final Item item = this.items.get(itemId);
-			final int x0 = item.getX() - this.windowSize / 2;
-			final int x1 = x0 + this.windowSize;
-			final int y0 = item.getY() - this.windowSize / 2;
-			final int y1 = y0 + this.windowSize;
-			int i = -1;
-			
-			switch (itemId % 4) {
-			case 0:
-				for (int y = y0; y < y1; ++y) {
-					for (int x = x0; x < x1; ++x) {
-						final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), x, y);
-						result[++i] = red8(rgb);
-						result[++i] = green8(rgb);
-						result[++i] = blue8(rgb);
-					}
-				}
-				
-				break;
-			case 1:
-				for (int x = x1 - 1; x0 <= x; --x) {
-					for (int y = y0; y < y1; ++y) {
-						final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), x, y);
-						result[++i] = red8(rgb);
-						result[++i] = green8(rgb);
-						result[++i] = blue8(rgb);
-					}
-				}
-				
-				break;
-			case 2:
-				for (int y = y1 - 1; y0 <= y; --y) {
-					for (int x = x1 - 1; x0 <= x; --x) {
-						final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), x, y);
-						result[++i] = red8(rgb);
-						result[++i] = green8(rgb);
-						result[++i] = blue8(rgb);
-					}
-				}
-				
-				break;
-			case 3:
-				for (int x = x0; x < x1; ++x) {
-					for (int y = y1 - 1; y0 <= y; --y) {
-						final int rgb = item.getImage().getRGB(item.getQ0(), item.getQ1(), x, y);
-						result[++i] = red8(rgb);
-						result[++i] = green8(rgb);
-						result[++i] = blue8(rgb);
-					}
-				}
-				
-				break;
-			}
-			
-			return result;
+			return this.items.get(itemId).getWeights(this.windowSize, itemId % 4, result);
 		}
 		
 		@Override
@@ -666,6 +629,63 @@ public final class ICPRMitos {
 			
 			public final double getLabel() {
 				return this.label;
+			}
+			
+			public final double[] getWeights(final int windowSize, final int rotation, final double[] result) {
+				final int x0 = this.getX() - windowSize / 2;
+				final int x1 = x0 + windowSize;
+				final int y0 = this.getY() - windowSize / 2;
+				final int y1 = y0 + windowSize;
+				int i = -1;
+				
+				switch (rotation) {
+				case 0:
+					for (int y = y0; y < y1; ++y) {
+						for (int x = x0; x < x1; ++x) {
+							final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
+							result[++i] = red8(rgb);
+							result[++i] = green8(rgb);
+							result[++i] = blue8(rgb);
+						}
+					}
+					
+					break;
+				case 1:
+					for (int x = x1 - 1; x0 <= x; --x) {
+						for (int y = y0; y < y1; ++y) {
+							final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
+							result[++i] = red8(rgb);
+							result[++i] = green8(rgb);
+							result[++i] = blue8(rgb);
+						}
+					}
+					
+					break;
+				case 2:
+					for (int y = y1 - 1; y0 <= y; --y) {
+						for (int x = x1 - 1; x0 <= x; --x) {
+							final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
+							result[++i] = red8(rgb);
+							result[++i] = green8(rgb);
+							result[++i] = blue8(rgb);
+						}
+					}
+					
+					break;
+				case 3:
+					for (int x = x0; x < x1; ++x) {
+						for (int y = y1 - 1; y0 <= y; --y) {
+							final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
+							result[++i] = red8(rgb);
+							result[++i] = green8(rgb);
+							result[++i] = blue8(rgb);
+						}
+					}
+					
+					break;
+				}
+				
+				return result;
 			}
 			
 			/**
