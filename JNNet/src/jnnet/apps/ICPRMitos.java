@@ -4,11 +4,11 @@ import static imj2.tools.IMJTools.blue8;
 import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
 import static java.lang.Double.parseDouble;
-import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
+import static java.util.Arrays.asList;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.gc;
+import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
@@ -28,10 +28,13 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -49,6 +52,7 @@ import jnnet.draft.CachedReference;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
@@ -68,29 +72,15 @@ public final class ICPRMitos {
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
-		if (true) {
-			new CachedReference<>(1);
-			new CachedReference<>(2);
-			new CachedReference<>(3);
-			new CachedReference<>(4);
-			
-			debugPrint(CachedReference.getCacheSize());
-			gc(1L);
-			debugPrint(CachedReference.getCacheSize());
-			gc(1L);
-			debugPrint(CachedReference.getCacheSize());
-			
-//			return;
-		}
-		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String trainingFileName = arguments.get("training", "");
 		final String trainingRoot = arguments.get("trainingRoot", "");
 		final int trainingFolds = arguments.get("trainingFolds", 6)[0];
 		final int trainingTestItems = arguments.get("trainingTestItems", 10000)[0];
 		final int trainingShuffleChunkSize = arguments.get("trainingShuffleChunkSize", 4)[0];
-		final int[] trainingParameters = arguments.get("trainingParameters", 10, 8, 6, 4, 2, 0);
-		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.25"));
+		final int trainingWindowSize = arguments.get("trainingWindowSize", 64)[0];
+		final int[] trainingParameters = arguments.get("trainingParameters", 4, 2, 0);
+		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.75"));
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
 		final String testRoot = arguments.get("test", "");
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
@@ -98,7 +88,7 @@ public final class ICPRMitos {
 		if (!trainingFileName.isEmpty()) {
 			if (trainingFileName.endsWith(".jo") && !new File(trainingFileName).exists()) {
 				debugPrint(trainingRoot, "->", trainingFileName);
-				writeObject(new VirtualImageDataset(trainingRoot, 16), trainingFileName);
+				writeObject(new VirtualImageDataset(trainingRoot, trainingWindowSize), trainingFileName);
 			}
 			
 			train(trainingFileName, trainingShuffleChunkSize, trainingFolds, trainingTestItems
@@ -304,81 +294,92 @@ public final class ICPRMitos {
 		final int[] bestClassifierParameter = { 0 };
 		final double[] bestSensitivity = { 0.0 };
 		final TaskManager taskManager = new TaskManager(maximumCPULoad);
+		final Map<Integer, Statistics[]> statistics = new HashMap<>();
 		
-		try (final PrintStream roc = new PrintStream(new File("roc.txt"))) {
-			for (final int classifierParameter : trainingParameters) {
+		for (final int classifierParameter : trainingParameters) {
+			synchronized (statistics) {
+				statistics.put(classifierParameter, instances(2, DefaultFactory.forClass(Statistics.class)));
+			}
+			
+			int fold0 = 0;
+			
+			for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
+				final int fold = ++fold0;
+				
 				taskManager.submit(new Runnable() {
 					
 					@Override
 					public final void run() {
-						debugPrint("classifierParameter:", classifierParameter);
+						final Dataset trainingData = trainingValidationPair[0];
+						final Dataset validationData = trainingValidationPair[1];
 						
-						final Statistics sensitivity = new Statistics();
-						final Statistics specificity = new Statistics();
-						int fold = 1;
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Building classifier started", new Date(timer.tic()));
+						final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
+								trainingData, 0.5, classifierParameter / 100.0, 200, true, true);
+						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
 						
-						for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
-							final Dataset trainingData = trainingValidationPair[0];
-							final Dataset validationData = trainingValidationPair[1];
-							
-							debugPrint("classifierParameter:", classifierParameter);
-							debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier started", new Date(timer.tic()));
-							final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
-									trainingData, 0.5, classifierParameter / 100.0, 100, true, true);
-							debugPrint("fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
-							
-							debugPrint("classifierParameter:", classifierParameter);
-							debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
-							debugPrint("fold:", fold + "/" + crossValidationFolds, "training:", classifier.evaluate(trainingData, null));
-							debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set done in", timer.toc(), "ms");
-							
-							debugPrint("classifierParameter:", classifierParameter);
-							debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set started", new Date(timer.tic()));
-							final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
-							debugPrint("fold:", fold + "/" + crossValidationFolds, "validation:", validationResult);
-							debugPrint("fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set done in", timer.toc(), "ms");
-							
-							sensitivity.addValue(validationResult.getSensitivity());
-							specificity.addValue(validationResult.getSpecificity());
-							++fold;
-						}
+						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
+						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "training:", classifier.evaluate(trainingData, null));
+						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set done in", timer.toc(), "ms");
 						
-						debugPrint("classifierParameter:", classifierParameter, "sensitivity:", sensitivity.getMinimum() + "<=" + sensitivity.getMean() + "(" + sqrt(sensitivity.getVariance()) + ")<=" + sensitivity.getMaximum());
+						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set started", new Date(timer.tic()));
+						final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
+						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "validation:", validationResult);
+						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set done in", timer.toc(), "ms");
 						
-						synchronized (bestSensitivity) {
-							roc.print(classifierParameter);
-							roc.print(" ");
-							roc.print(specificity.getMinimum());
-							roc.print(" ");
-							roc.print(specificity.getMean());
-							roc.print(" ");
-							roc.print(sqrt(specificity.getVariance()));
-							roc.print(" ");
-							roc.print(specificity.getMaximum());
-							roc.print(" ");
-							roc.print(sensitivity.getMinimum());
-							roc.print(" ");
-							roc.print(sensitivity.getMean());
-							roc.print(" ");
-							roc.print(sqrt(sensitivity.getVariance()));
-							roc.print(" ");
-							roc.println(sensitivity.getMaximum());
-							roc.flush();
+						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "sensitivity:", validationResult.getSensitivity(), "specificity:", validationResult.getSpecificity());
+						
+						synchronized (statistics) {
+							final Statistics[] sensitivityAndSpecificity = statistics.get(classifierParameter);
 							
-							if (bestSensitivity[0] < sensitivity.getMean()) {
-								bestSensitivity[0] = sensitivity.getMean();
-								bestClassifierParameter[0] = classifierParameter;
-							}
+							sensitivityAndSpecificity[0].addValue(validationResult.getSensitivity());
+							sensitivityAndSpecificity[1].addValue(validationResult.getSpecificity());
 						}
 					}
 					
 				});
 			}
-		} catch (final IOException exception) {
-			throw unchecked(exception);
 		}
 		
 		taskManager.join();
+		
+		try (final PrintStream roc = new PrintStream(new File("roc.txt"))) {
+			debugPrint("Printing to roc file...");
+			
+			for (final Map.Entry<Integer, Statistics[]> entry : statistics.entrySet()) {
+				final int classifierParameter = entry.getKey();
+				final Statistics sensitivity = entry.getValue()[0];
+				final Statistics specificity = entry.getValue()[1];
+				
+				roc.print(classifierParameter);
+				roc.print(" ");
+				roc.print(specificity.getMinimum());
+				roc.print(" ");
+				roc.print(specificity.getMean());
+				roc.print(" ");
+				roc.print(sqrt(specificity.getVariance()));
+				roc.print(" ");
+				roc.print(specificity.getMaximum());
+				roc.print(" ");
+				roc.print(sensitivity.getMinimum());
+				roc.print(" ");
+				roc.print(sensitivity.getMean());
+				roc.print(" ");
+				roc.print(sqrt(sensitivity.getVariance()));
+				roc.print(" ");
+				roc.println(sensitivity.getMaximum());
+				roc.flush();
+				
+				if (bestSensitivity[0] < sensitivity.getMean()) {
+					bestSensitivity[0] = sensitivity.getMean();
+					bestClassifierParameter[0] = classifierParameter;
+				}
+			}
+			
+			debugPrint("Printing to roc file done");
+		} catch (final IOException exception) {
+			throw unchecked(exception);
+		}
 		
 		if (bestClassifierParameter[0] != 0) {
 			debugPrint("bestClassifierParameter:", bestClassifierParameter[0]);
@@ -436,10 +437,10 @@ public final class ICPRMitos {
 			
 			final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
 			final Collection<String> imageBases = collectImageBases(root);
-			final Collection<Point> explicitPoints = new ArrayList<>();
 			final TicToc timer = new TicToc();
+			final int stride = 64;
 			
-			debugPrint("Collecting explicit data points...", new Date(timer.tic()));
+			debugPrint("Collecting data points...", new Date(timer.tic()));
 			
 			for (final String imageBase : imageBases) {
 				final VirtualImage40 image = new VirtualImage40(imageBase);
@@ -452,6 +453,7 @@ public final class ICPRMitos {
 						for (char q1 = 'a'; q1 <= 'd'; ++q1) {
 							final File mitosisFile = new File(csvBase + q0 + q1 + "_mitosis.csv");
 							final File notMitosisFile = new File(csvBase + q0 + q1 + "_not_mitosis.csv");
+							final Collection<Point> explicitPoints = new ArrayList<>();
 							
 							for (final File file : array(mitosisFile, notMitosisFile)) {
 								debugPrint(file, file.exists(), image.getWidth(), image.getHeight());
@@ -479,41 +481,27 @@ public final class ICPRMitos {
 									}
 								}
 							}
-						}
-					}
-				}
-			}
-			
-			debugPrint("Collecting explicit data points done in", timer.toc(), "ms");
-			debugPrint("Collecting implicit data points...", new Date(timer.tic()));
-			
-			final int stride = 64;
-			
-			for (final String imageBase : imageBases) {
-				debugPrint(this.getItemCount(), imageBase);
-				
-				final VirtualImage40 image = new VirtualImage40(imageBase);
-				final Point point = new Point();
-				
-				for (char q0 = 'A'; q0 <= 'D'; ++q0) {
-					for (char q1 = 'a'; q1 <= 'd'; ++q1) {
-						final BufferedImage tile = image.getTile(q0, q1);
-						final int w = tile.getWidth();
-						final int h = tile.getHeight();
-						
-						for (point.y = 0; point.y < h; point.y += stride) {
-							for (point.x = 0; point.x < w; point.x += stride) {
-								if (isFarEnough(point, explicitPoints, windowSize)) {
-									this.addDataPoints(image, q0, q1, point.x, point.y, 0.0);
+							
+							final Point point = new Point();
+							final BufferedImage tile = image.getTile(q0, q1);
+							final int w = tile.getWidth();
+							final int h = tile.getHeight();
+							
+							for (point.y = 0; point.y < h; point.y += stride) {
+								for (point.x = 0; point.x < w; point.x += stride) {
+									if (isFarEnough(point, explicitPoints, windowSize)) {
+										this.addDataPoints(image, q0, q1, point.x, point.y, 0.0);
+									}
 								}
 							}
+							
+							debugPrint(this.getItemCount());
 						}
 					}
 				}
 			}
 			
-			debugPrint("Collecting implicit data points done in", timer.toc(), "ms");
-			debugPrint("Collecting data points done in", timer.getTotalTime(), "ms");
+			debugPrint("Collecting data points done in", timer.toc(), "ms");
 			
 			this.chunkSize = chunkSize;
 		}
@@ -663,14 +651,14 @@ public final class ICPRMitos {
 			public final double[] getWeights(final int windowSize, final int rotation, final double[] result) {
 				byte[] weights = this.weights.get();
 				
-				synchronized (cacheEfficiency) {
-					cacheEfficiency.addValue(weights == null ? 0.0 : 1.0);
-					
-					if ((round(cacheEfficiency.getCount())) % 1000000L == 0L) {
-						debugPrint("cacheEfficiency:", cacheEfficiency.getMean());
-						cacheEfficiency.reset();
-					}
-				}
+//				synchronized (cacheEfficiency) {
+//					cacheEfficiency.addValue(weights == null ? 0.0 : 1.0);
+//					
+////					if ((round(cacheEfficiency.getCount())) % 2000000L == 0L) {
+////						debugPrint("cacheEfficiency:", cacheEfficiency.getMean(), CachedReference.getCacheSize());
+////						cacheEfficiency.reset();
+////					}
+//				}
 				
 				if (weights != null) {
 					copy(weights, result);
@@ -744,7 +732,7 @@ public final class ICPRMitos {
 			 */
 			private static final long serialVersionUID = -104545303635490290L;
 			
-			static final Statistics cacheEfficiency = new Statistics();
+//			static final Statistics cacheEfficiency = new Statistics();
 			
 			public static final double[] copy(final byte[] source, final double[] destination) {
 				final int n = source.length;
