@@ -1,5 +1,7 @@
 package jnnet.draft;
 
+import static net.sourceforge.aprog.tools.Tools.debugPrint;
+
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -59,7 +61,7 @@ public final class CachedReference<T> implements Serializable, Comparable<Cached
 	 */
 	private static final long serialVersionUID = 416637597373736132L;
 	
-	private static final List<CachedReference<?>> cache = new CacheReducer(0.25).getCache();
+	private static final List<CachedReference<?>> cache = new CacheReducer(0.1).getCache();
 	
 	public static final int getCacheSize() {
 		synchronized (cache) {
@@ -99,6 +101,8 @@ public final class CachedReference<T> implements Serializable, Comparable<Cached
 			
 			try {
 				synchronized (this.getCache()) {
+					debugPrint(runtime.freeMemory(), (long) (runtime.totalMemory() * this.reductionRatio));
+					
 					if (runtime.freeMemory() < runtime.totalMemory() * this.reductionRatio) {
 						Collections.sort((List) this.getCache());
 						
