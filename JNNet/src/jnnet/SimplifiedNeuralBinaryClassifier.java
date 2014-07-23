@@ -258,7 +258,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		
 		for (int i = 0; i < data.getItemCount(); ++i) {
 			if (LOGGING_MILLISECONDS <= timer.toc()) {
-				debugPrint(i, "/", data.getItemCount());
+				System.out.print(Thread.currentThread() + " clustering: " + i + " / " + data.getItemCount() + "\r");
 				timer.tic();
 			}
 			
@@ -378,7 +378,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		
 		while (!todo.isEmpty() && continueProcessing) {
 			if (LOGGING_MILLISECONDS < timer.toc()) {
-				debugPrint("remainingRegions:", todo.size());
+				System.out.print(Thread.currentThread() + " partinioning: " + todo.size() + "\r");
 				timer.tic();
 			}
 			
@@ -394,7 +394,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 			
 			if (acceptableErrors == null) {
 				acceptableErrors = new int[] {
-						(int) (count0  * acceptableErrorRate),
+						(int) (count0 * acceptableErrorRate),
 						(int) (count1 * acceptableErrorRate)
 				};
 			}

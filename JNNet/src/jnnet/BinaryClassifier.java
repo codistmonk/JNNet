@@ -1,7 +1,5 @@
 package jnnet;
 
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-
 import java.io.Serializable;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -21,7 +19,7 @@ public abstract interface BinaryClassifier extends Serializable {
 	/**
 	 * {@value}.
 	 */
-	public static final long LOGGING_MILLISECONDS = 5000L;
+	public static final long LOGGING_MILLISECONDS = 15000L;
 	
 	/**
 	 * @author codistmonk (creation 2014-03-25)
@@ -56,7 +54,7 @@ public abstract interface BinaryClassifier extends Serializable {
 			
 			for (int sampleId = 0; sampleId < dataset.getItemCount(); ++sampleId) {
 				if (LOGGING_MILLISECONDS <= timer.toc()) {
-					debugPrint(sampleId, "/", dataset.getItemCount());
+					System.out.print(Thread.currentThread() + " evaluating: " + sampleId + " / " + dataset.getItemCount() + "\r");
 					timer.tic();
 				}
 				
