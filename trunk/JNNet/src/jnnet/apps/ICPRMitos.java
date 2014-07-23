@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -50,14 +51,15 @@ import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.CachedReference;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-07-04)
@@ -246,6 +248,16 @@ public final class ICPRMitos {
 		return result;
 	}
 	
+	public static final Map<Integer, Pair<Statistics[], BitSet>> getOrCreateProgress(final String filePath) {
+		Map<Integer, Pair<Statistics[], BitSet>> result = readObject(filePath);
+		
+		if (result == null) {
+			result = new HashMap<>();
+		}
+		
+		return result;
+	}
+	
 	public static final void train(final String trainingFileName, final int shuffleChunkSize, final int crossValidationFolds
 			, final int testItems, final int[] trainingParameters, final String classifierFileName, final double maximumCPULoad) {
 		final TicToc timer = new TicToc();
@@ -297,17 +309,28 @@ public final class ICPRMitos {
 		final int[] bestClassifierParameter = { 0 };
 		final double[] bestSensitivity = { 0.0 };
 		final TaskManager taskManager = new TaskManager(maximumCPULoad);
-		final Map<Integer, Statistics[]> statistics = new HashMap<>();
+		final Map<Integer, Pair<Statistics[], BitSet>> progress = getOrCreateProgress("progress.jo");
 		
 		for (final int classifierParameter : trainingParameters) {
-			synchronized (statistics) {
-				statistics.put(classifierParameter, instances(2, DefaultFactory.forClass(Statistics.class)));
+			synchronized (progress) {
+				if (!progress.containsKey(classifierParameter)) {
+					progress.put(classifierParameter, new Pair<>(
+							instances(2, DefaultFactory.forClass(Statistics.class)), new BitSet(crossValidationFolds)));
+				}
 			}
 			
+			final BitSet foldDone = progress.get(classifierParameter).getSecond();
 			int fold0 = 0;
 			
 			for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
 				final int fold = ++fold0;
+				final String foldString = fold + " / " + crossValidationFolds;
+				
+				if (foldDone.get(fold)) {
+					debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "SKIPPED");
+					
+					continue;
+				}
 				
 				taskManager.submit(new Runnable() {
 					
@@ -317,27 +340,33 @@ public final class ICPRMitos {
 						final Dataset trainingData = trainingValidationPair[0];
 						final Dataset validationData = trainingValidationPair[1];
 						
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Building classifier started", new Date(timer.tic()));
+						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Building classifier started", new Date(timer.tic()));
 						final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
 								trainingData, 0.5, classifierParameter / 100.0, 200, true, true);
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
+						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Building classifier done in", timer.toc(), "ms");
 						
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "training:", classifier.evaluate(trainingData, null));
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set done in", timer.toc(), "ms");
+						if (false) {
+							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on training set started", new Date(timer.tic()));
+							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "training:", classifier.evaluate(trainingData, null));
+							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on training set done in", timer.toc(), "ms");
+						}
 						
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set started", new Date(timer.tic()));
+						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on validation set started", new Date(timer.tic()));
 						final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "validation:", validationResult);
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set done in", timer.toc(), "ms");
+						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "validation:", validationResult);
+						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on validation set done in", timer.toc(), "ms");
 						
-						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "sensitivity:", validationResult.getSensitivity(), "specificity:", validationResult.getSpecificity());
+						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "sensitivity:", validationResult.getSensitivity(), "specificity:", validationResult.getSpecificity());
 						
-						synchronized (statistics) {
-							final Statistics[] sensitivityAndSpecificity = statistics.get(classifierParameter);
+						synchronized (progress) {
+							final Statistics[] sensitivityAndSpecificity = progress.get(classifierParameter).getFirst();
 							
 							sensitivityAndSpecificity[0].addValue(validationResult.getSensitivity());
 							sensitivityAndSpecificity[1].addValue(validationResult.getSpecificity());
+							
+							foldDone.set(fold);
+							
+							writeObject((Serializable) progress, "progress.jo");
 						}
 					}
 					
@@ -350,10 +379,10 @@ public final class ICPRMitos {
 		try (final PrintStream roc = new PrintStream(new File("roc.txt"))) {
 			debugPrint("Printing to roc file...");
 			
-			for (final Map.Entry<Integer, Statistics[]> entry : statistics.entrySet()) {
+			for (final Map.Entry<Integer, Pair<Statistics[], BitSet>> entry : progress.entrySet()) {
 				final int classifierParameter = entry.getKey();
-				final Statistics sensitivity = entry.getValue()[0];
-				final Statistics specificity = entry.getValue()[1];
+				final Statistics sensitivity = entry.getValue().getFirst()[0];
+				final Statistics specificity = entry.getValue().getFirst()[1];
 				
 				roc.print(classifierParameter);
 				roc.print(" ");
