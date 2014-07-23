@@ -5,11 +5,11 @@ import static imj2.tools.IMJTools.green8;
 import static imj2.tools.IMJTools.red8;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.sqrt;
-import static java.util.Arrays.asList;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.readObject;
+import static net.sourceforge.aprog.tools.Tools.teeDebugOutputs;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
 
@@ -18,6 +18,7 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
@@ -28,7 +29,6 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -50,6 +50,7 @@ import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.CachedReference;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
@@ -72,6 +73,8 @@ public final class ICPRMitos {
 	 * <br>Must not be null
 	 */
 	public static final void main(final String[] commandLineArguments) throws Exception {
+		teeDebugOutputs(new FileOutputStream("log.txt"));
+		
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String trainingFileName = arguments.get("training", "");
 		final String trainingRoot = arguments.get("trainingRoot", "");
@@ -80,7 +83,7 @@ public final class ICPRMitos {
 		final int trainingShuffleChunkSize = arguments.get("trainingShuffleChunkSize", 4)[0];
 		final int trainingWindowSize = arguments.get("trainingWindowSize", 64)[0];
 		final int[] trainingParameters = arguments.get("trainingParameters", 4, 2, 0);
-		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.75"));
+		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.5"));
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
 		final String testRoot = arguments.get("test", "");
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
@@ -310,24 +313,25 @@ public final class ICPRMitos {
 					
 					@Override
 					public final void run() {
+						final TicToc timer = new TicToc();
 						final Dataset trainingData = trainingValidationPair[0];
 						final Dataset validationData = trainingValidationPair[1];
 						
 						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Building classifier started", new Date(timer.tic()));
 						final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
 								trainingData, 0.5, classifierParameter / 100.0, 200, true, true);
-						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Building classifier done in", timer.toc(), "ms");
 						
-						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
-						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "training:", classifier.evaluate(trainingData, null));
-						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set done in", timer.toc(), "ms");
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set started", new Date(timer.tic()));
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "training:", classifier.evaluate(trainingData, null));
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on training set done in", timer.toc(), "ms");
 						
-						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set started", new Date(timer.tic()));
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set started", new Date(timer.tic()));
 						final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
-						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "validation:", validationResult);
-						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set done in", timer.toc(), "ms");
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "validation:", validationResult);
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "Evaluating classifier on validation set done in", timer.toc(), "ms");
 						
-						debugPrint("classifierParameter:", "fold:", fold + "/" + crossValidationFolds, "sensitivity:", validationResult.getSensitivity(), "specificity:", validationResult.getSpecificity());
+						debugPrint("classifierParameter:", classifierParameter, "fold:", fold + "/" + crossValidationFolds, "sensitivity:", validationResult.getSensitivity(), "specificity:", validationResult.getSpecificity());
 						
 						synchronized (statistics) {
 							final Statistics[] sensitivityAndSpecificity = statistics.get(classifierParameter);
@@ -438,7 +442,7 @@ public final class ICPRMitos {
 			final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
 			final Collection<String> imageBases = collectImageBases(root);
 			final TicToc timer = new TicToc();
-			final int stride = 64;
+			final int stride = 160;
 			
 			debugPrint("Collecting data points...", new Date(timer.tic()));
 			
