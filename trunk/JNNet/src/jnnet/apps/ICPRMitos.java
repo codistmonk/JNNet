@@ -12,6 +12,7 @@ import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.readObject;
 import static net.sourceforge.aprog.tools.Tools.teeDebugOutputs;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static net.sourceforge.aprog.tools.Tools.write;
 import static net.sourceforge.aprog.tools.Tools.writeObject;
 
 import java.awt.Color;
@@ -19,8 +20,11 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.nio.file.FileSystems;
@@ -52,7 +56,6 @@ import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.CachedReference;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
-
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
@@ -86,7 +89,7 @@ public final class ICPRMitos {
 		final int trainingShuffleChunkSize = arguments.get("trainingShuffleChunkSize", 4)[0];
 		final int trainingWindowSize = arguments.get("trainingWindowSize", 64)[0];
 		final int[] trainingParameters = arguments.get("trainingParameters", 4, 2, 0);
-		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.5"));
+		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.75"));
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
 		final String testRoot = arguments.get("test", "");
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
@@ -249,7 +252,7 @@ public final class ICPRMitos {
 		return result;
 	}
 	
-	public static final Map<Integer, Pair<Statistics[], BitSet>> getOrCreateProgress(final String filePath) {
+	public static final <K, V> Map<K, V> getOrCreateProgress(final String filePath) {
 		try {
 			return readObject(filePath);
 		} catch (final Exception exception) {
@@ -257,6 +260,20 @@ public final class ICPRMitos {
 		}
 		
 		return new HashMap<>();
+	}
+	
+	public static final void writeSafely(final Serializable object, final String filePath) {
+		if (new File(filePath).exists()) {
+			try (final InputStream input = new FileInputStream(filePath);
+					final OutputStream backup = new FileOutputStream(filePath + ".bak")) {
+				
+				write(input, backup);
+			} catch (final IOException exception) {
+				throw unchecked(exception);
+			}
+		}
+		
+		writeObject(object, filePath);
 	}
 	
 	public static final void train(final String trainingFileName, final int shuffleChunkSize, final int crossValidationFolds
@@ -310,20 +327,22 @@ public final class ICPRMitos {
 		final int[] bestClassifierParameter = { 0 };
 		final double[] bestSensitivity = { 0.0 };
 		final TaskManager taskManager = new TaskManager(maximumCPULoad);
-		final Map<Integer, Pair<Statistics[], BitSet>> progress = getOrCreateProgress("progress.jo");
+		final Map<Integer, Pair<BinaryClassifier[], Pair<Statistics[], BitSet>>> progress = getOrCreateProgress("progress.jo");
 		
 		for (final int classifierParameter : trainingParameters) {
 			synchronized (progress) {
 				if (!progress.containsKey(classifierParameter)) {
-					progress.put(classifierParameter, new Pair<>(
-							instances(2, DefaultFactory.forClass(Statistics.class)), new BitSet(crossValidationFolds)));
+					progress.put(classifierParameter, new Pair<>(new BinaryClassifier[1], new Pair<>(
+							instances(2, DefaultFactory.forClass(Statistics.class)), new BitSet(crossValidationFolds))));
 				}
 			}
 			
-			final BitSet foldDone = progress.get(classifierParameter).getSecond();
+			final BitSet foldDone = progress.get(classifierParameter).getSecond().getSecond();
 			int fold0 = 0;
 			
 			for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
+				sleep();
+				
 				final int fold = ++fold0;
 				final String foldString = fold + " / " + crossValidationFolds;
 				
@@ -340,11 +359,23 @@ public final class ICPRMitos {
 						final TicToc timer = new TicToc();
 						final Dataset trainingData = trainingValidationPair[0];
 						final Dataset validationData = trainingValidationPair[1];
+						final BinaryClassifier classifier;
 						
-						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Building classifier started", new Date(timer.tic()));
-						final SimplifiedNeuralBinaryClassifier classifier = new SimplifiedNeuralBinaryClassifier(
-								trainingData, 0.5, classifierParameter / 100.0, 200, true, true);
-						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Building classifier done in", timer.toc(), "ms");
+						if (progress.get(classifierParameter).getFirst()[0] != null) {
+							classifier = progress.get(classifierParameter).getFirst()[0];
+						} else {
+							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Building classifier started", new Date(timer.tic()));
+							classifier = new SimplifiedNeuralBinaryClassifier(
+									trainingData, 0.5, classifierParameter / 100.0, 200, true, true);
+							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Building classifier done in", timer.toc(), "ms");
+							
+							synchronized (progress) {
+								progress.get(classifierParameter).getFirst()[0] = classifier;
+								writeSafely((Serializable) progress, "progress.jo");
+							}
+						}
+						
+						sleep();
 						
 						if (false) {
 							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on training set started", new Date(timer.tic()));
@@ -359,15 +390,18 @@ public final class ICPRMitos {
 						
 						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "sensitivity:", validationResult.getSensitivity(), "specificity:", validationResult.getSpecificity());
 						
+						sleep();
+						
 						synchronized (progress) {
-							final Statistics[] sensitivityAndSpecificity = progress.get(classifierParameter).getFirst();
+							progress.get(classifierParameter).getFirst()[0] = null;
+							final Statistics[] sensitivityAndSpecificity = progress.get(classifierParameter).getSecond().getFirst();
 							
 							sensitivityAndSpecificity[0].addValue(validationResult.getSensitivity());
 							sensitivityAndSpecificity[1].addValue(validationResult.getSpecificity());
 							
 							foldDone.set(fold);
 							
-							writeObject((Serializable) progress, "progress.jo");
+							writeSafely((Serializable) progress, "progress.jo");
 						}
 					}
 					
@@ -380,10 +414,10 @@ public final class ICPRMitos {
 		try (final PrintStream roc = new PrintStream(new File("roc.txt"))) {
 			debugPrint("Printing to roc file...");
 			
-			for (final Map.Entry<Integer, Pair<Statistics[], BitSet>> entry : progress.entrySet()) {
+			for (final Map.Entry<Integer, Pair<BinaryClassifier[], Pair<Statistics[], BitSet>>> entry : progress.entrySet()) {
 				final int classifierParameter = entry.getKey();
-				final Statistics sensitivity = entry.getValue().getFirst()[0];
-				final Statistics specificity = entry.getValue().getFirst()[1];
+				final Statistics sensitivity = entry.getValue().getSecond().getFirst()[0];
+				final Statistics specificity = entry.getValue().getSecond().getFirst()[1];
 				
 				roc.print(classifierParameter);
 				roc.print(" ");
@@ -444,6 +478,14 @@ public final class ICPRMitos {
 				writeObject(bestClassifier, classifierFileName);
 				debugPrint("Serializing best classifier done in", timer.toc(), "ms");
 			}
+		}
+	}
+
+	public static void sleep() {
+		try {
+			Thread.sleep(2000L);
+		} catch (final InterruptedException exception) {
+			throw unchecked(exception);
 		}
 	}
 	
@@ -682,17 +724,8 @@ public final class ICPRMitos {
 				return this.label;
 			}
 			
-			public final double[] getWeights(final int windowSize, final int rotation, final double[] result) {
+			public final synchronized double[] getWeights(final int windowSize, final int rotation, final double[] result) {
 				byte[] weights = this.weights.get();
-				
-//				synchronized (cacheEfficiency) {
-//					cacheEfficiency.addValue(weights == null ? 0.0 : 1.0);
-//					
-////					if ((round(cacheEfficiency.getCount())) % 2000000L == 0L) {
-////						debugPrint("cacheEfficiency:", cacheEfficiency.getMean(), CachedReference.getCacheSize());
-////						cacheEfficiency.reset();
-////					}
-//				}
 				
 				if (weights != null) {
 					copy(weights, result);
