@@ -6,6 +6,7 @@ import static imj2.tools.IMJTools.red8;
 import static java.lang.Double.parseDouble;
 import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.readObject;
@@ -51,6 +52,7 @@ import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.CachedReference;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
@@ -59,7 +61,6 @@ import net.sourceforge.aprog.tools.Pair;
 import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2014-07-04)
@@ -249,13 +250,13 @@ public final class ICPRMitos {
 	}
 	
 	public static final Map<Integer, Pair<Statistics[], BitSet>> getOrCreateProgress(final String filePath) {
-		Map<Integer, Pair<Statistics[], BitSet>> result = readObject(filePath);
-		
-		if (result == null) {
-			result = new HashMap<>();
+		try {
+			return readObject(filePath);
+		} catch (final Exception exception) {
+			debugError(exception);
 		}
 		
-		return result;
+		return new HashMap<>();
 	}
 	
 	public static final void train(final String trainingFileName, final int shuffleChunkSize, final int crossValidationFolds
