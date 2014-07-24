@@ -298,11 +298,11 @@ public final class ICPRMitos {
 		debugPrint("Shuffling dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Loading test dataset started", new Date(timer.tic()));
-		final Dataset testData = all.subset(all.getItemCount() - testItems, testItems);
+		final Dataset testData = all.reversedSubset(all.getItemCount() - testItems, testItems);
 		debugPrint("Loading test dataset done in", timer.toc(), "ms");
 		
 		debugPrint("Loading full training dataset started", new Date(timer.tic()));
-		final ReorderingDataset fullTrainingData = all.subset(0, all.getItemCount() - testItems);
+		final ReorderingDataset fullTrainingData = all.reversedSubset(0, all.getItemCount() - testItems);
 		debugPrint("Loading full training dataset done in", timer.toc(), "ms");
 		
 		final int validationItems = crossValidationFolds == 1 ? 0
@@ -313,11 +313,11 @@ public final class ICPRMitos {
 			fullTrainingData.swapFolds(0, fold - 1, crossValidationFolds);
 			
 			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading training dataset started", new Date(timer.tic()));
-			final Dataset trainingData = fullTrainingData.subset(validationItems, fullTrainingData.getItemCount() - validationItems);
+			final Dataset trainingData = fullTrainingData.reversedSubset(validationItems, fullTrainingData.getItemCount() - validationItems);
 			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading training dataset done in", timer.toc(), "ms");
 			
 			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading validation dataset started", new Date(timer.tic()));
-			final Dataset validationData = validationItems == 0 ? trainingData : fullTrainingData.subset(0, validationItems);
+			final Dataset validationData = validationItems == 0 ? trainingData : fullTrainingData.reversedSubset(0, validationItems);
 			debugPrint("fold:", fold + "/" + crossValidationFolds, "Loading validation dataset done in", timer.toc(), "ms");
 			
 			trainingValidationPairs.add(array(trainingData, validationData));
@@ -334,7 +334,7 @@ public final class ICPRMitos {
 		for (final int classifierParameter : trainingParameters) {
 			synchronized (progress) {
 				if (!progress.containsKey(classifierParameter)) {
-					progress.put(classifierParameter, new Pair<>(new BinaryClassifier[1], new Pair<>(
+					progress.put(classifierParameter, new Pair<>(new BinaryClassifier[crossValidationFolds], new Pair<>(
 							instances(2, DefaultFactory.forClass(Statistics.class)), new BitSet(crossValidationFolds))));
 				}
 			}
@@ -367,8 +367,8 @@ public final class ICPRMitos {
 						final Dataset validationData = trainingValidationPair[1];
 						final BinaryClassifier classifier;
 						
-						if (progress.get(classifierParameter).getFirst()[0] != null) {
-							classifier = progress.get(classifierParameter).getFirst()[0];
+						if (progress.get(classifierParameter).getFirst()[fold] != null) {
+							classifier = progress.get(classifierParameter).getFirst()[fold];
 						} else {
 							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Building classifier started", new Date(timer.tic()));
 							classifier = new SimplifiedNeuralBinaryClassifier(
@@ -376,7 +376,7 @@ public final class ICPRMitos {
 							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Building classifier done in", timer.toc(), "ms");
 							
 							synchronized (progress) {
-								progress.get(classifierParameter).getFirst()[0] = classifier;
+								progress.get(classifierParameter).getFirst()[fold] = classifier;
 								writeSafely((Serializable) progress, "progress.jo");
 							}
 						}
@@ -393,7 +393,7 @@ public final class ICPRMitos {
 						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on validation set done in", timer.toc(), "ms");
 						
 						synchronized (progress) {
-							progress.get(classifierParameter).getFirst()[0] = null;
+							progress.get(classifierParameter).getFirst()[fold] = null;
 							final Statistics[] sensitivityAndSpecificity = progress.get(classifierParameter).getSecond().getFirst();
 							
 							sensitivityAndSpecificity[0].addValue(validationResult.getSensitivity());

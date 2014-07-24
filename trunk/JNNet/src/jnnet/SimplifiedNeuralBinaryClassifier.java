@@ -15,6 +15,7 @@ import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTOR
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
+import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.instances;
@@ -87,7 +88,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 			final Collection<BitSet> ambiguousCodes = intersection(new HashSet<BitSet>(codes.getCodes()[0].keySet()), codes.getCodes()[1].keySet());
 			
 			if (!ambiguousCodes.isEmpty()) {
-				System.err.println(debug(Tools.DEBUG_STACK_OFFSET, "ambiguities:", ambiguousCodes.size()));
+				debugError("ambiguities:", ambiguousCodes.size());
 				
 				for (final BitSet ambiguousCode : ambiguousCodes) {
 					if (codes.getCodes()[0].get(ambiguousCode).get() <= codes.getCodes()[1].get(ambiguousCode).get()) {
@@ -97,8 +98,9 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 					}
 				}
 				
-				System.err.println(debug(Tools.DEBUG_STACK_OFFSET, codes));
+				debugError(codes);
 				
+				// XXX Is this a good idea? (may negatively impact weak reference-based caches)
 				Tools.gc(1L);
 			}
 		}
@@ -378,7 +380,7 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		
 		while (!todo.isEmpty() && continueProcessing) {
 			if (LOGGING_MILLISECONDS < timer.toc()) {
-				System.out.print(Thread.currentThread() + " partinioning: " + todo.size() + "\r");
+				System.out.print(Thread.currentThread() + " partitioning: " + todo.size() + "\r");
 				timer.tic();
 			}
 			
