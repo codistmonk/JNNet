@@ -69,6 +69,10 @@ public final class ReorderingDataset implements Dataset {
 		return new ReorderingDataset(this.source, copyOfRange(this.indices, start, start + count));
 	}
 	
+	public final ReorderingDataset reversedSubset(final int start, final int count) {
+		return new ReorderingDataset(this.source, reversedCopyOfRange(this.indices, start, start + count));
+	}
+	
 	public final ReorderingDataset swapFolds(final int fold1, final int fold2, final int foldCount) {
 		final int n = this.getItemCount() / foldCount;
 		final int i1 = fold1 * n;
@@ -121,5 +125,16 @@ public final class ReorderingDataset implements Dataset {
 	private static final long serialVersionUID = 7192159261343544777L;
 	
 	public static final Random RANDOM = new Random(0L);
+	
+	public static final int[] reversedCopyOfRange(final int[] original, final int from, final int to) {
+		final int n = to - from;
+		final int[] result = new int[n];
+		
+		for (int i = 0, j = to - 1; i < n; ++i, --j) {
+			result[i] = original[j];
+		}
+		
+		return result;
+	}
 	
 }
