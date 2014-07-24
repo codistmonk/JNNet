@@ -88,6 +88,7 @@ public final class ICPRMitos {
 		final int trainingTestItems = arguments.get("trainingTestItems", 10000)[0];
 		final int trainingShuffleChunkSize = arguments.get("trainingShuffleChunkSize", 4)[0];
 		final int trainingWindowSize = arguments.get("trainingWindowSize", 64)[0];
+		final int trainingStride = arguments.get("trainingStride", 192)[0];
 		final int[] trainingParameters = arguments.get("trainingParameters", 4, 2, 0);
 		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.75"));
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
@@ -97,7 +98,7 @@ public final class ICPRMitos {
 		if (!trainingFileName.isEmpty()) {
 			if (trainingFileName.endsWith(".jo") && !new File(trainingFileName).exists()) {
 				debugPrint(trainingRoot, "->", trainingFileName);
-				writeObject(new VirtualImageDataset(trainingRoot, trainingWindowSize), trainingFileName);
+				writeObject(new VirtualImageDataset(trainingRoot, trainingWindowSize, trainingStride), trainingFileName);
 			}
 			
 			train(trainingFileName, trainingShuffleChunkSize, trainingFolds, trainingTestItems
@@ -328,6 +329,7 @@ public final class ICPRMitos {
 		final double[] bestSensitivity = { 0.0 };
 		final TaskManager taskManager = new TaskManager(maximumCPULoad);
 		final Map<Integer, Pair<BinaryClassifier[], Pair<Statistics[], BitSet>>> progress = getOrCreateProgress("progress.jo");
+		boolean started = false;
 		
 		for (final int classifierParameter : trainingParameters) {
 			synchronized (progress) {
@@ -341,8 +343,6 @@ public final class ICPRMitos {
 			int fold0 = 0;
 			
 			for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
-				sleep();
-				
 				final int fold = ++fold0;
 				final String foldString = fold + " / " + crossValidationFolds;
 				
@@ -350,6 +350,12 @@ public final class ICPRMitos {
 					debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "SKIPPED");
 					
 					continue;
+				}
+				
+				if (started) {
+					sleep(300000L);
+				} else {
+					started = true;
 				}
 				
 				taskManager.submit(new Runnable() {
@@ -375,8 +381,6 @@ public final class ICPRMitos {
 							}
 						}
 						
-						sleep();
-						
 						if (false) {
 							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on training set started", new Date(timer.tic()));
 							debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "training:", classifier.evaluate(trainingData, null));
@@ -387,10 +391,6 @@ public final class ICPRMitos {
 						final SimpleConfusionMatrix validationResult = classifier.evaluate(validationData, null);
 						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "validation:", validationResult);
 						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on validation set done in", timer.toc(), "ms");
-						
-						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "sensitivity:", validationResult.getSensitivity(), "specificity:", validationResult.getSpecificity());
-						
-						sleep();
 						
 						synchronized (progress) {
 							progress.get(classifierParameter).getFirst()[0] = null;
@@ -481,9 +481,9 @@ public final class ICPRMitos {
 		}
 	}
 
-	public static void sleep() {
+	public static void sleep(final long milliseconds) {
 		try {
-			Thread.sleep(2000L);
+			Thread.sleep(milliseconds);
 		} catch (final InterruptedException exception) {
 			throw unchecked(exception);
 		}
@@ -504,7 +504,7 @@ public final class ICPRMitos {
 		
 		private final int chunkSize;
 		
-		public VirtualImageDataset(final String root, final int windowSize) {
+		public VirtualImageDataset(final String root, final int windowSize, final int stride) {
 			this.items = new ArrayList<>();
 			this.channelCount = 3;
 			this.windowSize = windowSize;
@@ -514,7 +514,6 @@ public final class ICPRMitos {
 			final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
 			final Collection<String> imageBases = collectImageBases(root);
 			final TicToc timer = new TicToc();
-			final int stride = 160;
 			
 			debugPrint("Collecting data points...", new Date(timer.tic()));
 			
@@ -724,71 +723,71 @@ public final class ICPRMitos {
 				return this.label;
 			}
 			
-			public final synchronized double[] getWeights(final int windowSize, final int rotation, final double[] result) {
-				byte[] weights = this.weights.get();
+			public final double[] getWeights(final int windowSize, final int rotation, final double[] result) {
+				byte[] weights = null;
 				
-				if (weights != null) {
-					copy(weights, result);
+				synchronized (this) {
+					weights = this.weights.get();
 					
-					return result;
-				}
-				
-				weights = new byte[windowSize * windowSize * 3];
-				this.weights = new CachedReference<>(weights);
-				
-				this.weights.get();
-				
-				final int x0 = this.getX() - windowSize / 2;
-				final int x1 = x0 + windowSize;
-				final int y0 = this.getY() - windowSize / 2;
-				final int y1 = y0 + windowSize;
-				int i = -1;
-				
-				switch (rotation) {
-				case 0:
-					for (int y = y0; y < y1; ++y) {
-						for (int x = x0; x < x1; ++x) {
-							final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
-							weights[++i] = (byte) red8(rgb);
-							weights[++i] = (byte) green8(rgb);
-							weights[++i] = (byte) blue8(rgb);
+					if (weights == null) {
+						weights = new byte[windowSize * windowSize * 3];
+						this.weights = new CachedReference<>(weights);
+						
+						this.weights.get();
+						
+						final int x0 = this.getX() - windowSize / 2;
+						final int x1 = x0 + windowSize;
+						final int y0 = this.getY() - windowSize / 2;
+						final int y1 = y0 + windowSize;
+						int i = -1;
+						
+						switch (rotation) {
+						case 0:
+							for (int y = y0; y < y1; ++y) {
+								for (int x = x0; x < x1; ++x) {
+									final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
+									weights[++i] = (byte) red8(rgb);
+									weights[++i] = (byte) green8(rgb);
+									weights[++i] = (byte) blue8(rgb);
+								}
+							}
+							
+							break;
+						case 1:
+							for (int x = x1 - 1; x0 <= x; --x) {
+								for (int y = y0; y < y1; ++y) {
+									final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
+									weights[++i] = (byte) red8(rgb);
+									weights[++i] = (byte) green8(rgb);
+									weights[++i] = (byte) blue8(rgb);
+								}
+							}
+							
+							break;
+						case 2:
+							for (int y = y1 - 1; y0 <= y; --y) {
+								for (int x = x1 - 1; x0 <= x; --x) {
+									final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
+									weights[++i] = (byte) red8(rgb);
+									weights[++i] = (byte) green8(rgb);
+									weights[++i] = (byte) blue8(rgb);
+								}
+							}
+							
+							break;
+						case 3:
+							for (int x = x0; x < x1; ++x) {
+								for (int y = y1 - 1; y0 <= y; --y) {
+									final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
+									weights[++i] = (byte) red8(rgb);
+									weights[++i] = (byte) green8(rgb);
+									weights[++i] = (byte) blue8(rgb);
+								}
+							}
+							
+							break;
 						}
 					}
-					
-					break;
-				case 1:
-					for (int x = x1 - 1; x0 <= x; --x) {
-						for (int y = y0; y < y1; ++y) {
-							final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
-							weights[++i] = (byte) red8(rgb);
-							weights[++i] = (byte) green8(rgb);
-							weights[++i] = (byte) blue8(rgb);
-						}
-					}
-					
-					break;
-				case 2:
-					for (int y = y1 - 1; y0 <= y; --y) {
-						for (int x = x1 - 1; x0 <= x; --x) {
-							final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
-							weights[++i] = (byte) red8(rgb);
-							weights[++i] = (byte) green8(rgb);
-							weights[++i] = (byte) blue8(rgb);
-						}
-					}
-					
-					break;
-				case 3:
-					for (int x = x0; x < x1; ++x) {
-						for (int y = y1 - 1; y0 <= y; --y) {
-							final int rgb = this.getImage().getRGB(this.getQ0(), this.getQ1(), x, y);
-							weights[++i] = (byte) red8(rgb);
-							weights[++i] = (byte) green8(rgb);
-							weights[++i] = (byte) blue8(rgb);
-						}
-					}
-					
-					break;
 				}
 				
 				return copy(weights, result);
@@ -798,8 +797,6 @@ public final class ICPRMitos {
 			 * {@value}.
 			 */
 			private static final long serialVersionUID = -104545303635490290L;
-			
-//			static final Statistics cacheEfficiency = new Statistics();
 			
 			public static final double[] copy(final byte[] source, final double[] destination) {
 				final int n = source.length;
