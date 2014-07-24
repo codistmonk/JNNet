@@ -34,6 +34,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Date;
@@ -89,11 +90,12 @@ public final class ICPRMitos {
 		final int trainingShuffleChunkSize = arguments.get("trainingShuffleChunkSize", 4)[0];
 		final int trainingWindowSize = arguments.get("trainingWindowSize", 64)[0];
 		final int trainingStride = arguments.get("trainingStride", 192)[0];
-		final int[] trainingParameters = arguments.get("trainingParameters", 4, 2, 0);
+		final int[] trainingParameters = arguments.get("trainingParameters", 5, 4, 3, 2, 0);
 		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.75"));
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
 		final String testRoot = arguments.get("test", "");
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
+		final boolean postProcess = arguments.get("postProcess", 0)[0] != 0;
 		
 		if (!trainingFileName.isEmpty()) {
 			if (trainingFileName.endsWith(".jo") && !new File(trainingFileName).exists()) {
@@ -131,6 +133,12 @@ public final class ICPRMitos {
 			}
 			
 			taskManager.join();
+		}
+		
+		if (postProcess) {
+			// TODO extract low-resolution binary masks from test results (yellow == 1)
+			// TODO find best radius for hit-or-miss filtering with disk surrounded by ring with fixed thickness
+			// TODO apply hit-or-miss filtering and generate coordinates using center of connected components
 		}
 	}
 	
@@ -334,8 +342,14 @@ public final class ICPRMitos {
 		for (final int classifierParameter : trainingParameters) {
 			synchronized (progress) {
 				if (!progress.containsKey(classifierParameter)) {
-					progress.put(classifierParameter, new Pair<>(new BinaryClassifier[crossValidationFolds], new Pair<>(
-							instances(2, DefaultFactory.forClass(Statistics.class)), new BitSet(crossValidationFolds))));
+					progress.put(classifierParameter, new Pair<>(new BinaryClassifier[crossValidationFolds + 1], new Pair<>(
+							instances(2, DefaultFactory.forClass(Statistics.class)), new BitSet(crossValidationFolds + 1))));
+				} else if (progress.get(classifierParameter).getFirst().length != crossValidationFolds + 1) {
+					debugPrint("Fixing progress structure for classifier parameter", classifierParameter);
+					progress.put(classifierParameter, new Pair<>(
+							Arrays.copyOf(progress.get(classifierParameter).getFirst(), crossValidationFolds + 1)
+							, progress.get(classifierParameter).getSecond()));
+					writeSafely((Serializable) progress, "progress.jo");
 				}
 			}
 			
@@ -344,7 +358,7 @@ public final class ICPRMitos {
 			
 			for (final Dataset[] trainingValidationPair : trainingValidationPairs) {
 				final int fold = ++fold0;
-				final String foldString = fold + " / " + crossValidationFolds;
+				final String foldString = fold + "/" + crossValidationFolds;
 				
 				if (foldDone.get(fold)) {
 					debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "SKIPPED");
@@ -353,10 +367,12 @@ public final class ICPRMitos {
 				}
 				
 				if (started) {
-					sleep(300000L);
+					sleep(400000L);
 				} else {
 					started = true;
 				}
+				
+				debugPrint("Submitting task for classifier parameter", classifierParameter, "fold", foldString);
 				
 				taskManager.submit(new Runnable() {
 					
@@ -366,6 +382,8 @@ public final class ICPRMitos {
 						final Dataset trainingData = trainingValidationPair[0];
 						final Dataset validationData = trainingValidationPair[1];
 						final BinaryClassifier classifier;
+						
+						debugPrint(Thread.currentThread(), classifierParameter, foldString);
 						
 						if (progress.get(classifierParameter).getFirst()[fold] != null) {
 							classifier = progress.get(classifierParameter).getFirst()[fold];
@@ -393,13 +411,13 @@ public final class ICPRMitos {
 						debugPrint("classifierParameter:", classifierParameter, "fold:", foldString, "Evaluating classifier on validation set done in", timer.toc(), "ms");
 						
 						synchronized (progress) {
-							progress.get(classifierParameter).getFirst()[fold] = null;
 							final Statistics[] sensitivityAndSpecificity = progress.get(classifierParameter).getSecond().getFirst();
 							
 							sensitivityAndSpecificity[0].addValue(validationResult.getSensitivity());
 							sensitivityAndSpecificity[1].addValue(validationResult.getSpecificity());
 							
 							foldDone.set(fold);
+							progress.get(classifierParameter).getFirst()[fold] = null;
 							
 							writeSafely((Serializable) progress, "progress.jo");
 						}
