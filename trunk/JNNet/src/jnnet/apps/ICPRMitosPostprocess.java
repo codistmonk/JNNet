@@ -4,6 +4,7 @@ import static java.lang.Math.sqrt;
 import static jnnet.apps.ICPRMitos.newEnglishScanner;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import imj.IMJTools;
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
@@ -17,7 +18,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,13 +30,21 @@ import javax.imageio.ImageIO;
 
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
+import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.MathTools.Statistics;
+import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
 
 /**
  * @author codistmonk (creation 2014-07-25)
  */
 public final class ICPRMitosPostprocess {
+	
+	private ICPRMitosPostprocess() {
+		throw new IllegalInstantiationException();
+	}
+	
+	public static final DefaultFactory<AtomicInteger> ATOMIC_INTEGER_FACTORY = DefaultFactory.forClass(AtomicInteger.class);
 	
 	/**
 	 * @param commandLineArguments
@@ -45,12 +57,16 @@ public final class ICPRMitosPostprocess {
 		final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
 		final Collection<String> imageBases = ICPRMitos.collectImageBases(trainingRoot);
 		final TicToc timer = new TicToc();
+		final Map<Integer, AtomicInteger> sizeHistogram = new TreeMap<>();
+		final Map<Integer, AtomicInteger> truePositiveSizeHistogram = new TreeMap<>();
+		final Statistics truePositivePatchSize = new Statistics();
 		
 		debugPrint("Postprocessing...", new Date(timer.tic()));
 		
 		for (final String imageBase : imageBases) {
 			final VirtualImage40 image = new VirtualImage40(imageBase);
 			final Matcher matcher = pattern.matcher(imageBase);
+			final Statistics patchSize = new Statistics();
 			
 			if (matcher.matches()) {
 				final String rawResultBase = matcher.group(1) + matcher.group(2) + "/mitosis" + matcher.group(3);
@@ -62,8 +78,6 @@ public final class ICPRMitosPostprocess {
 				
 				debugPrint(imjMask.getColumnCount(), imjMask.getRowCount(), explicitPoints.size());
 				
-				final Statistics patchSize = new Statistics();
-				final Statistics truePositivePatchSize = new Statistics();
 				final AtomicLong truePositives = new AtomicLong();
 				
 				IMJTools.forEachPixelInEachComponent4(imjMask, false, new PixelProcessor() {
@@ -72,7 +86,7 @@ public final class ICPRMitosPostprocess {
 					
 					private final Point point = new Point();
 					
-					private long patchPixelCount;
+					private int patchPixelCount;
 					
 					private boolean truePositive;
 					
@@ -95,9 +109,13 @@ public final class ICPRMitosPostprocess {
 						
 						if (this.truePositive) {
 							truePositivePatchSize.addValue(this.patchPixelCount);
+							getOrCreate(truePositiveSizeHistogram, this.patchPixelCount, ATOMIC_INTEGER_FACTORY).incrementAndGet();
+							this.truePositive = false;
 						}
 						
-						this.patchPixelCount = 0L;
+						getOrCreate(sizeHistogram, this.patchPixelCount, ATOMIC_INTEGER_FACTORY).incrementAndGet();
+						
+						this.patchPixelCount = 0;
 					}
 					
 					/**
@@ -109,14 +127,17 @@ public final class ICPRMitosPostprocess {
 				
 				debugPrint("patchCount:", patchSize.getCount(), "meanPatchSize:", patchSize.getMean()
 						, "truePositives:", truePositives);
-				debugPrint("truePositivePatchSize:", truePositivePatchSize.getMinimum()
-						, "<=", truePositivePatchSize.getMean()
-						, "#", sqrt(truePositivePatchSize.getVariance())
-						, "<=", truePositivePatchSize.getMaximum());
 			}
 		}
 		
 		debugPrint("Postprocessing done in", timer.toc(), "ms");
+		
+		debugPrint("truePositivePatchSize:", truePositivePatchSize.getMinimum()
+				, "<=", truePositivePatchSize.getMean()
+				, "#", sqrt(truePositivePatchSize.getVariance())
+				, "<=", truePositivePatchSize.getMaximum());
+		debugPrint("truePositiveSizeHistogram:", truePositiveSizeHistogram);
+		debugPrint("sizeHistogram:", sizeHistogram);
 	}
 	
 	public static final Collection<Point> collectDownscaledPositives(
