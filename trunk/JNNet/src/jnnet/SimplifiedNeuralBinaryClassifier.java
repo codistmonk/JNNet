@@ -23,6 +23,7 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -35,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jgencode.primitivelists.DoubleList;
+
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 import net.sourceforge.aprog.tools.TicToc;
@@ -254,13 +256,16 @@ public final class SimplifiedNeuralBinaryClassifier implements BinaryClassifier 
 		debugPrint("Clustering...");
 		
 		final Codeset result = new Codeset(hyperplanes.length / data.getItemSize());
+		final int itemCount = data.getItemCount();
 		final TicToc timer = new TicToc();
 		
 		timer.tic();
 		
-		for (int i = 0; i < data.getItemCount(); ++i) {
+		for (int i = 0; i < itemCount; ++i) {
 			if (LOGGING_MILLISECONDS <= timer.toc()) {
-				System.out.print(Thread.currentThread() + " clustering: " + i + " / " + data.getItemCount() + "\r");
+				System.out.print(Thread.currentThread() + " clustering: " + i + "/" + itemCount
+						+ " ETA: " + Duration.ofMillis((itemCount - i) * timer.getTotalTime() / (i | 1L))
+						+ "\r");
 				timer.tic();
 			}
 			
