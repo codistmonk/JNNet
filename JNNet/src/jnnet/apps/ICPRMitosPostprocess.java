@@ -16,6 +16,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
@@ -138,6 +139,33 @@ public final class ICPRMitosPostprocess {
 				, "<=", truePositivePatchSize.getMaximum());
 		debugPrint("truePositiveSizeHistogram:", truePositiveSizeHistogram);
 		debugPrint("sizeHistogram:", sizeHistogram);
+		
+		final Integer[] sizes = sizeHistogram.keySet().toArray(new Integer[sizeHistogram.size()]);
+		final int sizeCount = sizes.length;
+		final AtomicInteger zero = new AtomicInteger();
+		final double[] bestScore = new double[3];
+		
+		for (int i = 0; i < sizeCount; ++i) {
+			for (int j = i; j < sizeCount; ++j) {
+				double truePositiveCount = 0.0;
+				double count = 0.0;
+				
+				for (int k = i; k <= j; ++k) {
+					truePositiveCount += truePositiveSizeHistogram.getOrDefault(sizes[k], zero).get();
+					count += sizeHistogram.getOrDefault(sizes[k], zero).get();
+				}
+				
+				final double score = truePositiveCount / truePositivePatchSize.getCount() + truePositiveCount / count;
+				
+				if (bestScore[0] < score) {
+					bestScore[0] = score;
+					bestScore[1] = sizes[i];
+					bestScore[2] = sizes[j];
+				}
+			}
+		}
+		
+		debugPrint(Arrays.toString(bestScore));
 	}
 	
 	public static final Collection<Point> collectDownscaledPositives(
