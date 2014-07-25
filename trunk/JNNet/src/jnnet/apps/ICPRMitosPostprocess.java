@@ -22,9 +22,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -61,7 +63,6 @@ public final class ICPRMitosPostprocess {
 		final String trainingRoot = arguments.get("trainingRoot", "");
 		final String testRoot = arguments.get("test", "");
 		final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
-		final Collection<String> imageBases = ICPRMitos.collectImageBases(trainingRoot);
 		final TicToc timer = new TicToc();
 		final Map<String, Object> progress = ICPRMitos.getOrCreateProgress("postprocessingProgress.jo");
 		final Map<Integer, AtomicInteger> sizeHistogram = (Map<Integer, AtomicInteger>) getOrCreate(
@@ -74,6 +75,8 @@ public final class ICPRMitosPostprocess {
 		debugPrint("Postprocessing...", new Date(timer.tic()));
 		
 		if (sizeHistogram.isEmpty()) {
+			final Collection<String> imageBases = ICPRMitos.collectImageBases(trainingRoot);
+			
 			for (final String imageBase : imageBases) {
 				final VirtualImage40 image = new VirtualImage40(imageBase);
 				final Matcher matcher = pattern.matcher(imageBase);
@@ -183,6 +186,89 @@ public final class ICPRMitosPostprocess {
 		}
 		
 		debugPrint(Arrays.toString(bestScore));
+		
+		{
+			final int minimumSize = (int) bestScore[1];
+			final int maximumSize = (int) bestScore[2];
+			final Collection<String> imageBases = ICPRMitos.collectImageBases(testRoot);
+			final Map<String, Collection<Point>> mitoses = new TreeMap<>();
+			
+			for (final String imageBase : imageBases) {
+				final VirtualImage40 image = new VirtualImage40(imageBase);
+				final int tileWidth = image.getWidth() / 4;
+				final int tileHeight = image.getHeight() / 4;
+				final Matcher matcher = pattern.matcher(imageBase);
+				
+				if (matcher.matches()) {
+					final String rawResultBase = matcher.group(1) + matcher.group(2) + "/mitosis" + matcher.group(3);
+					final File maskFile = new File(rawResultBase + "_mask.png");
+					final BufferedImage mask = getOrCreateMask(image, rawResultBase, maskFile);
+					final Image imjMask = new ImageOfBufferedImage(mask, Feature.MAX_RGB);
+					
+					debugPrint(imjMask.getColumnCount(), imjMask.getRowCount());
+					
+					for (char q0 = 'A'; q0 <= 'D'; ++q0) {
+						for (char q1 = 'a'; q1 <= 'd'; ++q1) {
+							mitoses.put(imageBase + q0 + q1, new HashSet<>());
+						}
+					}
+					
+					IMJTools.forEachPixelInEachComponent4(imjMask, false, new PixelProcessor() {
+						
+						private final int w = imjMask.getColumnCount();
+						
+						private int x;
+						
+						private int y;
+						
+						private int patchPixelCount;
+						
+						@Override
+						public final void process(final int pixel) {
+							this.x += pixel % this.w;
+							this.y += pixel / this.w;
+							++this.patchPixelCount;
+						}
+						
+						@Override
+						public final void finishPatch() {
+							if (minimumSize <= this.patchPixelCount && this.patchPixelCount <= maximumSize) {
+								this.x /= this.patchPixelCount;
+								this.y /= this.patchPixelCount;
+								// (00 00) (01 00) (10 00) (11 00)
+								// (00 01) (01 01) (10 01) (11 01)
+								// (00 10) (01 10) (10 10) (11 10)
+								// (00 11) (01 11) (10 11) (11 11)
+								final int qx = (this.x * 4) / tileWidth;
+								final int qy = (this.y * 4) / tileHeight;
+								final char q0 = (char) ('A' + ((qx & 2) >> 1) + ((qy & 2) >> 0));
+								final char q1 = (char) ('a' + ((qx & 1) << 0) + ((qy & 1) << 1));
+								
+								mitoses.get(imageBase + q0 + q1).add(new Point(this.x, this.y));
+							}
+							
+							this.x = 0;
+							this.y = 0;
+							this.patchPixelCount = 0;
+						}
+						
+						/**
+						 * {@value}.
+						 */
+						private static final long serialVersionUID = 2769568076132020491L;
+						
+					});
+					
+					for (char q0 = 'A'; q0 <= 'D'; ++q0) {
+						for (char q1 = 'a'; q1 <= 'd'; ++q1) {
+							final String key = imageBase + q0 + q1;
+							
+							debugPrint(key, mitoses.get(key).size());
+						}
+					}
+				}
+			}
+		}
 		
 		debugPrint("Postprocessing done in", timer.toc(), "ms");
 	}

@@ -322,7 +322,6 @@ public final class MitosAtypiaImporter {
 			
 			for (int quad0 = 0; quad0 <= 3; ++quad0) {
 				for (int quad1 = 0; quad1 <= 3; ++quad1) {
-//					this.tiles[quad0][quad1] = readTile(quad0, quad1);
 					final BufferedImage tile = readTile(quad0, quad1);
 					this.tiles[quad0][quad1] = new WeakReference<BufferedImage>(tile);
 					
@@ -336,8 +335,6 @@ public final class MitosAtypiaImporter {
 				}
 			}
 			
-//			this.width = this.tiles[0][0].getWidth() + this.tiles[0][1].getWidth() + this.tiles[1][0].getWidth() + this.tiles[1][1].getWidth();
-//			this.height = this.tiles[0][0].getHeight() + this.tiles[0][2].getHeight() + this.tiles[2][0].getHeight() + this.tiles[2][2].getHeight();
 			this.width = width;
 			this.height = height;
 		}
