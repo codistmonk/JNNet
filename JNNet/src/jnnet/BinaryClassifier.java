@@ -1,6 +1,7 @@
 package jnnet;
 
 import java.io.Serializable;
+import java.time.Duration;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TicToc;
@@ -47,14 +48,17 @@ public abstract interface BinaryClassifier extends Serializable {
 		
 		public static final SimpleConfusionMatrix defaultEvaluate(final BinaryClassifier classifier,
 				final Dataset dataset, final EvaluationMonitor monitor) {
-			final TicToc timer = new TicToc();
+			final int itemCount = dataset.getItemCount();
 			final SimpleConfusionMatrix result = new SimpleConfusionMatrix();
+			final TicToc timer = new TicToc();
 			
 			timer.tic();
 			
-			for (int sampleId = 0; sampleId < dataset.getItemCount(); ++sampleId) {
+			for (int sampleId = 0; sampleId < itemCount; ++sampleId) {
 				if (LOGGING_MILLISECONDS <= timer.toc()) {
-					System.out.print(Thread.currentThread() + " evaluating: " + sampleId + " / " + dataset.getItemCount() + "\r");
+					System.out.print(Thread.currentThread() + " evaluating: " + sampleId + "/" + itemCount
+							+ " ETA: " + Duration.ofMillis((itemCount - sampleId) * timer.getTotalTime() / (sampleId | 1L))
+							+ "\r");
 					timer.tic();
 				}
 				

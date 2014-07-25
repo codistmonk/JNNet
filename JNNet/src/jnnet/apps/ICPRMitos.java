@@ -90,8 +90,8 @@ public final class ICPRMitos {
 		final int trainingShuffleChunkSize = arguments.get("trainingShuffleChunkSize", 4)[0];
 		final int trainingWindowSize = arguments.get("trainingWindowSize", 64)[0];
 		final int trainingStride = arguments.get("trainingStride", 192)[0];
-		final int[] trainingParameters = arguments.get("trainingParameters", 5, 4, 3, 2, 0);
-		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.75"));
+		final int[] trainingParameters = arguments.get("trainingParameters", 9, 8, 7, 6, 5, 4, 3, 2);
+		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.5"));
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
 		final String testRoot = arguments.get("test", "");
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
@@ -334,7 +334,7 @@ public final class ICPRMitos {
 		}
 		
 		final int[] bestClassifierParameter = { 0 };
-		final double[] bestSensitivity = { 0.0 };
+		final double[] bestValues = { 0.0, 0.0 };
 		final TaskManager taskManager = new TaskManager(maximumCPULoad);
 		final Map<Integer, Pair<BinaryClassifier[], Pair<Statistics[], BitSet>>> progress = getOrCreateProgress("progress.jo");
 		boolean started = false;
@@ -367,7 +367,7 @@ public final class ICPRMitos {
 				}
 				
 				if (started) {
-					sleep(400000L);
+					sleep(600000L);
 				} else {
 					started = true;
 				}
@@ -436,12 +436,14 @@ public final class ICPRMitos {
 				final int classifierParameter = entry.getKey();
 				final Statistics sensitivity = entry.getValue().getSecond().getFirst()[0];
 				final Statistics specificity = entry.getValue().getSecond().getFirst()[1];
+				final double meanSpecificity = specificity.getMean();
+				final double meanSensitivity = sensitivity.getMean();
 				
 				roc.print(classifierParameter);
 				roc.print(" ");
 				roc.print(specificity.getMinimum());
 				roc.print(" ");
-				roc.print(specificity.getMean());
+				roc.print(meanSpecificity);
 				roc.print(" ");
 				roc.print(sqrt(specificity.getVariance()));
 				roc.print(" ");
@@ -449,15 +451,16 @@ public final class ICPRMitos {
 				roc.print(" ");
 				roc.print(sensitivity.getMinimum());
 				roc.print(" ");
-				roc.print(sensitivity.getMean());
+				roc.print(meanSensitivity);
 				roc.print(" ");
 				roc.print(sqrt(sensitivity.getVariance()));
 				roc.print(" ");
 				roc.println(sensitivity.getMaximum());
 				roc.flush();
 				
-				if (bestSensitivity[0] < sensitivity.getMean()) {
-					bestSensitivity[0] = sensitivity.getMean();
+				if (bestValues[0] < meanSensitivity || bestValues[0] == meanSensitivity && bestValues[1] < meanSpecificity) {
+					bestValues[0] = meanSensitivity;
+					bestValues[1] = meanSpecificity;
 					bestClassifierParameter[0] = classifierParameter;
 				}
 			}
@@ -476,9 +479,11 @@ public final class ICPRMitos {
 						fullTrainingData, 0.5, bestClassifierParameter[0] / 100.0, 100, true, true);
 				debugPrint("Building test classifier done in", timer.toc(), "ms");
 				
-				debugPrint("Evaluating test classifier on training set started", new Date(timer.tic()));
-				debugPrint("training:", bestClassifier.evaluate(fullTrainingData, null));
-				debugPrint("Evaluating test classifier on training set done in", timer.toc(), "ms");
+				if (false) {
+					debugPrint("Evaluating test classifier on training set started", new Date(timer.tic()));
+					debugPrint("training:", bestClassifier.evaluate(fullTrainingData, null));
+					debugPrint("Evaluating test classifier on training set done in", timer.toc(), "ms");
+				}
 				
 				debugPrint("Evaluating test classifier on test set started", new Date(timer.tic()));
 				final SimpleConfusionMatrix testResult = bestClassifier.evaluate(testData, null);
@@ -505,6 +510,20 @@ public final class ICPRMitos {
 		} catch (final InterruptedException exception) {
 			throw unchecked(exception);
 		}
+	}
+	
+	public static final Scanner newEnglishScanner(final Object argument) {
+		final Scanner result;
+		
+		try {
+			result = Scanner.class.getConstructor(argument.getClass()).newInstance(argument);
+		} catch (final Exception exception) {
+			throw unchecked(exception);
+		}
+		
+		result.useLocale(Locale.ENGLISH);
+		
+		return result;
 	}
 	
 	/**
@@ -671,20 +690,6 @@ public final class ICPRMitos {
 			}
 			
 			return true;
-		}
-		
-		public static final Scanner newEnglishScanner(final Object argument) {
-			final Scanner result;
-			
-			try {
-				result = Scanner.class.getConstructor(argument.getClass()).newInstance(argument);
-			} catch (final Exception exception) {
-				throw unchecked(exception);
-			}
-			
-			result.useLocale(Locale.ENGLISH);
-			
-			return result;
 		}
 		
 		/**
