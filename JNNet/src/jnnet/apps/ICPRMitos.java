@@ -95,9 +95,8 @@ public final class ICPRMitos {
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
 		final String testRoot = arguments.get("test", "");
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
-		final boolean postProcess = arguments.get("postProcess", 0)[0] != 0;
 		
-		if (!trainingFileName.isEmpty()) {
+		if (!trainingFileName.isEmpty() && !new File(classifierFileName).exists()) {
 			if (trainingFileName.endsWith(".jo") && !new File(trainingFileName).exists()) {
 				debugPrint(trainingRoot, "->", trainingFileName);
 				writeObject(new VirtualImageDataset(trainingRoot, trainingWindowSize, trainingStride), trainingFileName);
@@ -134,12 +133,6 @@ public final class ICPRMitos {
 			
 			taskManager.join();
 		}
-		
-		if (postProcess) {
-			// TODO extract low-resolution binary masks from test results (yellow == 1)
-			// TODO find best radius for hit-or-miss filtering with disk surrounded by ring with fixed thickness
-			// TODO apply hit-or-miss filtering and generate coordinates using center of connected components
-		}
 	}
 	
 	public static final int getWindowSize(final BinaryClassifier classifier, final int channelCount) {
@@ -155,7 +148,7 @@ public final class ICPRMitos {
 	public static final void process(final String imageBase, final int strideX, final int strideY
 			, final BinaryClassifier classifier, final boolean restart) throws IOException {
 		final TicToc timer = new TicToc();
-		final ConsoleMonitor monitor = new ConsoleMonitor(10000L);
+		final ConsoleMonitor monitor = new ConsoleMonitor(15000L);
 		final int channelCount = 3;
 		final int windowSize = getWindowSize(classifier, channelCount);
 		final int windowHalfSize = windowSize / 2;
@@ -172,7 +165,15 @@ public final class ICPRMitos {
 				final String resultPath = new File(imageBase).getParent() + "/mitosis/" + tileFileId + "_mitosis.png";
 				final File resultFile = new File(resultPath);
 				
-				if (!restart && resultFile.isFile()) {
+				if (resultFile.isFile()) {
+					if (restart) {
+						debugPrint("Deleting", resultFile);
+						
+						resultFile.delete();
+					} else {
+						debugPrint("Skipping", resultFile);
+					}
+					
 					continue;
 				}
 				
@@ -189,7 +190,7 @@ public final class ICPRMitos {
 				
 				for (int y = 0; y < tileHeight; y += strideY) {
 					for (int x = 0; x < tileWidth; x += strideX) {
-						monitor.ping(tileFileId + " " + x + " " + y + "\r");
+						monitor.ping(Thread.currentThread() + " " + tileFileId + " " + x + " " + y + "\r");
 						
 						getPixels(image, tileId, x - windowHalfSize, y - windowHalfSize, window, windowSize);
 						

@@ -265,10 +265,11 @@ public final class ICPRMitosPostprocess {
 						for (char q1 = 'a'; q1 <= 'd'; ++q1) {
 							final String key = imageBase + q0 + q1;
 							final Collection<Point> points = mitoses.get(key);
+							final File csvFile = new File(new File(rawResultBase + q0 + q1 + ".csv").getName());
 							
-							debugPrint(key, points.size());
+							debugPrint(csvFile, points.size());
 							
-							try (final PrintStream csv = new PrintStream(rawResultBase + q0 + q1 + ".csv")) {
+							try (final PrintStream csv = new PrintStream(csvFile)) {
 								for (final Point point : points) {
 									csv.print(point.x);
 									csv.print(',');
