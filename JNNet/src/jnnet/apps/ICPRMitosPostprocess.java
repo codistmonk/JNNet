@@ -17,6 +17,7 @@ import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,6 +63,7 @@ public final class ICPRMitosPostprocess {
 		final CommandLineArgumentsParser arguments = new CommandLineArgumentsParser(commandLineArguments);
 		final String trainingRoot = arguments.get("trainingRoot", "");
 		final String testRoot = arguments.get("test", "");
+		final String version = arguments.get("version", "");
 		final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
 		final TicToc timer = new TicToc();
 		final Map<String, Object> progress = ICPRMitos.getOrCreateProgress("postprocessingProgress.jo");
@@ -85,7 +87,7 @@ public final class ICPRMitosPostprocess {
 				if (matcher.matches()) {
 					final String rawResultBase = matcher.group(1) + matcher.group(2) + "/mitosis" + matcher.group(3);
 					final String csvBase = matcher.group(1) + "mitosis" + matcher.group(3);
-					final File maskFile = new File(rawResultBase + "_mask.png");
+					final File maskFile = new File(rawResultBase + "_mask" + version + ".png");
 					final BufferedImage mask = getOrCreateMask(image, rawResultBase, maskFile);
 					final Collection<Point> explicitPoints = collectDownscaledPositives(image, csvBase);
 					final Image imjMask = new ImageOfBufferedImage(mask, Feature.MAX_RGB);
@@ -201,7 +203,7 @@ public final class ICPRMitosPostprocess {
 				
 				if (matcher.matches()) {
 					final String rawResultBase = matcher.group(1) + matcher.group(2) + "/mitosis" + matcher.group(3);
-					final File maskFile = new File(rawResultBase + "_mask.png");
+					final File maskFile = new File(rawResultBase + "_mask" + version + ".png");
 					final BufferedImage mask = getOrCreateMask(image, rawResultBase, maskFile);
 					final Image imjMask = new ImageOfBufferedImage(mask, Feature.MAX_RGB);
 					
@@ -244,7 +246,7 @@ public final class ICPRMitosPostprocess {
 								final char q0 = (char) ('A' + ((qx & 2) >> 1) + ((qy & 2) >> 0));
 								final char q1 = (char) ('a' + ((qx & 1) << 0) + ((qy & 1) << 1));
 								
-								mitoses.get(imageBase + q0 + q1).add(new Point(this.x, this.y));
+								mitoses.get(imageBase + q0 + q1).add(new Point(this.x % tileWidth, this.y % tileHeight));
 							}
 							
 							this.x = 0;
@@ -262,8 +264,18 @@ public final class ICPRMitosPostprocess {
 					for (char q0 = 'A'; q0 <= 'D'; ++q0) {
 						for (char q1 = 'a'; q1 <= 'd'; ++q1) {
 							final String key = imageBase + q0 + q1;
+							final Collection<Point> points = mitoses.get(key);
 							
-							debugPrint(key, mitoses.get(key).size());
+							debugPrint(key, points.size());
+							
+							try (final PrintStream csv = new PrintStream(rawResultBase + q0 + q1 + ".csv")) {
+								for (final Point point : points) {
+									csv.print(point.x);
+									csv.print(',');
+									csv.print(point.y);
+									csv.println(",1");
+								}
+							}
 						}
 					}
 				}
