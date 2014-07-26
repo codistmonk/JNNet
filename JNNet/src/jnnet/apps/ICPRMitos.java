@@ -118,18 +118,6 @@ public final class ICPRMitos {
 			
 			for (final String imageBase : imageBases) {
 				process(imageBase, strideX, strideY, classifier, restartTest, taskManager);
-//				taskManager.submit(new Runnable() {
-//					
-//					@Override
-//					public final void run() {
-//						try {
-//							process(imageBase, strideX, strideY, classifier, restartTest, taskManager);
-//						} catch (final IOException exception) {
-//							throw unchecked(exception);
-//						}
-//					}
-//					
-//				});
 			}
 			
 			taskManager.join();

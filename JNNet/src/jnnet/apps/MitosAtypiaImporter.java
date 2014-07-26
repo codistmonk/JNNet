@@ -5,6 +5,7 @@ import static net.sourceforge.aprog.tools.MathTools.square;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debug;
+import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.ignore;
@@ -21,7 +22,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
+import jnnet.draft.CachedReference;
 import jnnet.draft.MosaicBuilder;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -307,7 +308,7 @@ public final class MitosAtypiaImporter {
 		
 		private final String basePath;
 		
-		private transient WeakReference<BufferedImage>[][] tiles;
+		private transient CachedReference<BufferedImage>[][] tiles;
 		
 		private final int width;
 		
@@ -315,7 +316,7 @@ public final class MitosAtypiaImporter {
 		
 		public VirtualImage40(final String basePath) {
 			this.basePath = basePath;
-			this.tiles = new WeakReference[4][4];
+			this.tiles = new CachedReference[4][4];
 			
 			int width = 0;
 			int height = 0;
@@ -323,7 +324,7 @@ public final class MitosAtypiaImporter {
 			for (int quad0 = 0; quad0 <= 3; ++quad0) {
 				for (int quad1 = 0; quad1 <= 3; ++quad1) {
 					final BufferedImage tile = readTile(quad0, quad1);
-					this.tiles[quad0][quad1] = new WeakReference<BufferedImage>(tile);
+					this.tiles[quad0][quad1] = new CachedReference<BufferedImage>(tile);
 					
 					if (quad0 < 2 && quad1 < 2) {
 						width += tile.getWidth();
@@ -438,11 +439,11 @@ public final class MitosAtypiaImporter {
 		@SuppressWarnings("unchecked")
 		private final synchronized BufferedImage getTile(final int quad0, final int quad1) {
 			if (this.tiles == null) {
-				this.tiles = new WeakReference[4][4];
+				this.tiles = new CachedReference[4][4];
 				
-				for (final WeakReference<BufferedImage>[] row : this.tiles) {
+				for (final CachedReference<BufferedImage>[] row : this.tiles) {
 					for (int i = 0; i < row.length; ++i) {
-						row[i] = new WeakReference<BufferedImage>(null);
+						row[i] = new CachedReference<BufferedImage>(null);
 					}
 				}
 			}
@@ -451,7 +452,7 @@ public final class MitosAtypiaImporter {
 			
 			if (result == null) {
 				result = this.readTile(quad0, quad1);
-				this.tiles[quad0][quad1] = new WeakReference<BufferedImage>(result);
+				this.tiles[quad0][quad1] = new CachedReference<BufferedImage>(result);
 				this.tiles[quad0][quad1].get();
 			}
 			
@@ -464,7 +465,7 @@ public final class MitosAtypiaImporter {
 			try {
 				return ImageIO.read(file);
 			} catch (final IOException exception) {
-				System.err.println(debug(DEBUG_STACK_OFFSET, "Error reading file", file));
+				debugError("Error reading file", file);
 				throw unchecked(exception);
 			}
 		}
