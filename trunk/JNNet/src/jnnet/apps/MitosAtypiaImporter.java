@@ -436,7 +436,7 @@ public final class MitosAtypiaImporter {
 		}
 		
 		@SuppressWarnings("unchecked")
-		private final BufferedImage getTile(final int quad0, final int quad1) {
+		private final synchronized BufferedImage getTile(final int quad0, final int quad1) {
 			if (this.tiles == null) {
 				this.tiles = new WeakReference[4][4];
 				
@@ -452,6 +452,7 @@ public final class MitosAtypiaImporter {
 			if (result == null) {
 				result = this.readTile(quad0, quad1);
 				this.tiles[quad0][quad1] = new WeakReference<BufferedImage>(result);
+				this.tiles[quad0][quad1].get();
 			}
 			
 			return result;

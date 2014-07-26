@@ -149,7 +149,6 @@ public final class ICPRMitos {
 	public static final void process(final String imageBase, final int strideX, final int strideY
 			, final BinaryClassifier classifier, final boolean restart
 			, final TaskManager taskManager) throws IOException {
-		final TicToc timer = new TicToc();
 		final int channelCount = 3;
 		final int windowSize = getWindowSize(classifier, channelCount);
 		final int windowHalfSize = windowSize / 2;
@@ -166,6 +165,7 @@ public final class ICPRMitos {
 					@Override
 					public final void run() {
 						try {
+							final TicToc timer = new TicToc();
 							final ConsoleMonitor monitor = new ConsoleMonitor(15000L);
 							final String tileId = quad0 + quad1;
 							final String tileFileId = virtualImageName + tileId;
