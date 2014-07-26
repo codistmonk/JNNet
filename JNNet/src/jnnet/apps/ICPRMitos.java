@@ -91,7 +91,7 @@ public final class ICPRMitos {
 		final int trainingWindowSize = arguments.get("trainingWindowSize", 64)[0];
 		final int trainingStride = arguments.get("trainingStride", 192)[0];
 		final int[] trainingParameters = arguments.get("trainingParameters", 9, 8, 7, 6, 5, 4, 3, 2);
-		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.5"));
+		final double maximumCPULoad = parseDouble(arguments.get("maximumCPULoad", "0.75"));
 		final String classifierFileName = arguments.get("classifier", "bestclassifier.jo");
 		final String testRoot = arguments.get("test", "");
 		final boolean restartTest = arguments.get("testRestart", 0)[0] != 0;
@@ -117,18 +117,19 @@ public final class ICPRMitos {
 			final TaskManager taskManager = new TaskManager(maximumCPULoad);
 			
 			for (final String imageBase : imageBases) {
-				taskManager.submit(new Runnable() {
-					
-					@Override
-					public final void run() {
-						try {
-							process(imageBase, strideX, strideY, classifier, restartTest);
-						} catch (final IOException exception) {
-							throw unchecked(exception);
-						}
-					}
-					
-				});
+				process(imageBase, strideX, strideY, classifier, restartTest, taskManager);
+//				taskManager.submit(new Runnable() {
+//					
+//					@Override
+//					public final void run() {
+//						try {
+//							process(imageBase, strideX, strideY, classifier, restartTest, taskManager);
+//						} catch (final IOException exception) {
+//							throw unchecked(exception);
+//						}
+//					}
+//					
+//				});
 			}
 			
 			taskManager.join();
@@ -146,9 +147,9 @@ public final class ICPRMitos {
 	}
 	
 	public static final void process(final String imageBase, final int strideX, final int strideY
-			, final BinaryClassifier classifier, final boolean restart) throws IOException {
+			, final BinaryClassifier classifier, final boolean restart
+			, final TaskManager taskManager) throws IOException {
 		final TicToc timer = new TicToc();
-		final ConsoleMonitor monitor = new ConsoleMonitor(15000L);
 		final int channelCount = 3;
 		final int windowSize = getWindowSize(classifier, channelCount);
 		final int windowHalfSize = windowSize / 2;
@@ -160,54 +161,66 @@ public final class ICPRMitos {
 		
 		for (final String quad0 : array("A", "B", "C", "D")) {
 			for (final String quad1 : array("a", "b", "c", "d")) {
-				final String tileId = quad0 + quad1;
-				final String tileFileId = virtualImageName + tileId;
-				final String resultPath = new File(imageBase).getParent() + "/mitosis/" + tileFileId + "_mitosis.png";
-				final File resultFile = new File(resultPath);
-				
-				if (resultFile.isFile()) {
-					if (restart) {
-						debugPrint("Deleting", resultFile);
-						
-						resultFile.delete();
-					} else {
-						debugPrint("Skipping", resultFile);
-					}
+				taskManager.submit(new Runnable() {
 					
-					continue;
-				}
-				
-				debugPrint("Processing tile", tileFileId, "started...", new Date(timer.tic()));
-				
-				final BufferedImage tile = image.getTile(tileId);
-				final int tileWidth = tile.getWidth();
-				final int tileHeight = tile.getHeight();
-				final BufferedImage tileCopy = new BufferedImage(tileWidth, tileHeight, tile.getType());
-				final Graphics2D g = tileCopy.createGraphics();
-				
-				tile.copyData(tileCopy.getRaster());
-				g.setColor(Color.YELLOW);
-				
-				for (int y = 0; y < tileHeight; y += strideY) {
-					for (int x = 0; x < tileWidth; x += strideX) {
-						monitor.ping(Thread.currentThread() + " " + tileFileId + " " + x + " " + y + "\r");
-						
-						getPixels(image, tileId, x - windowHalfSize, y - windowHalfSize, window, windowSize);
-						
-						if (classifier.accept(window)) {
-//							debugPrint("Mitosis detected in", tileFileId, "at", x, y);
-							g.fillRect(x - strideX / 2, y - strideY / 2, strideX, strideY);
+					@Override
+					public final void run() {
+						try {
+							final ConsoleMonitor monitor = new ConsoleMonitor(15000L);
+							final String tileId = quad0 + quad1;
+							final String tileFileId = virtualImageName + tileId;
+							final String resultPath = new File(imageBase).getParent() + "/mitosis/" + tileFileId + "_mitosis.png";
+							final File resultFile = new File(resultPath);
+							
+							if (resultFile.isFile()) {
+								if (restart) {
+									debugPrint("Deleting", resultFile);
+									
+									resultFile.delete();
+								} else {
+									debugPrint("Skipping", resultFile);
+								}
+								
+								return;
+							}
+							
+							debugPrint("Processing tile", tileFileId, "started...", new Date(timer.tic()));
+							
+							final BufferedImage tile = image.getTile(tileId);
+							final int tileWidth = tile.getWidth();
+							final int tileHeight = tile.getHeight();
+							final BufferedImage tileCopy = new BufferedImage(tileWidth, tileHeight, tile.getType());
+							final Graphics2D g = tileCopy.createGraphics();
+							
+							tile.copyData(tileCopy.getRaster());
+							g.setColor(Color.YELLOW);
+							
+							for (int y = 0; y < tileHeight; y += strideY) {
+								for (int x = 0; x < tileWidth; x += strideX) {
+									monitor.ping(Thread.currentThread() + " " + tileFileId + " " + x + " " + y + "\r");
+									
+									getPixels(image, tileId, x - windowHalfSize, y - windowHalfSize, window, windowSize);
+									
+									if (classifier.accept(window)) {
+//										debugPrint("Mitosis detected in", tileFileId, "at", x, y);
+										g.fillRect(x - strideX / 2, y - strideY / 2, strideX, strideY);
+									}
+								}
+							}
+							
+							monitor.pause();
+							
+							debugPrint("Processing tile", tileFileId, "done in", timer.toc(), "ms");
+							
+							resultFile.getParentFile().mkdirs();
+							
+							ImageIO.write(tileCopy, "png", resultFile);
+						} catch (final IOException exception) {
+							exception.printStackTrace();
 						}
 					}
-				}
-				
-				monitor.pause();
-				
-				debugPrint("Processing tile", tileFileId, "done in", timer.toc(), "ms");
-				
-				resultFile.getParentFile().mkdirs();
-				
-				ImageIO.write(tileCopy, "png", resultFile);
+					
+				});
 			}
 		}
 	}
