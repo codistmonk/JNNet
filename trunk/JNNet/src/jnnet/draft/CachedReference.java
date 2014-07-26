@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import net.sourceforge.aprog.tools.Tools;
+
 /**
  * @author codistmonk (creation 2014-07-22)
  * 
@@ -98,6 +100,9 @@ public final class CachedReference<T> implements Serializable, Comparable<Cached
 			try {
 				synchronized (this.getCache()) {
 					if (runtime.freeMemory() < runtime.totalMemory() * this.reductionRatio) {
+						System.out.println(Tools.debug(Tools.DEBUG_STACK_OFFSET
+								, runtime.freeMemory(), runtime.totalMemory()));
+						
 						Collections.sort((List) this.getCache());
 						
 						final int oldEnd = this.getCache().size();
