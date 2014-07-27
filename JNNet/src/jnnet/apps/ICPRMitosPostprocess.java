@@ -1,18 +1,27 @@
 package jnnet.apps;
 
+import static imj.MorphologicalOperations.dilate;
+import static imj.MorphologicalOperations.dilate4;
+import static imj.MorphologicalOperations.filterRank;
 import static java.lang.Math.sqrt;
 import static jnnet.VectorStatistics.STATISTICS_FACTORY;
 import static jnnet.apps.ICPRMitos.newEnglishScanner;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.TREE_MAP_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.array;
+import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
+
 import imj.IMJTools;
 import imj.IMJTools.PixelProcessor;
 import imj.Image;
 import imj.ImageOfBufferedImage;
 import imj.ImageOfBufferedImage.Feature;
+import imj.Labeling.NeighborhoodShape.Distance;
+import imj.MorphologicalOperations.StructuringElement;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -27,7 +36,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -35,8 +43,8 @@ import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
-import jnnet.VectorStatistics;
 import jnnet.apps.MitosAtypiaImporter.VirtualImage40;
+
 import net.sourceforge.aprog.tools.CommandLineArgumentsParser;
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
@@ -66,13 +74,16 @@ public final class ICPRMitosPostprocess {
 		final String version = arguments.get("version", "");
 		final Pattern pattern = Pattern.compile("(.*)(frames.+x40)(.+)");
 		final TicToc timer = new TicToc();
-		final Map<String, Object> progress = ICPRMitos.getOrCreateProgress("postprocessingProgress.jo");
+		final String progressPath = "postprocessingProgress" + version + ".jo";
+		final Map<String, Object> progress = ICPRMitos.getOrCreateProgress(progressPath);
 		final Map<Integer, AtomicInteger> sizeHistogram = (Map<Integer, AtomicInteger>) getOrCreate(
 				progress, "sizeHistogram", (Factory) TREE_MAP_FACTORY);
 		final Map<Integer, AtomicInteger> truePositiveSizeHistogram = (Map<Integer, AtomicInteger>) getOrCreate(
 				progress, "truePositiveSizeHistogram", (Factory) TREE_MAP_FACTORY);
 		final Statistics truePositivePatchSize = (Statistics) getOrCreate(
 				progress, "truePositivePatchSize", (Factory) STATISTICS_FACTORY);
+		final boolean clearMasks = arguments.get("clearMasks", 0)[0] != 0;
+		final double structuringElementSize = 2.0;
 		
 		debugPrint("Postprocessing...", new Date(timer.tic()));
 		
@@ -88,7 +99,7 @@ public final class ICPRMitosPostprocess {
 					final String rawResultBase = matcher.group(1) + matcher.group(2) + "/mitosis" + matcher.group(3);
 					final String csvBase = matcher.group(1) + "mitosis" + matcher.group(3);
 					final File maskFile = new File(rawResultBase + "_mask" + version + ".png");
-					final BufferedImage mask = getOrCreateMask(image, rawResultBase, maskFile);
+					final BufferedImage mask = getOrCreateMask(image, rawResultBase, maskFile, structuringElementSize);
 					final Collection<Point> explicitPoints = collectDownscaledPositives(image, csvBase);
 					final Image imjMask = new ImageOfBufferedImage(mask, Feature.MAX_RGB);
 					
@@ -146,7 +157,7 @@ public final class ICPRMitosPostprocess {
 				}
 			}
 			
-			ICPRMitos.writeSafely((Serializable) progress, "postprocessingProgress.jo");
+			ICPRMitos.writeSafely((Serializable) progress, progressPath);
 		}
 		
 		debugPrint(truePositivePatchSize.getCount());
@@ -161,7 +172,7 @@ public final class ICPRMitosPostprocess {
 		final int sizeCount = sizes.length;
 		final AtomicInteger zero = new AtomicInteger();
 		final double[] bestScore = new double[5];
-		final double alpha = 0.05;
+		final double alpha = 0.5;
 		final double beta = 1.0 - alpha;
 		
 		for (int i = 0; i < sizeCount; ++i) {
@@ -192,8 +203,13 @@ public final class ICPRMitosPostprocess {
 		{
 			final int minimumSize = (int) bestScore[1];
 			final int maximumSize = (int) bestScore[2];
+//			final int minimumSize = 1;
+//			final int maximumSize = 80;
 			final Collection<String> imageBases = ICPRMitos.collectImageBases(testRoot);
 			final Map<String, Collection<Point>> mitoses = new TreeMap<>();
+			final BufferedImage[] qualityCheck = { null };
+			final Graphics2D[] qualityCheckGraphics = { null };
+			int totalMitosisCount = 0;
 			
 			for (final String imageBase : imageBases) {
 				final VirtualImage40 image = new VirtualImage40(imageBase);
@@ -204,8 +220,35 @@ public final class ICPRMitosPostprocess {
 				if (matcher.matches()) {
 					final String rawResultBase = matcher.group(1) + matcher.group(2) + "/mitosis" + matcher.group(3);
 					final File maskFile = new File(rawResultBase + "_mask" + version + ".png");
-					final BufferedImage mask = getOrCreateMask(image, rawResultBase, maskFile);
-					final Image imjMask = new ImageOfBufferedImage(mask, Feature.MAX_RGB);
+					
+					if (clearMasks) {
+						if (maskFile.exists()) {
+							debugPrint("Deleting", maskFile);
+							
+							if (!maskFile.delete()) {
+								debugError("Failed to delete", maskFile);
+							}
+						} else {
+							debugPrint("File not found:", maskFile);
+						}
+						
+						continue;
+					}
+					
+					final BufferedImage mask = getOrCreateMask(image, rawResultBase, maskFile, structuringElementSize);
+					final Image imjMask = dilate(new ImageOfBufferedImage(mask, Feature.MAX_RGB)
+						, StructuringElement.newDisk(structuringElementSize, Distance.CITYBLOCK));
+					final char qcQ0 = 'C';
+					final char qcQ1 = 'b';
+					
+					if (qualityCheck[0] == null) {
+						qualityCheck[0] = new BufferedImage(tileWidth, tileHeight, BufferedImage.TYPE_3BYTE_BGR);
+						qualityCheckGraphics[0] = qualityCheck[0].createGraphics();
+						qualityCheckGraphics[0].setColor(Color.YELLOW);
+						qualityCheckGraphics[0].drawImage(image.getTile(qcQ0, qcQ1), 0, 0, null);
+						
+						debugPrint("Quality check uses", imageBase + qcQ0 + qcQ1 + ".png");
+					}
 					
 					debugPrint(imjMask.getColumnCount(), imjMask.getRowCount());
 					
@@ -215,9 +258,13 @@ public final class ICPRMitosPostprocess {
 						}
 					}
 					
+					final int border = 8;
+					
 					IMJTools.forEachPixelInEachComponent4(imjMask, false, new PixelProcessor() {
 						
 						private final int w = imjMask.getColumnCount();
+						
+						private final int h = imjMask.getRowCount();
 						
 						private int x;
 						
@@ -237,16 +284,26 @@ public final class ICPRMitosPostprocess {
 							if (minimumSize <= this.patchPixelCount && this.patchPixelCount <= maximumSize) {
 								this.x /= this.patchPixelCount;
 								this.y /= this.patchPixelCount;
-								// (00 00) (01 00) (10 00) (11 00)
-								// (00 01) (01 01) (10 01) (11 01)
-								// (00 10) (01 10) (10 10) (11 10)
-								// (00 11) (01 11) (10 11) (11 11)
-								final int qx = (this.x * 4) / tileWidth;
-								final int qy = (this.y * 4) / tileHeight;
-								final char q0 = (char) ('A' + ((qx & 2) >> 1) + ((qy & 2) >> 0));
-								final char q1 = (char) ('a' + ((qx & 1) << 0) + ((qy & 1) << 1));
 								
-								mitoses.get(imageBase + q0 + q1).add(new Point(this.x % tileWidth, this.y % tileHeight));
+								if (border <= this.x && border <= this.y && this.x < this.w - border && this.y < this.h - border) {
+									// (00 00) (01 00) (10 00) (11 00)
+									// (00 01) (01 01) (10 01) (11 01)
+									// (00 10) (01 10) (10 10) (11 10)
+									// (00 11) (01 11) (10 11) (11 11)
+									final int qx = (this.x * 4) / tileWidth;
+									final int qy = (this.y * 4) / tileHeight;
+									final char q0 = (char) ('A' + ((qx & 2) >> 1) + ((qy & 2) >> 0));
+									final char q1 = (char) ('a' + ((qx & 1) << 0) + ((qy & 1) << 1));
+									final int xInTile = (this.x * 4) % tileWidth;
+									final int yInTile = (this.y * 4) % tileHeight;
+									
+									mitoses.get(imageBase + q0 + q1).add(new Point(xInTile, yInTile));
+									
+									if (qualityCheckGraphics[0] != null && q0 == qcQ0 && q1 == qcQ1) {
+										debugPrint(this.x, this.y, q0, q1, xInTile, yInTile);
+										qualityCheckGraphics[0].fillOval(xInTile - 8, yInTile - 8, 20, 20);
+									}
+								}
 							}
 							
 							this.x = 0;
@@ -261,11 +318,26 @@ public final class ICPRMitosPostprocess {
 						
 					});
 					
+					if (qualityCheckGraphics[0] != null) {
+						qualityCheckGraphics[0].dispose();
+						qualityCheckGraphics[0] = null;
+						
+						final File qualityCheckFile = new File(rawResultBase + qcQ0 + qcQ1 + "_qc.png");
+						
+						debugPrint("Writing quality check:", qualityCheckFile);
+						
+						ImageIO.write(qualityCheck[0], "png", qualityCheckFile);
+						
+//						return;
+					}
+					
 					for (char q0 = 'A'; q0 <= 'D'; ++q0) {
 						for (char q1 = 'a'; q1 <= 'd'; ++q1) {
 							final String key = imageBase + q0 + q1;
 							final Collection<Point> points = mitoses.get(key);
 							final File csvFile = new File(new File(rawResultBase + q0 + q1 + ".csv").getName());
+							
+							totalMitosisCount += points.size();
 							
 							debugPrint(csvFile, points.size());
 							
@@ -274,13 +346,15 @@ public final class ICPRMitosPostprocess {
 									csv.print(point.x);
 									csv.print(',');
 									csv.print(point.y);
-									csv.println(",1");
+									csv.println(",0.4");
 								}
 							}
 						}
 					}
 				}
 			}
+			
+			debugPrint("totalMitosisCount:", totalMitosisCount);
 		}
 		
 		debugPrint("Postprocessing done in", timer.toc(), "ms");
@@ -325,13 +399,13 @@ public final class ICPRMitosPostprocess {
 	}
 	
 	public static final BufferedImage getOrCreateMask(final VirtualImage40 image,
-			final String rawResultBase, final File maskFile) throws IOException {
+			final String rawResultBase, final File maskFile
+			, final double structuringElementSize) throws IOException {
 		final int tileWidth = image.getWidth() / 4;
 		final int tileHeight = image.getHeight() / 4;
-		final BufferedImage result;
 		
 		if (!maskFile.exists()) {
-			result = new BufferedImage(image.getWidth() / 4, image.getHeight() / 4, BufferedImage.TYPE_BYTE_BINARY);
+			BufferedImage mask = new BufferedImage(image.getWidth() / 4, image.getHeight() / 4, BufferedImage.TYPE_BYTE_BINARY);
 			
 			for (char q0 = 'A'; q0 <= 'D'; ++q0) {
 				for (char q1 = 'a'; q1 <= 'd'; ++q1) {
@@ -346,7 +420,7 @@ public final class ICPRMitosPostprocess {
 					for (int y = 0; y < tileHeight; y += 4) {
 						for (int x = 0; x < tileWidth; x += 4) {
 							if (classifiedTile.getRGB(x, y) == 0xFFFFFF00) {
-								result.setRGB((tileX + x) / 4
+								mask.setRGB((tileX + x) / 4
 										, (tileY + y) / 4, 0xFFFFFFFF);
 							}
 						}
@@ -354,13 +428,27 @@ public final class ICPRMitosPostprocess {
 				}
 			}
 			
-			ImageIO.write(result, "png", maskFile);
-		} else {
-			debugPrint("Reading", maskFile);
-			result = ImageIO.read(maskFile);
+			if (0.0 < structuringElementSize) {
+				final Image imjMask = dilate4(filterRank(
+						new ImageOfBufferedImage(mask, Feature.MAX_RGB),
+						-5,
+						StructuringElement.newDisk(structuringElementSize, Distance.EUCLIDEAN)));
+				final int w = mask.getWidth();
+				final int h = mask.getHeight();
+				
+				for (int y = 0; y < h; ++y) {
+					for (int x = 0; x < w; ++x) {
+						mask.setRGB(x, y, (imjMask.getValue(y, x) & 0x00FFFFFF) != 0 ? 0xFFFFFFFF : 0);
+					}
+				}
+			}
+			
+			ImageIO.write(mask, "png", maskFile);
 		}
 		
-		return result;
+		debugPrint("Reading", maskFile);
+		
+		return ImageIO.read(maskFile);
 	}
 	
 }

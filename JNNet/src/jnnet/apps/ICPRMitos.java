@@ -117,7 +117,16 @@ public final class ICPRMitos {
 			final TaskManager taskManager = new TaskManager(maximumCPULoad);
 			
 			for (final String imageBase : imageBases) {
-				process(imageBase, strideX, strideY, classifier, restartTest, taskManager);
+//				process(imageBase, strideX, strideY, classifier, restartTest, taskManager);
+				
+				taskManager.submit(new Runnable() {
+					
+					@Override
+					public final void run() {
+						process(imageBase, strideX, strideY, classifier, restartTest, taskManager);
+					}
+					
+				});
 			}
 			
 			taskManager.join();
@@ -136,7 +145,7 @@ public final class ICPRMitos {
 	
 	public static final void process(final String imageBase, final int strideX, final int strideY
 			, final BinaryClassifier classifier, final boolean restart
-			, final TaskManager taskManager) throws IOException {
+			, final TaskManager taskManager) {
 		final int channelCount = 3;
 		final int windowSize = getWindowSize(classifier, channelCount);
 		final int windowHalfSize = windowSize / 2;
@@ -148,10 +157,10 @@ public final class ICPRMitos {
 		
 		for (final String quad0 : array("A", "B", "C", "D")) {
 			for (final String quad1 : array("a", "b", "c", "d")) {
-				taskManager.submit(new Runnable() {
-					
-					@Override
-					public final void run() {
+//				taskManager.submit(new Runnable() {
+//					
+//					@Override
+//					public final void run() {
 						try {
 							final TicToc timer = new TicToc();
 							final ConsoleMonitor monitor = new ConsoleMonitor(15000L);
@@ -169,7 +178,7 @@ public final class ICPRMitos {
 									debugPrint("Skipping", resultFile);
 								}
 								
-								return;
+								continue;
 							}
 							
 							debugPrint("Processing tile", tileFileId, "started...", new Date(timer.tic()));
@@ -206,9 +215,9 @@ public final class ICPRMitos {
 						} catch (final IOException exception) {
 							exception.printStackTrace();
 						}
-					}
-					
-				});
+//					}
+//					
+//				});
 			}
 		}
 	}
