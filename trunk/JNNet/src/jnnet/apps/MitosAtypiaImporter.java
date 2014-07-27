@@ -34,8 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
-import jnnet.draft.CachedReference;
 import jnnet.draft.MosaicBuilder;
+
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
@@ -308,7 +308,7 @@ public final class MitosAtypiaImporter {
 		
 		private final String basePath;
 		
-		private transient CachedReference<BufferedImage>[][] tiles;
+		private transient BufferedImage[][] tiles;
 		
 		private final int width;
 		
@@ -316,15 +316,15 @@ public final class MitosAtypiaImporter {
 		
 		public VirtualImage40(final String basePath) {
 			this.basePath = basePath;
-			this.tiles = new CachedReference[4][4];
+			this.tiles = new BufferedImage[4][4];
 			
 			int width = 0;
 			int height = 0;
 			
 			for (int quad0 = 0; quad0 <= 3; ++quad0) {
 				for (int quad1 = 0; quad1 <= 3; ++quad1) {
-					final BufferedImage tile = readTile(quad0, quad1);
-					this.tiles[quad0][quad1] = new CachedReference<BufferedImage>(tile);
+					final BufferedImage tile = this.readTile(quad0, quad1);
+					this.tiles[quad0][quad1] = tile;
 					
 					if (quad0 < 2 && quad1 < 2) {
 						width += tile.getWidth();
@@ -436,27 +436,22 @@ public final class MitosAtypiaImporter {
 			return this.getTile(quad0 - 'A', quad1 - 'a');
 		}
 		
-		@SuppressWarnings("unchecked")
-		private final synchronized BufferedImage getTile(final int quad0, final int quad1) {
+		private final BufferedImage getTile(final int quad0, final int quad1) {
 			if (this.tiles == null) {
-				this.tiles = new CachedReference[4][4];
-				
-				for (final CachedReference<BufferedImage>[] row : this.tiles) {
-					for (int i = 0; i < row.length; ++i) {
-						row[i] = new CachedReference<BufferedImage>(null);
+				synchronized (this) {
+					if (this.tiles == null) {
+						this.tiles = new BufferedImage[4][4];
+						
+						for (int q0 = 0; q0 <= 3; ++q0) {
+							for (int q1 = 0; q1 <= 3; ++q1) {
+								this.tiles[q0][q1] = this.readTile(q0, q1);
+							}
+						}
 					}
 				}
 			}
 			
-			BufferedImage result = this.tiles[quad0][quad1].get();
-			
-			if (result == null) {
-				result = this.readTile(quad0, quad1);
-				this.tiles[quad0][quad1] = new CachedReference<BufferedImage>(result);
-				this.tiles[quad0][quad1].get();
-			}
-			
-			return result;
+			return this.tiles[quad0][quad1];
 		}
 		
 		private final BufferedImage readTile(final int quad0, final int quad1) {
