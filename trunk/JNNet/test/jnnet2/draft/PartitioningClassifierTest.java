@@ -1,6 +1,8 @@
 package jnnet2.draft;
 
 import static net.sourceforge.aprog.tools.Tools.debugError;
+import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
+import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
 import static org.junit.Assert.*;
 
 import java.util.Collection;
@@ -39,6 +41,11 @@ public final class PartitioningClassifierTest {
 		test(DATASET4);
 	}
 	
+	@Test
+	public final void test5() {
+		test(DATASET5);
+	}
+	
 	public static final Dataset DATASET1 = new SimpleDataset()
 			.add(0.0, 0.0)
 			.add(1.0, 1.0)
@@ -73,6 +80,8 @@ public final class PartitioningClassifierTest {
 			.add(3.0, 3.0, 1.0)
 			.add(5.0, 3.0, 1.0)
 	;
+	
+	public static final Dataset DATASET5 = new VirtualARFFDataset(getResourceAsStream(getThisPackagePath() + "iris.arff"));
 	
 	public static final void test(final Dataset dataset) {
 		final Classifier classifier = new PartitioningClassifier(dataset);

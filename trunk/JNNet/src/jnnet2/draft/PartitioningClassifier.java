@@ -1,9 +1,6 @@
 package jnnet2.draft;
 
-import static net.sourceforge.aprog.tools.Factory.DefaultFactory.HASH_SET_FACTORY;
 import static net.sourceforge.aprog.tools.Tools.debugError;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
-import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.Serializable;
@@ -12,12 +9,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 
-import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Tools;
 
 import nsphere.LDATest;
@@ -32,7 +29,6 @@ import jgencode.primitivelists.LongList;
 import jgencode.primitivelists.LongList.Processor;
 
 import jnnet.draft.LinearConstraintSystem;
-
 import jnnet2.core.Classifier;
 import jnnet2.core.Dataset;
 
@@ -92,18 +88,13 @@ public final class PartitioningClassifier implements Classifier {
 		return this.defaultLabel;
 	}
 	
-	@SuppressWarnings("unchecked")
 	private final void computeClusters(final Dataset trainingDataset) {
-		final int hyperplaneCount = this.hyperplanes.size();
 		final double[] item = new double[trainingDataset.getItemSize()];
 		final long itemCount = trainingDataset.getItemCount();
 		
-		Tools.debugPrint(hyperplaneCount);
-		
 		for (long itemId = 0L; itemId < itemCount; ++itemId) {
 			trainingDataset.getItem(itemId, item);
-			getOrCreate(this.clusters, item[this.inputSize]
-					, (Factory<Collection<BitSet>>) (Object) HASH_SET_FACTORY).add(this.encode(item));
+			this.clusters.computeIfAbsent(item[this.inputSize], k -> new HashSet<>()).add(this.encode(item));
 		}
 	}
 	
@@ -147,16 +138,12 @@ public final class PartitioningClassifier implements Classifier {
 				
 			});
 			
-			debugPrint(subset.getItemIds());
-			
 			if (2 <= belowClasses.cardinality()) {
 				todo.add(new Subset(trainingDataset, below));
-				debugPrint(below);
 			}
 			
 			if (2 <= aboveClasses.cardinality()) {
 				todo.add(new Subset(trainingDataset, above));
-				debugPrint(above);
 			}
 		}
 	}
@@ -342,8 +329,6 @@ public final class PartitioningClassifier implements Classifier {
 			}
 			
 			if (true) {
-				final int n2 = this.centersCovarianceMatrix.length;
-				
 				for (int i = 0; i < n; ++i) {
 					this.centersCovarianceMatrix[i * n + i] += 1.0E-9;
 					this.covarianceMatrix[i * n + i] += 1.0E-9;
