@@ -2,6 +2,7 @@ package jnnet2.draft;
 
 import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import static nsphere.LDATest.matrix;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -17,8 +18,6 @@ import java.util.TreeMap;
 
 import net.sourceforge.aprog.tools.Tools;
 
-import nsphere.LDATest;
-
 import org.ojalgo.matrix.BasicMatrix;
 import org.ojalgo.matrix.MatrixBuilder;
 import org.ojalgo.matrix.PrimitiveMatrix;
@@ -29,6 +28,7 @@ import jgencode.primitivelists.LongList;
 import jgencode.primitivelists.LongList.Processor;
 
 import jnnet.draft.LinearConstraintSystem;
+
 import jnnet2.core.Classifier;
 import jnnet2.core.Dataset;
 
@@ -181,10 +181,6 @@ public final class PartitioningClassifier implements Classifier {
 		
 		private final double[] counts;
 		
-		private BasicMatrix centersCovarianceBasicMatrix;
-		
-		private BasicMatrix covarianceBasicMatrix;
-		
 		public Subset(final Dataset dataset, final LongList itemIds) {
 			final int n = dataset.getItemSize() - 1;
 			final int classCount = dataset.getLabelStatistics().getLabelCount();
@@ -219,12 +215,9 @@ public final class PartitioningClassifier implements Classifier {
 		}
 		
 		public final double[] getHyperplane() {
-			this.centersCovarianceBasicMatrix = LDATest.matrix(this.dimension, this.centersCovarianceMatrix);
-			this.covarianceBasicMatrix = LDATest.matrix(this.dimension, this.covarianceMatrix);
-			
 			try {
-				final BasicMatrix principalComponent = computePrincipalComponent(this.centersCovarianceBasicMatrix);
-				final BasicMatrix hyperplaneDirection = this.covarianceBasicMatrix.solve(principalComponent);
+				final BasicMatrix principalComponent = computePrincipalComponent(matrix(this.dimension, this.centersCovarianceMatrix));
+				final BasicMatrix hyperplaneDirection = matrix(this.dimension, this.covarianceMatrix).solve(principalComponent);
 				final double[] result = new double[this.dimension + 1];
 				
 				for (int i = 0; i < this.dimension; ++i) {
