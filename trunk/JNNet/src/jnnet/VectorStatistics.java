@@ -37,6 +37,28 @@ public final class VectorStatistics implements Serializable {
 		}
 	}
 	
+	public final double[] getNormalizedValues(final double... values) {
+		final int n = this.getStatistics().length;
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = this.getStatistics()[i].getNormalizedValue(values[i]);
+		}
+		
+		return result;
+	}
+	
+	public final double[] getDenormalizedValues(final double... values) {
+		final int n = this.getStatistics().length;
+		final double[] result = new double[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = this.getStatistics()[i].getDenormalizedValue(values[i]);
+		}
+		
+		return result;
+	}
+	
 	public final double getCount() {
 		return this.getStatistics()[0].getCount();
 	}
