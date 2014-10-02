@@ -1,7 +1,7 @@
 package weka.classifiers.functions;
 
-import static java.util.Arrays.copyOf;
 import jnnet.Dataset;
+
 import weka.core.Instances;
 
 /**
@@ -31,16 +31,17 @@ public final class WekaDataset implements Dataset {
 	}
 	
 	@Override
-	public final double[] getItem(final int itemId) {
-		final double[] result = this.data.instance(itemId).toDoubleArray();
-		final int sourceLabelIndex = this.data.classIndex();
+	public final double[] getItem(final int itemId, final double[] result) {
+		System.arraycopy(this.data.instance(itemId).toDoubleArray(), 0, result, 0, this.getItemSize());
 		
-		return convert(sourceLabelIndex, result);
+		return convert(this.data.classIndex(), result);
 	}
 	
 	@Override
-	public final double[] getItemWeights(final int itemId) {
-		return copyOf(this.getItem(itemId), this.getItemSize() - 1);
+	public final double[] getItemWeights(final int itemId, final double[] result) {
+		System.arraycopy(this.data.instance(itemId).toDoubleArray(), 0, result, 0, this.getItemSize() - 1);
+		
+		return result;
 	}
 	
 	@Override
