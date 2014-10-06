@@ -1,5 +1,7 @@
 package jnnet.draft;
 
+import static imj2.pixel3d.PolygonTools.X;
+import static imj2.pixel3d.PolygonTools.Y;
 import static imj2.tools.IMJTools.a8r8g8b8;
 import static imj2.tools.IMJTools.alpha8;
 import static imj2.tools.IMJTools.blue8;
@@ -13,9 +15,9 @@ import static net.sourceforge.aprog.swing.SwingTools.I18N.item;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
-import static pixel3d.PolygonTools.X;
-import static pixel3d.PolygonTools.Y;
-
+import imj2.pixel3d.MouseHandler;
+import imj2.pixel3d.PolygonTools;
+import imj2.pixel3d.PolygonTools.Processor;
 import imj2.tools.Image2DComponent.Painter;
 import imj2.tools.SimpleImageView;
 
@@ -61,17 +63,12 @@ import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.CSV2Bin.DataType;
 import jnnet.draft.ImageDataset.TileTransformer;
-
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.TaskManager;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
-
-import pixel3d.MouseHandler;
-import pixel3d.PolygonTools;
-import pixel3d.PolygonTools.Processor;
 
 /**
  * @author codistmonk (creation 2014-05-10)
