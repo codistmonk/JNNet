@@ -3,7 +3,7 @@ package jnnet;
 import static net.sourceforge.aprog.tools.Tools.array;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
-import static net.sourceforge.aprog.tools.Tools.writeAndCloseOutput;
+import static net.sourceforge.aprog.tools.Tools.writeAndClose;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -93,7 +93,7 @@ public final class DLLTools {
 			debugPrint(dllResourcePath, "->", dll);
 			
 			try {
-				writeAndCloseOutput(getResourceAsStream(dllResourcePath), new FileOutputStream(dll));
+				writeAndClose(getResourceAsStream(dllResourcePath), true, new FileOutputStream(dll), true);
 				// XXX Has no effect after System.load() on Windows
 				dll.deleteOnExit();
 			} catch (final IOException exception) {
