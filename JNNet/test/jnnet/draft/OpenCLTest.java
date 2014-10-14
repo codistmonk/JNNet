@@ -11,7 +11,6 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getThisMethodName;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -22,9 +21,7 @@ import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
 
-import com.amd.aparapi.Device;
 import com.amd.aparapi.Kernel;
-import com.amd.aparapi.OpenCLDevice;
 import com.amd.aparapi.Range;
 import com.amd.aparapi.Kernel.EXECUTION_MODE;
 
