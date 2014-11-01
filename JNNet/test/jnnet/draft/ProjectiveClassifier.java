@@ -7,6 +7,8 @@ import static jnnet.JNNetTools.uint8;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
+import imj2.tools.VectorStatistics;
+
 import java.awt.image.BufferedImage;
 import java.io.Serializable;
 
@@ -14,7 +16,6 @@ import jnnet.BinaryClassifier;
 import jnnet.CSVDataset;
 import jnnet.Dataset;
 import jnnet.SimpleConfusionMatrix;
-import jnnet.VectorStatistics;
 
 import net.sourceforge.aprog.tools.MathTools.Statistics;
 

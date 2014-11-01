@@ -5,6 +5,8 @@ import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
+import imj2.tools.VectorStatistics;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
