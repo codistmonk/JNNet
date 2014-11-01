@@ -10,6 +10,8 @@ import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
+import imj2.tools.VectorStatistics;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

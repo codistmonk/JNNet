@@ -9,15 +9,15 @@ import static net.sourceforge.aprog.tools.MathTools.lcm;
 import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static org.junit.Assert.*;
 
+import imj2.tools.VectorStatistics;
+
 import java.util.Arrays;
 import java.util.Date;
 
 import jnnet.BinDataset;
 import jnnet.Dataset;
 import jnnet.Dataset.DatasetStatistics;
-import jnnet.VectorStatistics;
 import jnnet.draft.LinearConstraintSystem;
-
 import net.sourceforge.aprog.tools.TicToc;
 
 import org.junit.Test;
