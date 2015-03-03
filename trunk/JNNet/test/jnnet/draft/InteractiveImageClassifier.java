@@ -15,7 +15,6 @@ import static net.sourceforge.aprog.swing.SwingTools.I18N.item;
 import static net.sourceforge.aprog.tools.Tools.DEBUG_STACK_OFFSET;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.debug;
-import imj2.pixel3d.MouseHandler;
 import imj2.pixel3d.PolygonTools;
 import imj2.pixel3d.PolygonTools.Processor;
 import imj2.tools.Image2DComponent.Painter;
@@ -63,6 +62,7 @@ import jnnet.Dataset;
 import jnnet.SimplifiedNeuralBinaryClassifier;
 import jnnet.draft.CSV2Bin.DataType;
 import jnnet.draft.ImageDataset.TileTransformer;
+import net.sourceforge.aprog.swing.MouseHandler;
 import net.sourceforge.aprog.swing.SwingTools;
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -116,7 +116,7 @@ public final class InteractiveImageClassifier {
 		buttonGroup.add(positiveExamplesButton);
 		buttonGroup.setSelected(clearExamplesButton.getModel(), true);
 		
-		new MouseHandler(null) {
+		new MouseHandler() {
 			
 			@Override
 			public final void mouseExited(final MouseEvent event) {
