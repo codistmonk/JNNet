@@ -1,5 +1,6 @@
 package dct;
 
+import static dct.DCT.getDimensionCount;
 import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
@@ -59,19 +60,8 @@ public final class DCTb {
 					{ 3.0, 4.0, 1.0, 2.0 },
 					{ 4.0, 1.0, 2.0, 3.0 },
 			};
-			final int n = f.length;
-			final double[][] dct = new double[n][n];
-			
-//			dct1(f, dct);
-//			dct1(transpose(dct), dct);
-			
-			dct(f, 0, dct);
-			dct(dct, 1, dct);
-			
-			final double[][] y = new double[n][n];
-			
-			idct1(dct, y);
-			idct1(transpose(y), y);
+			final double[][] dct = dct(f);
+			final double[][] y = idct(dct);
 			
 			Tools.debugPrint();
 			Tools.debugPrint(Arrays.deepToString(f));
@@ -90,7 +80,6 @@ public final class DCTb {
 						{ 7.0, 8.0 },
 					},
 			};
-			
 			final double[][][] dct = dct(f);
 			final double[][][] y = idct(dct);
 			
@@ -103,7 +92,7 @@ public final class DCTb {
 	
 	public static final <T> T dct(final T f) {
 		final T result = deepClone(f);
-		final int n = Array.getLength(f);
+		final int n = getDimensionCount(f.getClass());
 		
 		for (int i = 0; i < n; ++i) {
 			dct(result, i, result);
@@ -112,9 +101,9 @@ public final class DCTb {
 		return result;
 	}
 	
-	public static final <T> T idct(final T f) {
-		final T result = deepClone(f);
-		final int n = Array.getLength(f);
+	public static final <T> T idct(final T dct) {
+		final T result = deepClone(dct);
+		final int n = getDimensionCount(dct.getClass());
 		
 		for (int i = 0; i < n; ++i) {
 			idct(result, i, result);
@@ -150,6 +139,7 @@ public final class DCTb {
 			minMaxes[2 * i + 1] = dimensions.get(i) - 1;
 		}
 		
+		Tools.debugPrint(dimensions, dimensionIndex);
 		final double[] inputBuffer = new double[dimensions.get(dimensionIndex)];
 		final double[] outputBuffer = inputBuffer.clone();
 		
