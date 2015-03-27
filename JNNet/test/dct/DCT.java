@@ -1,5 +1,6 @@
 package dct;
 
+import static dct.DCT.getDimensionCount;
 import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
@@ -101,9 +102,17 @@ public final class DCT {
 		}
 	}
 	
+	public static final int getDimensionCount(final Class<?> cls) {
+		if (!cls.isArray()) {
+			return 0;
+		}
+		
+		return 1 + getDimensionCount(cls.getComponentType());
+	}
+	
 	public static final <T> T dct(final T f) {
 		final T result = deepClone(f);
-		final int n = Array.getLength(f);
+		final int n = getDimensionCount(f.getClass());
 		
 		for (int i = 0; i < n; ++i) {
 			dct(result, i, result);
@@ -112,9 +121,9 @@ public final class DCT {
 		return result;
 	}
 	
-	public static final <T> T idct(final T f) {
-		final T result = deepClone(f);
-		final int n = Array.getLength(f);
+	public static final <T> T idct(final T dct) {
+		final T result = deepClone(dct);
+		final int n = getDimensionCount(dct.getClass());
 		
 		for (int i = 0; i < n; ++i) {
 			idct(result, i, result);
