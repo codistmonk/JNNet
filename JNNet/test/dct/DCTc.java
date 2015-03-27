@@ -4,17 +4,21 @@ import static dct.DCTa.getDimensionCount;
 import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
 import static java.lang.Math.sqrt;
+import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.deepClone;
 import static net.sourceforge.aprog.tools.Tools.swap;
+import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.DoubleSupplier;
 
+import dct.DCTc.Expression;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.Tools;
 
@@ -26,6 +30,16 @@ public final class DCTc {
 	private DCTc() {
 		throw new IllegalInstantiationException();
 	}
+	
+	public static final Constant ZERO = constant(0.0);
+	
+	public static final Constant ONE = constant(1.0);
+	
+	public static final Constant MINUS_ONE = constant(-1.0);
+	
+	public static final Constant PI = constant(Math.PI);
+	
+	public static final Expression HALF_PI = divide(PI, 2.0);
 	
 	/**
 	 * @param commandLineArguments
@@ -47,8 +61,10 @@ public final class DCTc {
 			idct(dct, y);
 			
 			Tools.debugPrint();
-			Tools.debugPrint(Arrays.toString(toDoubles(f)));
+			Tools.debugPrint(Arrays.deepToString(f));
+			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.toString(toDoubles(dct)));
+			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.toString(toDoubles(y)));
 		}
 		
@@ -63,8 +79,10 @@ public final class DCTc {
 			final Expression[][] y = idct(dct);
 			
 			Tools.debugPrint();
-			Tools.debugPrint(Arrays.deepToString(deepToDoubles(f)));
+			Tools.debugPrint(Arrays.deepToString(f));
+			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
+			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
 		}
 		
@@ -83,8 +101,10 @@ public final class DCTc {
 			final Expression[][][] y = idct(dct);
 			
 			Tools.debugPrint();
-			Tools.debugPrint(Arrays.deepToString(deepToDoubles(f)));
+			Tools.debugPrint(Arrays.deepToString(f));
+			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
+			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
 		}
 	}
@@ -120,6 +140,21 @@ public final class DCTc {
 		}
 		
 		return result;
+	}
+	
+	public static final void deepSimplify(final Object array) {
+		final Class<? extends Object> cls = array.getClass();
+		final int n = Array.getLength(array);
+		
+		if (cls.getComponentType().isArray()) {
+			for (int i = 0; i < n; ++i) {
+				deepSimplify(Array.get(array, i));
+			}
+		} else {
+			for (int i = 0; i < n; ++i) {
+				Array.set(array, i, ((Expression) Array.get(array, i)).simplified());
+			}
+		}
 	}
 	
 	public static final Expression[] constants(final double... values) {
@@ -295,7 +330,7 @@ public final class DCTc {
 			result = multiply(result, sqrt(2.0));
 		}
 		
-		return divide(result, sqrt(n));
+		return divide(result, sqrt(n)).simplified();
 	}
 	
 	public static final Expression idct(final Expression[] dct, final Object x) {
@@ -306,7 +341,7 @@ public final class DCTc {
 			result = add(result, idct1k(dct[k], x, k, n));
 		}
 		
-		return divide(result, sqrt(n));
+		return divide(result, sqrt(n)).simplified();
 	}
 	
 	public static final Expression dct1k(final Expression a, final Object x, final int k, final int n) {
@@ -325,11 +360,11 @@ public final class DCTc {
 		return expression instanceof Expression ? (Expression) expression : constant(expression);
 	}
 	
-	public static final Cos cos(final Object operand) {
+	public static final Expression cos(final Object operand) {
 		return new Cos(expression(operand));
 	}
 	
-	public static final Addition add(final Object... operands) {
+	public static final Expression add(final Object... operands) {
 		final int n = operands.length;
 		Addition result = new Addition(expression(operands[0]), expression(operands[1]));
 		
@@ -340,7 +375,7 @@ public final class DCTc {
 		return result;
 	}
 	
-	public static final Multiplication multiply(final Object... operands) {
+	public static final Expression multiply(final Object... operands) {
 		final int n = operands.length;
 		Multiplication result = new Multiplication(expression(operands[0]), expression(operands[1]));
 		
@@ -351,12 +386,52 @@ public final class DCTc {
 		return result;
 	}
 	
-	public static final Subtraction subtract(final Object leftOperand, final Object rightOperand) {
+	public static final Expression subtract(final Object leftOperand, final Object rightOperand) {
 		return new Subtraction(expression(leftOperand), expression(rightOperand));
 	}
 	
-	public static final Division divide(final Object leftOperand, final Object rightOperand) {
+	public static final Expression divide(final Object leftOperand, final Object rightOperand) {
 		return new Division(expression(leftOperand), expression(rightOperand));
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-27)
+	 */
+	public static final class Negation extends UnaryOperation.Default {
+		
+		public Negation(final Expression operand) {
+			super(operand);
+		}
+		
+		@Override
+		public final double getAsDouble() {
+			return -this.getOperand().getAsDouble();
+		}
+		
+		@Override
+		public final Expression simplified(final Expression simplifiedOperand) {
+			final Negation negativeOperand = cast(this.getClass(), simplifiedOperand);
+			
+			if (negativeOperand != null) {
+				return negativeOperand.getOperand();
+			}
+			
+			final Constant constantOperand = cast(Constant.class, simplifiedOperand);
+			
+			if (constantOperand != null) {
+				return constant(-constantOperand.getAsDouble());
+			}
+			
+			return super.simplified(simplifiedOperand);
+		}
+		
+		@Override
+		public final String toString() {
+			return "-" + this.getOperand();
+		}
+		
+		private static final long serialVersionUID = -117667692146333768L;
+		
 	}
 	
 	/**
@@ -371,6 +446,28 @@ public final class DCTc {
 		@Override
 		public final double getAsDouble() {
 			return Math.cos(this.getOperand().getAsDouble());
+		}
+		
+		@Override
+		public final Expression simplified(final Expression simplifiedOperand) {
+			if (ZERO.equals(simplifiedOperand)) {
+				return ONE;
+			}
+			
+			if (PI.equals(simplifiedOperand)) {
+				return MINUS_ONE;
+			}
+			
+			if (HALF_PI.equals(simplifiedOperand)) {
+				return ZERO;
+			}
+			
+			return super.simplified(simplifiedOperand);
+		}
+		
+		@Override
+		public final String toString() {
+			return "cos(" + this.getOperand() + ")";
 		}
 		
 		private static final long serialVersionUID = -8359113605516006482L;
@@ -391,6 +488,31 @@ public final class DCTc {
 			return this.getLeftOperand().getAsDouble() + this.getRightOperand().getAsDouble();
 		}
 		
+		@Override
+		public final Expression simplified(final Expression simplifiedLeftOperand, final Expression simplifiedRightOperand) {
+			if (ZERO.equals(simplifiedLeftOperand)) {
+				return simplifiedRightOperand;
+			}
+			
+			if (ZERO.equals(simplifiedRightOperand)) {
+				return simplifiedLeftOperand;
+			}
+			
+			final Constant constantLeft = cast(Constant.class, simplifiedLeftOperand);
+			final Constant constantRight = cast(Constant.class, simplifiedRightOperand);
+			
+			if (constantLeft != null && constantRight != null) {
+				return constant(this.getAsDouble());
+			}
+			
+			return super.simplified(simplifiedLeftOperand, simplifiedRightOperand);
+		}
+		
+		@Override
+		public final String toString() {
+			return this.getLeftOperand() + "+" + this.getRightOperand();
+		}
+		
 		private static final long serialVersionUID = 6536740395597475091L;
 		
 	}
@@ -407,6 +529,31 @@ public final class DCTc {
 		@Override
 		public final double getAsDouble() {
 			return this.getLeftOperand().getAsDouble() - this.getRightOperand().getAsDouble();
+		}
+		
+		@Override
+		public final Expression simplified(final Expression simplifiedLeftOperand, final Expression simplifiedRightOperand) {
+			if (ZERO.equals(simplifiedRightOperand)) {
+				return simplifiedLeftOperand;
+			}
+			
+			if (simplifiedLeftOperand.equals(simplifiedRightOperand)) {
+				return ZERO;
+			}
+			
+			final Constant constantLeft = cast(Constant.class, this.getLeftOperand().simplified());
+			final Constant constantRight = cast(Constant.class, this.getRightOperand().simplified());
+			
+			if (constantLeft != null && constantRight != null) {
+				return constant(this.getAsDouble());
+			}
+			
+			return super.simplified(simplifiedLeftOperand, simplifiedRightOperand);
+		}
+		
+		@Override
+		public final String toString() {
+			return this.getLeftOperand() + "/" + this.getRightOperand();
 		}
 		
 		private static final long serialVersionUID = -7252500312383884584L;
@@ -427,6 +574,35 @@ public final class DCTc {
 			return this.getLeftOperand().getAsDouble() * this.getRightOperand().getAsDouble();
 		}
 		
+		@Override
+		public final Expression simplified(final Expression simplifiedLeftOperand, final Expression simplifiedRightOperand) {
+			if (ZERO.equals(simplifiedLeftOperand) || ZERO.equals(simplifiedRightOperand)) {
+				return ZERO;
+			}
+			
+			if (ONE.equals(simplifiedLeftOperand)) {
+				return simplifiedRightOperand;
+			}
+			
+			if (ONE.equals(simplifiedRightOperand)) {
+				return simplifiedLeftOperand;
+			}
+			
+			final Constant constantLeft = cast(Constant.class, this.getLeftOperand().simplified());
+			final Constant constantRight = cast(Constant.class, this.getRightOperand().simplified());
+			
+			if (constantLeft != null && constantRight != null) {
+				return constant(this.getAsDouble());
+			}
+			
+			return super.simplified(simplifiedLeftOperand, simplifiedRightOperand);
+		}
+		
+		@Override
+		public final String toString() {
+			return this.getLeftOperand() + "*" + this.getRightOperand();
+		}
+		
 		private static final long serialVersionUID = 6537238820394469045L;
 		
 	}
@@ -445,6 +621,30 @@ public final class DCTc {
 			return this.getLeftOperand().getAsDouble() / this.getRightOperand().getAsDouble();
 		}
 		
+		@Override
+		public final Expression simplified(final Expression simplifiedLeftOperand, final Expression simplifiedRightOperand) {
+			if (ONE.equals(simplifiedRightOperand)) {
+				return simplifiedLeftOperand;
+			}
+			
+			if (!ZERO.equals(simplifiedRightOperand)) {
+				if (ZERO.equals(simplifiedLeftOperand)) {
+					return ZERO;
+				}
+				
+				if (simplifiedLeftOperand.equals(simplifiedRightOperand)) {
+					return ONE;
+				}
+			}
+			
+			return super.simplified(simplifiedLeftOperand, simplifiedRightOperand);
+		}
+		
+		@Override
+		public final String toString() {
+			return this.getLeftOperand() + "/" + this.getRightOperand();
+		}
+		
 		private static final long serialVersionUID = -3646307774259846699L;
 		
 	}
@@ -453,7 +653,11 @@ public final class DCTc {
 	 * @author codistmonk (creation 2015-03-27)
 	 */
 	public static abstract interface Expression extends DoubleSupplier, Serializable {
-		//
+		
+		public default Expression simplified() {
+			return this;
+		}
+		
 	}
 	
 	/**
@@ -472,6 +676,23 @@ public final class DCTc {
 			return this.value;
 		}
 		
+		@Override
+		public final int hashCode() {
+			return Double.hashCode(this.getAsDouble());
+		}
+		
+		@Override
+		public final boolean equals(final Object object) {
+			final Constant that = cast(this.getClass(), object);
+			
+			return that != null && this.getAsDouble() == that.getAsDouble();
+		}
+		
+		@Override
+		public final String toString() {
+			return Double.toString(this.getAsDouble());
+		}
+		
 		private static final long serialVersionUID = 4701039521481142899L;
 		
 	}
@@ -482,6 +703,23 @@ public final class DCTc {
 	public static abstract interface UnaryOperation extends Expression {
 		
 		public abstract Expression getOperand();
+		
+		@Override
+		public default Expression simplified() {
+			return this.simplified(this.getOperand().simplified());
+		}
+		
+		public default Expression simplified(final Expression simplifiedOperand) {
+			if (this.getOperand() != simplifiedOperand) {
+				try {
+					return this.getClass().getConstructor(Expression.class).newInstance(simplifiedOperand);
+				} catch (final Exception exception) {
+					throw unchecked(exception);
+				}
+			}
+			
+			return Expression.super.simplified();
+		}
 		
 		/**
 		 * @author codistmonk (creation 2015-03-27)
@@ -499,6 +737,18 @@ public final class DCTc {
 				return this.operand;
 			}
 			
+			@Override
+			public final int hashCode() {
+				return this.getOperand().hashCode() + this.getClass().hashCode();
+			}
+			
+			@Override
+			public final boolean equals(final Object object) {
+				final Default that = cast(this.getClass(), object);
+				
+				return that != null && this.getOperand().equals(that.getOperand());
+			}
+			
 			private static final long serialVersionUID = 4857285485599960277L;
 			
 		}
@@ -513,6 +763,23 @@ public final class DCTc {
 		public abstract Expression getLeftOperand();
 		
 		public abstract Expression getRightOperand();
+		
+		@Override
+		public default Expression simplified() {
+			return this.simplified(this.getLeftOperand().simplified(), this.getRightOperand().simplified());
+		}
+		
+		public default Expression simplified(final Expression simplifiedLeftOperand, final Expression simplifiedRightOperand) {
+			if (this.getLeftOperand() != simplifiedLeftOperand || this.getRightOperand() != simplifiedRightOperand) {
+				try {
+					return this.getClass().getConstructor(Expression.class, Expression.class).newInstance(simplifiedLeftOperand, simplifiedRightOperand);
+				} catch (final Exception exception) {
+					throw unchecked(exception);
+				}
+			}
+			
+			return Expression.super.simplified();
+		}
 		
 		/**
 		 * @author codistmonk (creation 2015-03-27)
@@ -536,6 +803,18 @@ public final class DCTc {
 			@Override
 			public final Expression getRightOperand() {
 				return this.rightOperand;
+			}
+			
+			@Override
+			public final int hashCode() {
+				return this.getLeftOperand().hashCode() + this.getRightOperand().hashCode() + this.getClass().hashCode();
+			}
+			
+			@Override
+			public final boolean equals(final Object object) {
+				final Default that = cast(this.getClass(), object);
+				
+				return that != null && this.getLeftOperand().equals(that.getLeftOperand()) && this.getRightOperand().equals(that.getRightOperand());
 			}
 			
 			private static final long serialVersionUID = -4709432671538857881L;
