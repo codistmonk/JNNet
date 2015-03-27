@@ -1,11 +1,12 @@
 package dct;
 
+import static dct.DCT.get;
 import static dct.DCT.getDimensionCount;
+import static dct.DCT.put;
 import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 import static java.lang.Math.sqrt;
-import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.deepClone;
 import static net.sourceforge.aprog.tools.Tools.swap;
 
@@ -139,7 +140,6 @@ public final class DCTb {
 			minMaxes[2 * i + 1] = dimensions.get(i) - 1;
 		}
 		
-		Tools.debugPrint(dimensions, dimensionIndex);
 		final double[] inputBuffer = new double[dimensions.get(dimensionIndex)];
 		final double[] outputBuffer = inputBuffer.clone();
 		
@@ -179,30 +179,6 @@ public final class DCTb {
 		
 		public abstract void transform(double[] input, double[] output);
 		
-	}
-	
-	public static final double get(final Object array, final int... indices) {
-		final int n = indices.length;
-		int i;
-		Object row = array;
-		
-		for (i = 0; i + 1 < n; ++i) {
-			row = Array.get(row, indices[i]);
-		}
-		
-		return Array.getDouble(row, indices[i]);
-	}
-	
-	public static final void put(final double value, final Object array, final int... indices) {
-		final int n = indices.length;
-		int i;
-		Object row = array;
-		
-		for (i = 0; i + 1 < n; ++i) {
-			row = Array.get(row, indices[i]);
-		}
-		
-		Array.setDouble(row, indices[i], value);
 	}
 	
 	public static final double[] dct(final double[] f, final double[] result) {
@@ -263,54 +239,6 @@ public final class DCTb {
 	
 	public static final double idct1k(final double a, final int x, final int k, final int n) {
 		return dct1k(a, x, k, n) * sqrt(2.0);
-	}
-	
-	public static final  <T> T mapDCT(final T f) {
-		final Object[] array = (Object[]) f;
-		final int n = array.length;
-		Object[] result = array.clone();
-		
-		for (int i = 0; i < n; ++i) {
-			final double[] values = cast(double[].class, array[i]);
-			
-			if (values != null) {
-				result[i] = dct(values, new double[values.length]);
-			} else {
-				result[i] = mapDCT((Object[]) array[i]);
-			}
-		}
-		
-		return (T) result;
-	}
-	
-	public static final void dct1(final double[][] x, final double[][] result) {
-		final int n = x.length;
-		
-		for (int i = 0; i < n; ++i) {
-			dct(x[i], result[i]);
-		}
-	}
-	
-	public static final void idct1(final double[][] dct, final double[][] result) {
-		final int n = dct.length;
-		
-		for (int i = 0; i < n; ++i) {
-			idct(dct[i], result[i]);
-		}
-	}
-	
-	public static final double[][] transpose(final double[][] matrix) {
-		final int n1 = matrix.length;
-		final int n2 = matrix[0].length;
-		final double[][] result = new double[n2][n1];
-		
-		for (int i = 0; i < n1; ++i) {
-			for (int j = 0; j < n2; ++j) {
-				result[j][i] = matrix[i][j];
-			}
-		}
-		
-		return result;
 	}
 	
 }
