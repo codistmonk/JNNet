@@ -1,6 +1,6 @@
 package dct;
 
-import static dct.DCT.getDimensionCount;
+import static dct.DCTa.getDimensionCount;
 import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
@@ -22,9 +22,9 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2015-03-23)
  */
-public final class DCT {
+public final class DCTa {
 	
-	private DCT() {
+	private DCTa() {
 		throw new IllegalInstantiationException();
 	}
 	
@@ -133,11 +133,11 @@ public final class DCT {
 	}
 	
 	public static final <T> T dct(final T f, final int dimensionIndex, final T result) {
-		return transform(f, dimensionIndex, result, DCT::dct);
+		return transform(f, dimensionIndex, result, DCTa::dct);
 	}
 	
 	public static final <T> T idct(final T f, final int dimensionIndex, final T result) {
-		return transform(f, dimensionIndex, result, DCT::idct);
+		return transform(f, dimensionIndex, result, DCTa::idct);
 	}
 	
 	public static final <T> T transform(final T f, final int dimensionIndex, final T result, final Transformation transformation) {

@@ -1,8 +1,8 @@
 package dct;
 
-import static dct.DCT.get;
-import static dct.DCT.getDimensionCount;
-import static dct.DCT.put;
+import static dct.DCTa.get;
+import static dct.DCTa.getDimensionCount;
+import static dct.DCTa.put;
 import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
@@ -182,8 +182,6 @@ public final class DCTb {
 	}
 	
 	public static final double[] dct(final double[] f, final double[] result) {
-		Arrays.fill(result, 0.0);
-		
 		final int n = f.length;
 		
 		for (int k = 0; k < n; ++k) {
