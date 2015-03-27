@@ -2,7 +2,6 @@ package dct;
 
 import static dct.DCTa.getDimensionCount;
 import static imj3.tools.CommonTools.cartesian;
-import static java.lang.Math.PI;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.deepClone;
 import static net.sourceforge.aprog.tools.Tools.swap;
@@ -10,14 +9,12 @@ import static net.sourceforge.aprog.tools.Tools.unchecked;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.DoubleSupplier;
 
-import dct.DCTc.Expression;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools;
 import net.sourceforge.aprog.tools.Tools;
@@ -262,6 +259,29 @@ public final class DCTc {
 		return result;
 	}
 	
+	private static final Expression contract(final Object array, final Contraction contraction, final int... indices) {
+		return contract(array, contraction, indices, 0);
+	}
+	
+	private static final Expression contract(Object array, final Contraction contraction, final int[] indices, final int indexIndex) {
+		final Expression[] buffer;
+		
+		if (indexIndex + 1 < indices.length) {
+			final int n = Array.getLength(array);
+			buffer = new Expression[n];
+			
+			for (int i = 0; i < n; ++i) {
+				buffer[i] = contract(Array.get(array, i), contraction, indices, indexIndex + 1);
+			}
+		} else {
+			buffer = (Expression[]) array;
+		}
+		
+		return contraction.transform(buffer, indices[indexIndex]);
+	}
+	
+	
+	
 	@SuppressWarnings("unchecked")
 	public static final <T> T get(final Object array, final int... indices) {
 		final int n = indices.length;
@@ -293,6 +313,15 @@ public final class DCTc {
 	public static abstract interface Transformation extends Serializable {
 		
 		public abstract void transform(Expression[] input, Expression[] output);
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-25)
+	 */
+	public static abstract interface Contraction extends Serializable {
+		
+		public abstract Expression transform(Expression[] input, int index);
 		
 	}
 	
