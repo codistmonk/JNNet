@@ -46,6 +46,8 @@ public final class DCTc {
 	public static final void main(final String[] commandLineArguments) {
 		Tools.debugPrint(divide(divide(4.0, sqrt(2.0)), sqrt(2.0)).simplified());
 		
+		final double epsilon = 1.0E-12;
+		
 		if (true) {
 //			final double[] f = { 1.0, 2.0, 3.0, 4.0 };
 //			final double[] f = { 121, 58, 61, 113, 171, 200, 226, 246 };
@@ -67,18 +69,20 @@ public final class DCTc {
 			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.toString(toDoubles(y)));
 			
-			Tools.debugPrint(contract(dct, DCTc::idct, expression(1.0)).approximated());
-			Tools.debugPrint(contract(dct, DCTc::idct, expression("x")).approximated());
-			
-			return;
+			Tools.debugPrint(contract(dct, DCTc::idct, expression(1.0)).approximated(epsilon).simplified());
+			Tools.debugPrint(contract(dct, DCTc::idct, expression("x")).approximated(epsilon).simplified());
 		}
 		
 		if (true) {
+//			final Expression[][] f = {
+//					constants(1.0, 2.0, 3.0, 4.0),
+//					constants(2.0, 3.0, 4.0, 1.0),
+//					constants(3.0, 4.0, 1.0, 2.0),
+//					constants(4.0, 1.0, 2.0, 3.0),
+//			};
 			final Expression[][] f = {
-					constants(1.0, 2.0, 3.0, 4.0),
-					constants(2.0, 3.0, 4.0, 1.0),
-					constants(3.0, 4.0, 1.0, 2.0),
-					constants(4.0, 1.0, 2.0, 3.0),
+					constants(1.0, 2.0),
+					constants(2.0, 3.0),
 			};
 			final Expression[][] dct = dct(f);
 			final Expression[][] y = idct(dct);
@@ -89,6 +93,8 @@ public final class DCTc {
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
 			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
+			
+			Tools.debugPrint(contract(dct, DCTc::idct, expression("x"), expression("y")).approximated(epsilon).simplified());
 		}
 		
 		if (true) {
@@ -797,7 +803,7 @@ public final class DCTc {
 		}
 		
 		@Override
-		public final Expression approximated(final Expression approximatedLeftOperand,
+		public final Expression approximated(final double epsilon, final Expression approximatedLeftOperand,
 				final Expression approximatedRightOperand, final Expression defaultResult) {
 			{
 				final List<Expression> leftTerms = terms(approximatedLeftOperand);
@@ -808,13 +814,13 @@ public final class DCTc {
 					
 					for (final Expression leftTerm : leftTerms) {
 						for (final Expression rightTerm : rightTerms) {
-							distributed.addAll(terms(multiply(leftTerm, rightTerm).approximated()));
+							distributed.addAll(terms(multiply(leftTerm, rightTerm).approximated(epsilon)));
 						}
 					}
 					
 					reorder(distributed);
 					
-					return add(distributed.toArray()).approximated();
+					return add(distributed.toArray()).approximated(epsilon);
 				}
 			}
 			
@@ -833,7 +839,7 @@ public final class DCTc {
 			}
 			
 			
-			return super.approximated(approximatedLeftOperand, approximatedRightOperand, defaultResult);
+			return super.approximated(epsilon, approximatedLeftOperand, approximatedRightOperand, defaultResult);
 		}
 		
 		private static final void reorder(final List<Expression> expressions) {
@@ -1003,7 +1009,7 @@ public final class DCTc {
 			return this;
 		}
 		
-		public default Expression approximated() {
+		public default Expression approximated(double epsilon) {
 			return this;
 		}
 		
@@ -1104,23 +1110,25 @@ public final class DCTc {
 		}
 		
 		@Override
-		public default Expression approximated() {
-			final Expression approximatedOperand = this.getOperand().approximated();
+		public default Expression approximated(final double epsilon) {
+			final Expression approximatedOperand = this.getOperand().approximated(epsilon);
 			
 			try {
 				final UnaryOperation approximated = this.getClass().getConstructor(Expression.class).newInstance(approximatedOperand);
 				
 				if (approximatedOperand instanceof Constant) {
-					return constant(approximated.getAsDouble());
+					final double value = approximated.getAsDouble();
+					
+					return Math.abs(value) < epsilon ? ZERO : constant(value);
 				}
 				
-				return this.approximated(approximatedOperand, approximated);
+				return this.approximated(epsilon, approximatedOperand, approximated);
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
 		}
 		
-		public default Expression approximated(final Expression approximatedOperand, final Expression defaultResult) {
+		public default Expression approximated(final double epsilon, final Expression approximatedOperand, final Expression defaultResult) {
 			return defaultResult;
 		}
 		
@@ -1185,24 +1193,26 @@ public final class DCTc {
 		}
 		
 		@Override
-		public default Expression approximated() {
-			final Expression approximatedLeftOperand = this.getLeftOperand().approximated();
-			final Expression approximatedRightOperand = this.getRightOperand().approximated();
+		public default Expression approximated(final double epsilon) {
+			final Expression approximatedLeftOperand = this.getLeftOperand().approximated(epsilon);
+			final Expression approximatedRightOperand = this.getRightOperand().approximated(epsilon);
 			
 			try {
 				final BinaryOperation approximated = this.getClass().getConstructor(Expression.class, Expression.class).newInstance(approximatedLeftOperand, approximatedRightOperand);
 				
 				if (approximatedLeftOperand instanceof Constant && approximatedRightOperand instanceof Constant) {
-					return constant(approximated.getAsDouble());
+					final double value = approximated.getAsDouble();
+					
+					return Math.abs(value) < epsilon ? ZERO : constant(value);
 				}
 				
-				return this.approximated(approximatedLeftOperand, approximatedRightOperand, approximated);
+				return this.approximated(epsilon, approximatedLeftOperand, approximatedRightOperand, approximated);
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
 		}
 		
-		public default Expression approximated(final Expression approximatedLeftOperand, final Expression approximatedRightOperand, final Expression defaultResult) {
+		public default Expression approximated(final double epsilon, final Expression approximatedLeftOperand, final Expression approximatedRightOperand, final Expression defaultResult) {
 			return defaultResult;
 		}
 		
