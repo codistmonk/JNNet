@@ -15,6 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.DoubleSupplier;
 
+import dct.DCTc.Expression;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools;
 import net.sourceforge.aprog.tools.Tools;
@@ -65,6 +66,10 @@ public final class DCTc {
 			Tools.debugPrint(Arrays.toString(toDoubles(dct)));
 			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.toString(toDoubles(y)));
+			
+			Tools.debugPrint(contract(dct, DCTc::idct, variable("x")).approximated());
+			
+			return;
 		}
 		
 		if (true) {
@@ -259,11 +264,11 @@ public final class DCTc {
 		return result;
 	}
 	
-	private static final Expression contract(final Object array, final Contraction contraction, final int... indices) {
+	private static final Expression contract(final Object array, final Contraction contraction, final Expression... indices) {
 		return contract(array, contraction, indices, 0);
 	}
 	
-	private static final Expression contract(Object array, final Contraction contraction, final int[] indices, final int indexIndex) {
+	private static final Expression contract(Object array, final Contraction contraction, final Expression[] indices, final int indexIndex) {
 		final Expression[] buffer;
 		
 		if (indexIndex + 1 < indices.length) {
@@ -277,7 +282,7 @@ public final class DCTc {
 			buffer = (Expression[]) array;
 		}
 		
-		return contraction.transform(buffer, indices[indexIndex]);
+		return contraction.contract(buffer, indices[indexIndex]);
 	}
 	
 	
@@ -321,7 +326,7 @@ public final class DCTc {
 	 */
 	public static abstract interface Contraction extends Serializable {
 		
-		public abstract Expression transform(Expression[] input, int index);
+		public abstract Expression contract(Expression[] input, Expression index);
 		
 	}
 	
@@ -383,12 +388,17 @@ public final class DCTc {
 		return multiply(dct1k(a, x, k, n), sqrt(2.0));
 	}
 	
+	public static final Variable variable(final Object name) {
+		return new Variable(name.toString());
+	}
+	
 	public static final Constant constant(final Object value) {
 		return new Constant(((Number) value).doubleValue());
 	}
 	
 	public static final Expression expression(final Object expression) {
-		return expression instanceof Expression ? (Expression) expression : constant(expression);
+		return expression instanceof Expression ? (Expression) expression :
+			expression instanceof CharSequence ? variable(expression) : constant(expression);
 	}
 	
 	public static final Expression abs(final Object expression) {
@@ -939,6 +949,43 @@ public final class DCTc {
 			return this;
 		}
 		
+		public default Expression approximated() {
+			return this;
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-27)
+	 */
+	public static final class Variable implements Expression {
+		
+		private final String name;
+		
+		private double value;
+		
+		public Variable(final String name) {
+			this.name = name;
+		}
+		
+		public Variable setValue(final double value) {
+			this.value = value;
+			
+			return this;
+		}
+		
+		@Override
+		public final double getAsDouble() {
+			return this.value;
+		}
+		
+		@Override
+		public final String toString() {
+			return this.name;
+		}
+		
+		private static final long serialVersionUID = -4287494233694126598L;
+		
 	}
 	
 	/**
@@ -1002,6 +1049,25 @@ public final class DCTc {
 			return Expression.super.simplified();
 		}
 		
+		@Override
+		public default Expression approximated() {
+			return this.approximated(this.getOperand().approximated());
+		}
+		
+		public default Expression approximated(final Expression approximatedOperand) {
+			try {
+				final UnaryOperation approximated = this.getClass().getConstructor(Expression.class).newInstance(approximatedOperand);
+				
+				if (approximatedOperand instanceof Constant) {
+					return constant(approximated.getAsDouble());
+				}
+				
+				return approximated;
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
+		}
+		
 		/**
 		 * @author codistmonk (creation 2015-03-27)
 		 */
@@ -1060,6 +1126,25 @@ public final class DCTc {
 			}
 			
 			return Expression.super.simplified();
+		}
+		
+		@Override
+		public default Expression approximated() {
+			return this.approximated(this.getLeftOperand().approximated(), this.getRightOperand().approximated());
+		}
+		
+		public default Expression approximated(final Expression approximatedLeftOperand, final Expression approximatedRightOperand) {
+			try {
+				final BinaryOperation approximated = this.getClass().getConstructor(Expression.class, Expression.class).newInstance(approximatedLeftOperand, approximatedRightOperand);
+				
+				if (approximatedLeftOperand instanceof Constant && approximatedRightOperand instanceof Constant) {
+					return constant(approximated.getAsDouble());
+				}
+				
+				return approximated;
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
 		}
 		
 		/**
