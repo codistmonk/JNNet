@@ -803,41 +803,82 @@ public final class DCTc {
 				}
 			}
 			
-			final Division divisionLeft = cast(this.getClass(), simplifiedLeftOperand);
-			
-			if (divisionLeft != null) {
-				final Expression simplifiedDenominator = Multiplication.tryToSimplifyMultiplication(divisionLeft.getRightOperand(), simplifiedRightOperand);
+			{
+				final Division divisionLeft = cast(this.getClass(), simplifiedLeftOperand);
 				
-				if (simplifiedDenominator != null) {
-					return divide(divisionLeft.getLeftOperand(), simplifiedDenominator).simplified();
+				if (divisionLeft != null) {
+					final Expression simplifiedDenominator = Multiplication.tryToSimplifyMultiplication(divisionLeft.getRightOperand(), simplifiedRightOperand);
+					
+					if (simplifiedDenominator != null) {
+						return divide(divisionLeft.getLeftOperand(), simplifiedDenominator).simplified();
+					}
 				}
 			}
 			
-			final Constant constantLeft = cast(Constant.class, simplifiedLeftOperand);
-			final Constant constantRight = cast(Constant.class, simplifiedRightOperand);
-			
-			if (constantLeft != null && constantRight != null) {
-				final double leftAsDouble = constantLeft.getAsDouble();
-				final double rightAsDouble = constantRight.getAsDouble();
+			simplify_terms:
+			{
+				final List<Expression> termsLeft = terms(simplifiedLeftOperand);
+				final int n = termsLeft.size();
 				
-				final double value = leftAsDouble / rightAsDouble;
-				
-				if (value * rightAsDouble == leftAsDouble) {
-					return constant(value);
-				}
-				
-				final long leftAsLong = (long) leftAsDouble;
-				final long rightAsLong = (long) rightAsDouble;
-				
-				if (leftAsDouble == leftAsLong && rightAsDouble == rightAsLong) {
-					final long gcd = MathTools.gcd(leftAsLong, rightAsLong);
-					
-					if (gcd == rightAsLong) {
-						return constant(leftAsLong / gcd);
+				if (2 <= n) {
+					for (int i = 0; i < n; ++i) {
+						final Expression simplifiedTerm = tryToSimplifyDivision(termsLeft.get(i), simplifiedRightOperand);
+						
+						if (simplifiedTerm != null) {
+							termsLeft.set(i, simplifiedTerm);
+						} else {
+							break simplify_terms;
+						}
 					}
 					
-					if (gcd != 1L) {
-						return divide(leftAsLong / gcd, rightAsLong / gcd);
+					return add(termsLeft.toArray()).simplified();
+				}
+			}
+			
+			{
+				final List<Expression> factorsLeft = factors(simplifiedLeftOperand);
+				final int n = factorsLeft.size();
+				
+				if (2 <= n) {
+					for (int i = 0; i < n; ++i) {
+						final Expression simplifiedFactor = tryToSimplifyDivision(factorsLeft.get(i), simplifiedRightOperand);
+						
+						if (simplifiedFactor != null) {
+							factorsLeft.set(i, simplifiedFactor);
+							
+							return multiply(factorsLeft.toArray()).simplified();
+						}
+					}
+				}
+			}
+			
+			{
+				final Constant constantLeft = cast(Constant.class, simplifiedLeftOperand);
+				final Constant constantRight = cast(Constant.class, simplifiedRightOperand);
+				
+				if (constantLeft != null && constantRight != null) {
+					final double leftAsDouble = constantLeft.getAsDouble();
+					final double rightAsDouble = constantRight.getAsDouble();
+					
+					final double value = leftAsDouble / rightAsDouble;
+					
+					if (value * rightAsDouble == leftAsDouble) {
+						return constant(value);
+					}
+					
+					final long leftAsLong = (long) leftAsDouble;
+					final long rightAsLong = (long) rightAsDouble;
+					
+					if (leftAsDouble == leftAsLong && rightAsDouble == rightAsLong) {
+						final long gcd = MathTools.gcd(leftAsLong, rightAsLong);
+						
+						if (gcd == rightAsLong) {
+							return constant(leftAsLong / gcd);
+						}
+						
+						if (gcd != 1L) {
+							return divide(leftAsLong / gcd, rightAsLong / gcd);
+						}
 					}
 				}
 			}
@@ -851,6 +892,41 @@ public final class DCTc {
 		}
 		
 		private static final long serialVersionUID = -3646307774259846699L;
+		
+		public static final Expression tryToSimplifyDivision(final Expression leftOperand, final Expression rightOperand) {
+			final Expression division = divide(leftOperand, rightOperand);
+			final Expression simplified = division.simplified();
+			
+			return division == simplified ? null : simplified;
+		}
+		
+		public static final List<Expression> terms(final Expression expression) {
+			final List<Expression> result = new ArrayList<>();
+			final Addition addition = cast(Addition.class, expression);
+			
+			if (addition != null) {
+				result.addAll(terms(addition.getLeftOperand()));
+				result.addAll(terms(addition.getRightOperand()));
+			} else {
+				result.add(expression);
+			}
+			
+			return result;
+		}
+		
+		public static final List<Expression> factors(final Expression expression) {
+			final List<Expression> result = new ArrayList<>();
+			final Multiplication multiplication = cast(Multiplication.class, expression);
+			
+			if (multiplication != null) {
+				result.addAll(factors(multiplication.getLeftOperand()));
+				result.addAll(factors(multiplication.getRightOperand()));
+			} else {
+				result.add(expression);
+			}
+			
+			return result;
+		}
 		
 	}
 	
