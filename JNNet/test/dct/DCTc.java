@@ -11,11 +11,11 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.DoubleSupplier;
 
-import dct.DCTc.Expression;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import net.sourceforge.aprog.tools.MathTools;
 import net.sourceforge.aprog.tools.Tools;
@@ -50,7 +50,7 @@ public final class DCTc {
 //			final double[] f = { 1.0, 2.0, 3.0, 4.0 };
 //			final double[] f = { 121, 58, 61, 113, 171, 200, 226, 246 };
 //			final double[] f = { 121, 58 };
-			final Expression[] f = constants(121, 58, 61, 113);
+			final Expression[] f = constants(121, 58);
 			final int n = f.length;
 			final Expression[] dct = new Expression[n];
 			
@@ -67,7 +67,8 @@ public final class DCTc {
 			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.toString(toDoubles(y)));
 			
-			Tools.debugPrint(contract(dct, DCTc::idct, variable("x")).approximated());
+			Tools.debugPrint(contract(dct, DCTc::idct, expression(1.0)).approximated());
+			Tools.debugPrint(contract(dct, DCTc::idct, expression("x")).approximated());
 			
 			return;
 		}
@@ -447,6 +448,34 @@ public final class DCTc {
 		return new Division(expression(leftOperand), expression(rightOperand));
 	}
 	
+	public static final List<Expression> terms(final Expression expression) {
+		final List<Expression> result = new ArrayList<>();
+		final Addition addition = cast(Addition.class, expression);
+		
+		if (addition != null) {
+			result.addAll(terms(addition.getLeftOperand()));
+			result.addAll(terms(addition.getRightOperand()));
+		} else {
+			result.add(expression);
+		}
+		
+		return result;
+	}
+	
+	public static final List<Expression> factors(final Expression expression) {
+		final List<Expression> result = new ArrayList<>();
+		final Multiplication multiplication = cast(Multiplication.class, expression);
+		
+		if (multiplication != null) {
+			result.addAll(factors(multiplication.getLeftOperand()));
+			result.addAll(factors(multiplication.getRightOperand()));
+		} else {
+			result.add(expression);
+		}
+		
+		return result;
+	}
+	
 	/**
 	 * @author codistmonk (creation 2015-03-27)
 	 */
@@ -768,6 +797,59 @@ public final class DCTc {
 		}
 		
 		@Override
+		public final Expression approximated(final Expression approximatedLeftOperand,
+				final Expression approximatedRightOperand, final Expression defaultResult) {
+			{
+				final List<Expression> leftTerms = terms(approximatedLeftOperand);
+				final List<Expression> rightTerms = terms(approximatedRightOperand);
+				
+				if (1 < leftTerms.size() || 1 < rightTerms.size()) {
+					final List<Expression> distributed = new ArrayList<DCTc.Expression>();
+					
+					for (final Expression leftTerm : leftTerms) {
+						for (final Expression rightTerm : rightTerms) {
+							distributed.addAll(terms(multiply(leftTerm, rightTerm).approximated()));
+						}
+					}
+					
+					reorder(distributed);
+					
+					return add(distributed.toArray()).approximated();
+				}
+			}
+			
+			{
+				final List<Expression> factors = factors(approximatedLeftOperand);
+				
+				factors.addAll(factors(approximatedRightOperand));
+				
+				final int n = factors.size();
+				
+				if (2 < n) {
+					reorder(factors);
+					
+					return multiply(factors.toArray()).simplified();
+				}
+			}
+			
+			
+			return super.approximated(approximatedLeftOperand, approximatedRightOperand, defaultResult);
+		}
+		
+		private static final void reorder(final List<Expression> expressions) {
+			final int n = expressions.size();
+			
+			for (int i = 0, j = n - 1; i < j;) {
+				if (expressions.get(i) instanceof Constant) {
+					++i;
+				} else {
+					Collections.swap(expressions, i, j);
+					--j;
+				}
+			}
+		}
+		
+		@Override
 		public final String toString() {
 			return "(" + this.getLeftOperand() + "*" + this.getRightOperand() + ")";
 		}
@@ -910,34 +992,6 @@ public final class DCTc {
 			return division == simplified ? null : simplified;
 		}
 		
-		public static final List<Expression> terms(final Expression expression) {
-			final List<Expression> result = new ArrayList<>();
-			final Addition addition = cast(Addition.class, expression);
-			
-			if (addition != null) {
-				result.addAll(terms(addition.getLeftOperand()));
-				result.addAll(terms(addition.getRightOperand()));
-			} else {
-				result.add(expression);
-			}
-			
-			return result;
-		}
-		
-		public static final List<Expression> factors(final Expression expression) {
-			final List<Expression> result = new ArrayList<>();
-			final Multiplication multiplication = cast(Multiplication.class, expression);
-			
-			if (multiplication != null) {
-				result.addAll(factors(multiplication.getLeftOperand()));
-				result.addAll(factors(multiplication.getRightOperand()));
-			} else {
-				result.add(expression);
-			}
-			
-			return result;
-		}
-		
 	}
 	
 	/**
@@ -1051,10 +1105,8 @@ public final class DCTc {
 		
 		@Override
 		public default Expression approximated() {
-			return this.approximated(this.getOperand().approximated());
-		}
-		
-		public default Expression approximated(final Expression approximatedOperand) {
+			final Expression approximatedOperand = this.getOperand().approximated();
+			
 			try {
 				final UnaryOperation approximated = this.getClass().getConstructor(Expression.class).newInstance(approximatedOperand);
 				
@@ -1062,10 +1114,14 @@ public final class DCTc {
 					return constant(approximated.getAsDouble());
 				}
 				
-				return approximated;
+				return this.approximated(approximatedOperand, approximated);
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
+		}
+		
+		public default Expression approximated(final Expression approximatedOperand, final Expression defaultResult) {
+			return defaultResult;
 		}
 		
 		/**
@@ -1130,10 +1186,9 @@ public final class DCTc {
 		
 		@Override
 		public default Expression approximated() {
-			return this.approximated(this.getLeftOperand().approximated(), this.getRightOperand().approximated());
-		}
-		
-		public default Expression approximated(final Expression approximatedLeftOperand, final Expression approximatedRightOperand) {
+			final Expression approximatedLeftOperand = this.getLeftOperand().approximated();
+			final Expression approximatedRightOperand = this.getRightOperand().approximated();
+			
 			try {
 				final BinaryOperation approximated = this.getClass().getConstructor(Expression.class, Expression.class).newInstance(approximatedLeftOperand, approximatedRightOperand);
 				
@@ -1141,10 +1196,14 @@ public final class DCTc {
 					return constant(approximated.getAsDouble());
 				}
 				
-				return approximated;
+				return this.approximated(approximatedLeftOperand, approximatedRightOperand, approximated);
 			} catch (final Exception exception) {
 				throw unchecked(exception);
 			}
+		}
+		
+		public default Expression approximated(final Expression approximatedLeftOperand, final Expression approximatedRightOperand, final Expression defaultResult) {
+			return defaultResult;
 		}
 		
 		/**
