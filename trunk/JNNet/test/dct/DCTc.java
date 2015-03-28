@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.DoubleSupplier;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
@@ -74,16 +75,16 @@ public final class DCTc {
 		}
 		
 		if (true) {
-//			final Expression[][] f = {
-//					constants(1.0, 2.0, 3.0, 4.0),
-//					constants(2.0, 3.0, 4.0, 1.0),
-//					constants(3.0, 4.0, 1.0, 2.0),
-//					constants(4.0, 1.0, 2.0, 3.0),
-//			};
 			final Expression[][] f = {
-					constants(1.0, 2.0),
-					constants(2.0, 3.0),
+					constants(1.0, 2.0, 3.0, 4.0),
+					constants(2.0, 3.0, 4.0, 1.0),
+					constants(3.0, 4.0, 1.0, 2.0),
+					constants(4.0, 1.0, 2.0, 3.0),
 			};
+//			final Expression[][] f = {
+//					constants(1.0, 2.0),
+//					constants(2.0, 3.0),
+//			};
 			final Expression[][] dct = dct(f);
 			final Expression[][] y = idct(dct);
 			
@@ -117,6 +118,8 @@ public final class DCTc {
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
 			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
+			
+			Tools.debugPrint(contract(dct, DCTc::idct, expression("x"), expression("y"), expression("z")).approximated(epsilon).simplified());
 		}
 	}
 	
@@ -1078,7 +1081,7 @@ public final class DCTc {
 		
 		@Override
 		public final String toString() {
-			return Double.toString(this.getAsDouble());
+			return String.format(Locale.ENGLISH, "%.2f", this.getAsDouble());
 		}
 		
 		private static final long serialVersionUID = 4701039521481142899L;
