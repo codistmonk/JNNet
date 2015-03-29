@@ -391,7 +391,29 @@ public final class DCTc {
 	}
 	
 	public static final Expression dct1k(final Expression a, final Object x, final int k, final int n) {
-		return multiply(a, cos(divide(multiply(add(multiply(2.0, x), 1.0), k, PI), 2 * n)));
+		final Expression cosOperand = divide(multiply(add(multiply(2.0, x), 1.0), k, PI), 2 * n);
+		
+		return add(terms(a).stream().map(t -> multiplyTermWithCos(t, cosOperand)).toArray());
+	}
+	
+	public static final Expression multiplyTermWithCos(final Expression term, final Expression cosOperand) {
+		final List<Expression> factors = factors(term);
+		final int n = factors.size();
+		
+		for (int i = 0; i < n; ++i) {
+			final Cos cosFactor = cast(Cos.class, factors.get(i));
+			
+			if (cosFactor != null) {
+				final Expression u = cosFactor.getOperand();
+				final Expression v = cosOperand;
+				
+				factors.set(i, divide(add(cos(subtract(u, v)), cos(add(u, v))), 2.0));
+				
+				return multiply(factors.toArray());
+			}
+		}
+		
+		return multiply(term, cos(cosOperand));
 	}
 	
 	public static final Expression idct1k(final Expression a, final Object x, final int k, final int n) {
@@ -429,6 +451,15 @@ public final class DCTc {
 	
 	public static final Expression add(final Object... operands) {
 		final int n = operands.length;
+		
+		if (n == 0) {
+			return ZERO;
+		}
+		
+		if (n == 1) {
+			return expression(operands[0]);
+		}
+		
 		Addition result = new Addition(expression(operands[0]), expression(operands[1]));
 		
 		for (int i = 2; i < n; ++i) {
@@ -440,6 +471,15 @@ public final class DCTc {
 	
 	public static final Expression multiply(final Object... operands) {
 		final int n = operands.length;
+		
+		if (n == 0) {
+			return ONE;
+		}
+		
+		if (n == 1) {
+			return expression(operands[0]);
+		}
+		
 		Multiplication result = new Multiplication(expression(operands[0]), expression(operands[1]));
 		
 		for (int i = 2; i < n; ++i) {
