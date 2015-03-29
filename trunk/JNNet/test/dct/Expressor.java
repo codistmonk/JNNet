@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -32,6 +33,8 @@ public final class Expressor extends ClassVisitor {
 	
 	private Expression result;
 	
+	private String visitedClassName;
+	
 	public Expressor(final String method, final String description) {
 		super(Opcodes.ASM5);
 		this.description = description;
@@ -45,7 +48,21 @@ public final class Expressor extends ClassVisitor {
 	final void setResult(final Expression result) {
 		this.result = result;
 	}
+	
+	final String getVisitedClassName() {
+		return this.visitedClassName;
+	}
+	
+	public final void setVisitedClassName(String visitedClassName) {
+		this.visitedClassName = visitedClassName;
+	}
 
+	@Override
+	public final void visit(final int version, final int access, final String name, final String signature,
+			final String superName, final String[] interfaces) {
+		this.visitedClassName = name;
+	}
+	
 	@Override
 	public final MethodVisitor visitMethod(final int access, final String name,
 			final String desc, final String signature, final String[] exceptions) {
@@ -130,6 +147,52 @@ public final class Expressor extends ClassVisitor {
 							} catch (final Exception exception) {
 								throw unchecked(exception);
 							}
+							
+							break;
+						} else if (getVisitedClassName().equals(owner)) {
+							final ParameterExtractor extractor = new ParameterExtractor();
+							
+							try {
+								new ClassReader(getVisitedClassName()).accept(new MethodClassVisitor(name, desc, extractor), 0);
+							} catch (final IOException exception) {
+								throw new UncheckedIOException(exception);
+							}
+							
+							final List<String> names = new ArrayList<>(extractor.getNames().values());
+							final int n = names.size() - 1;
+							final int[] lastStackIndexUsed = { -1 };
+							final Expression expression = express(owner, name).accept(new Expression.Visitor<Expression>() {
+								
+								@Override
+								public final Expression visit(final Expression expression) {
+									return expression;
+								}
+								
+								@Override
+								public final Expression visit(final Variable variable) {
+									final int index = n - names.indexOf(variable.toString());
+									
+									lastStackIndexUsed[0] = Math.max(lastStackIndexUsed[0], index);
+									
+									return stack.get(index);
+								}
+								
+								@Override
+								public final UnaryOperation visit(final UnaryOperation operation) {
+									return operation.maybeNew(operation.getOperand().accept(this));
+								}
+								
+								@Override
+								public final NaryOperation visit(final NaryOperation operation) {
+									return operation.maybeNew(operation.getOperands().stream().map(o -> o.accept(this)).collect(toList()));
+								}
+								
+								private static final long serialVersionUID = -9070289976187109964L;
+								
+							});
+							
+							this.stack.subList(0, lastStackIndexUsed[0] + 1).clear();
+							this.stack.add(0, expression);
 							
 							break;
 						}
@@ -248,6 +311,92 @@ public final class Expressor extends ClassVisitor {
 		} catch (final IOException exception) {
 			throw new UncheckedIOException(exception);
 		}
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-29)
+	 */
+	public static final class ParameterExtractor extends MethodVisitor {
+		
+		private final Map<Integer, String> names;
+		
+		private final Map<String, Integer> indices;
+		
+		private Label firstLabel = null;
+		
+		public ParameterExtractor() {
+			super(Opcodes.ASM5);
+			this.names = new TreeMap<>();
+			this.indices = new HashMap<>();
+		}
+		
+		public final Map<Integer, String> getNames() {
+			return this.names;
+		}
+		
+		public final Map<String, Integer> getIndices() {
+			return this.indices;
+		}
+		
+		@Override
+		public final void visitLabel(final Label label) {
+			if (this.firstLabel == null) {
+				this.firstLabel = label;
+			}
+		}
+		
+		@Override
+		public final void visitLocalVariable(final String name, final String desc,
+				final String signature, final Label start, final Label end, final int index) {
+			if (start.equals(this.firstLabel)) {
+				this.getNames().put(index, name);
+				this.getIndices().put(name, index);
+			}
+		}
+		
+	}
+	
+}
+
+/**
+ * @author codistmonk (creation 2015-03-29)
+ */
+final class MethodClassVisitor extends ClassVisitor {
+	
+	private final String methodName;
+	
+	private final String methodDescription;
+	
+	private final MethodVisitor methodVisitor;
+	
+	public MethodClassVisitor(final String methodName, final String methodDescription, final MethodVisitor methodVisitor) {
+		super(Opcodes.ASM5);
+		this.methodName = methodName;
+		this.methodDescription = methodDescription;
+		this.methodVisitor = methodVisitor;
+	}
+	
+	public final String getMethodName() {
+		return this.methodName;
+	}
+	
+	public final String getMethodDescription() {
+		return this.methodDescription;
+	}
+	
+	public final MethodVisitor getMethodVisitor() {
+		return this.methodVisitor;
+	}
+	
+	@Override
+	public final MethodVisitor visitMethod(final int access, final String name, final String desc,
+			final String signature, final String[] exceptions) {
+		if ((this.getMethodName() == null || this.getMethodName().equals(name))
+				&& (this.getMethodDescription() == null || this.getMethodDescription().equals(desc))) {
+			return this.methodVisitor;
+		}
+		
+		return super.visitMethod(access, name, desc, signature, exceptions);
 	}
 	
 }

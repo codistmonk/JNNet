@@ -37,6 +37,9 @@ public final class ASMDemo {
 		if (true) {
 			debugPrint(express(ASMDemo.class.getName(), "dct1k"));
 		}
+		if (true) {
+			debugPrint(express(ASMDemo.class.getName(), "idct1k"));
+		}
 	}
 	
 	public static final double f(final double x, final double y) {
