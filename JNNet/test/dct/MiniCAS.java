@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.DoubleSupplier;
@@ -97,15 +98,15 @@ public final class MiniCAS {
 		return multiply(leftOperand, invert(rightOperand));
 	}
 	
-	public static final boolean sameElements(final List<?> list1, final List<?> list2) {
+	public static final boolean sameElements(final Collection<?> list1, final Collection<?> list2) {
 		final int n = list1.size();
 		
 		if (n != list2.size()) {
 			return false;
 		}
 		
-		for (int i = 0; i < n; ++i) {
-			if (list1.get(i) != list2.get(i)) {
+		for (final Iterator<?> i = list1.iterator(), j = list2.iterator(); i.hasNext();) {
+			if (i.next() != j.next()) {
 				return false;
 			}
 		}
@@ -148,42 +149,38 @@ public final class MiniCAS {
 			// TODO handle more operations
 			
 			if (operand != canonicalOperand) {
-				try {
-					return operation.getClass().getConstructor(Expression.class).newInstance(canonicalOperand);
-				} catch (final Exception exception) {
-					throw unchecked(exception);
-				}
+				return operation.newInstance(canonicalOperand);
 			}
 			
 			return operation;
 		}
 		
 		@Override
-		public final Expression visit(final CommutativeAssociativeOperation operation) {
+		public final Expression visit(final NaryOperation operation) {
 			final List<Expression> operands = operation.getOperands();
 			final List<Expression> canonicalOperands = operands.stream().map(operand -> operand.accept(this)).collect(toList());
-			final List<Expression> flattened = new ArrayList<>();
+			final List<Expression> flattened;
 			
-			for (final Expression operand : canonicalOperands) {
-				if (operand.getClass() == operation.getClass()) {
-					flattened.addAll(((CommutativeAssociativeOperation) operand).getOperands());
-				} else {
-					flattened.add(operand);
+			if (operation.isAssociative()) {
+				flattened = new ArrayList<>();
+				
+				for (final Expression operand : canonicalOperands) {
+					if (operand.getClass() == operation.getClass()) {
+						flattened.addAll(((NaryOperation) operand).getOperands());
+					} else {
+						flattened.add(operand);
+					}
 				}
+			} else {
+				flattened = canonicalOperands;
+			}
+			
+			if (operation.isCommutative()) {
+				sort(flattened);
 			}
 			
 			if (!sameElements(operands, flattened)) {
-				sort(flattened);
-				
-				try {
-					final CommutativeAssociativeOperation result = operation.getClass().newInstance();
-					
-					result.getOperands().addAll(flattened);
-					
-					return result;
-				} catch (final Exception exception) {
-					throw unchecked(exception);
-				}
+				return operation.newInstance(flattened);
 			}
 			
 			return operation;
@@ -231,7 +228,7 @@ public final class MiniCAS {
 				return this.visit((Expression) operation);
 			}
 			
-			public default V visit(final CommutativeAssociativeOperation operation) {
+			public default V visit(final NaryOperation operation) {
 				return this.visit((Expression) operation);
 			}
 			
@@ -407,11 +404,19 @@ public final class MiniCAS {
 	/**
 	 * @author codistmonk (creation 2015-03-28)
 	 */
-	public static abstract interface CommutativeAssociativeOperation extends Expression {
+	public static abstract interface NaryOperation extends Expression {
 		
 		public abstract String getOperator();
 		
 		public abstract List<Expression> getOperands();
+		
+		public default boolean isCommutative() {
+			return true;
+		}
+		
+		public default boolean isAssociative() {
+			return true;
+		}
 		
 		@Override
 		public default <V> V accept(final Visitor<V> visitor) {
@@ -421,7 +426,7 @@ public final class MiniCAS {
 		@Override
 		public default int compareTo(final Expression other) {
 			if (this.getClass() == other.getClass()) {
-				final CommutativeAssociativeOperation commutativeAssociativeOther = (CommutativeAssociativeOperation) other;
+				final NaryOperation commutativeAssociativeOther = (NaryOperation) other;
 				final List<Expression> thisOperands = this.getOperands();
 				final List<Expression> otherOperands = commutativeAssociativeOther.getOperands();
 				final int n1 = thisOperands.size();
@@ -442,9 +447,13 @@ public final class MiniCAS {
 			return Expression.super.compareTo(other);
 		}
 		
-		public default CommutativeAssociativeOperation newInstance(final Collection<Expression> operands) {
+		public default NaryOperation maybeNew(final Collection<Expression> operands) {
+			return sameElements(this.getOperands(), operands) ? this : this.newInstance(operands);
+		}
+		
+		public default NaryOperation newInstance(final Collection<Expression> operands) {
 			try {
-				final CommutativeAssociativeOperation result = this.getClass().newInstance();
+				final NaryOperation result = this.getClass().newInstance();
 				
 				result.getOperands().addAll(operands);
 				
@@ -457,7 +466,7 @@ public final class MiniCAS {
 		/**
 		 * @author codistmonk (creation 2015-03-27)
 		 */
-		public static abstract class Abstract implements CommutativeAssociativeOperation {
+		public static abstract class Abstract implements NaryOperation {
 			
 			private final List<Expression> operands = new ArrayList<>();
 			
@@ -561,7 +570,7 @@ public final class MiniCAS {
 	/**
 	 * @author codistmonk (creation 2015-03-29)
 	 */
-	public static final class Sum extends CommutativeAssociativeOperation.Abstract {
+	public static final class Sum extends NaryOperation.Abstract {
 		
 		@Override
 		public final String getOperator() {
@@ -580,7 +589,7 @@ public final class MiniCAS {
 	/**
 	 * @author codistmonk (creation 2015-03-29)
 	 */
-	public static final class Product extends CommutativeAssociativeOperation.Abstract {
+	public static final class Product extends NaryOperation.Abstract {
 		
 		@Override
 		public final String getOperator() {

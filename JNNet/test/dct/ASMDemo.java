@@ -6,14 +6,11 @@ import static java.lang.Math.sqrt;
 import static net.sourceforge.aprog.tools.Tools.*;
 import static dct.Expressor.express;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.io.PrintWriter;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.TraceClassVisitor;
 
-import dct.DCTc.Expression;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**

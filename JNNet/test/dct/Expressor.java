@@ -2,7 +2,6 @@ package dct;
 
 import static java.util.stream.Collectors.toList;
 import static net.sourceforge.aprog.tools.Tools.debugError;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static dct.MiniCAS.*;
 
@@ -13,9 +12,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-
-import net.sourceforge.aprog.tools.Tools;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -24,8 +20,6 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.util.Printer;
-
-import dct.MiniCAS.Expression;
 
 /**
  * @author codistmonk (creation 2015-03-29)
@@ -99,7 +93,7 @@ public final class Expressor extends ClassVisitor {
 						}
 						
 						@Override
-						public final CommutativeAssociativeOperation visit(final CommutativeAssociativeOperation operation) {
+						public final NaryOperation visit(final NaryOperation operation) {
 							final List<Expression> operands = operation.getOperands();
 							final List<Expression> newOperands = operands.stream().map(o -> o.accept(this)).collect(toList());
 							
