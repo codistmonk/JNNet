@@ -2,10 +2,12 @@ package dct;
 
 import static dct.DCTa.getDimensionCount;
 import static imj3.tools.CommonTools.cartesian;
+import static java.util.Collections.sort;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.deepClone;
 import static net.sourceforge.aprog.tools.Tools.swap;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import dct.DCTc.Expression;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
@@ -111,8 +113,81 @@ public final class DCTc {
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
 			
-			Tools.debugPrint(contract(dct, DCTc::idct, expression("x"), expression("y"), expression("z")).approximated(epsilon).simplified());
+			final Expression simplified = deepExpand(contract(dct, DCTc::idct, expression("x"), expression("y"), expression("z"))).simplified();
+			Tools.debugPrint(simplified);
+			for (final Expression term : terms(simplified)) {
+				Tools.debugPrint(cosProductToSum(term).approximated(epsilon).simplified());
+			}
 		}
+	}
+	
+	public static final Expression cosProductToSum(final Expression expression) {
+		final List<Expression> factors = factors(expression);
+		final int n = factors.size();
+		
+		for (int i = 0; i < n; ++i) {
+			final Cos cosI = cast(Cos.class, factors.get(i));
+			
+			if (cosI != null) {
+				for (int j = i + 1; j < n; ++j) {
+					final Cos cosJ = cast(Cos.class, factors.get(j));
+					
+					if (cosJ != null) {
+						final Expression u = cosI.getOperand();
+						final Expression v = cosJ.getOperand();
+						
+						factors.set(i, ONE);
+						factors.set(j, divide(add(cos(subtract(u, v)), cos(add(u, v))), 2.0));
+						
+						return deepExpand(multiply(factors.toArray()));
+					}
+				}
+			}
+		}
+		
+		return expression;
+	}
+	
+	public static final Expression deepExpand(final Expression expression) {
+		{
+			final Multiplication multiplication = cast(Multiplication.class, expression);
+			
+			if (multiplication != null) {
+				final List<Expression> leftTerms = terms(deepExpand(multiplication.getLeftOperand()));
+				final List<Expression> rightTerms = terms(deepExpand(multiplication.getRightOperand()));
+				
+				return add(leftTerms.stream().flatMap(left -> rightTerms.stream().map(right -> multiply(left, right))).toArray());
+			}
+		}
+		{
+			final Division division = cast(Division.class, expression);
+			
+			if (division != null) {
+				final List<Expression> leftTerms = terms(deepExpand(division.getLeftOperand()));
+				final Expression right = deepExpand(division.getRightOperand());
+				
+				return add(leftTerms.stream().map(left -> divide(left, right)).toArray());
+			}
+		}
+		
+		{
+			final UnaryOperation unary = cast(UnaryOperation.class, expression);
+			
+			if (unary != null) {
+				return unary.maybeNew(deepExpand(unary.getOperand()));
+			}
+		}
+		
+		{
+			final BinaryOperation binary = cast(BinaryOperation.class, expression);
+			
+			if (binary != null) {
+				return binary.maybeNew(
+						deepExpand(binary.getLeftOperand()), deepExpand(binary.getRightOperand()));
+			}
+		}
+		
+		return expression;
 	}
 	
 	public static final double[] toDoubles(final Expression... expressions) {
@@ -478,6 +553,8 @@ public final class DCTc {
 			result.add(expression);
 		}
 		
+		sort(result);
+		
 		return result;
 	}
 	
@@ -491,6 +568,8 @@ public final class DCTc {
 		} else {
 			result.add(expression);
 		}
+		
+		sort(result);
 		
 		return result;
 	}
@@ -1016,7 +1095,7 @@ public final class DCTc {
 	/**
 	 * @author codistmonk (creation 2015-03-27)
 	 */
-	public static abstract interface Expression extends DoubleSupplier, Serializable {
+	public static abstract interface Expression extends DoubleSupplier, Serializable, Comparable<Expression> {
 		
 		public default Expression simplified() {
 			return this;
@@ -1024,6 +1103,11 @@ public final class DCTc {
 		
 		public default Expression approximated(double epsilon) {
 			return this;
+		}
+		
+		@Override
+		public default int compareTo(final Expression other) {
+			return this.getClass().getName().compareTo(other.getClass().getName());
 		}
 		
 	}
@@ -1053,6 +1137,17 @@ public final class DCTc {
 		}
 		
 		@Override
+		public final int compareTo(final Expression other) {
+			final Variable that = cast(this.getClass(), other);
+			
+			if (that != null) {
+				return this.toString().compareTo(that.toString());
+			}
+			
+			return Expression.super.compareTo(other);
+		}
+		
+		@Override
 		public final String toString() {
 			return this.name;
 		}
@@ -1075,6 +1170,17 @@ public final class DCTc {
 		@Override
 		public final double getAsDouble() {
 			return this.value;
+		}
+		
+		@Override
+		public final int compareTo(final Expression other) {
+			final Constant that = cast(this.getClass(), other);
+			
+			if (that != null) {
+				return Double.compare(this.getAsDouble(), that.getAsDouble());
+			}
+			
+			return Expression.super.compareTo(other);
 		}
 		
 		@Override
@@ -1112,14 +1218,22 @@ public final class DCTc {
 		
 		public default Expression simplified(final Expression simplifiedOperand) {
 			if (this.getOperand() != simplifiedOperand) {
-				try {
-					return this.getClass().getConstructor(Expression.class).newInstance(simplifiedOperand);
-				} catch (final Exception exception) {
-					throw unchecked(exception);
-				}
+				return this.newInstance(simplifiedOperand);
 			}
 			
 			return Expression.super.simplified();
+		}
+		
+		public default UnaryOperation maybeNew(final Expression operand) {
+			return this.getOperand() == operand ? this : this.newInstance(operand);
+		}
+		
+		public default UnaryOperation newInstance(final Expression operand) {
+			try {
+				return this.getClass().getConstructor(Expression.class).newInstance(operand);
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
 		}
 		
 		@Override
@@ -1127,7 +1241,7 @@ public final class DCTc {
 			final Expression approximatedOperand = this.getOperand().approximated(epsilon);
 			
 			try {
-				final UnaryOperation approximated = this.getClass().getConstructor(Expression.class).newInstance(approximatedOperand);
+				final UnaryOperation approximated = this.newInstance(approximatedOperand);
 				
 				if (approximatedOperand instanceof Constant) {
 					final double value = approximated.getAsDouble();
@@ -1143,6 +1257,17 @@ public final class DCTc {
 		
 		public default Expression approximated(final double epsilon, final Expression approximatedOperand, final Expression defaultResult) {
 			return defaultResult;
+		}
+		
+		@Override
+		public default int compareTo(final Expression other) {
+			final UnaryOperation that = cast(this.getClass(), other);
+			
+			if (that != null) {
+				return this.getOperand().compareTo(that.getOperand());
+			}
+			
+			return Expression.super.compareTo(other);
 		}
 		
 		/**
@@ -1194,15 +1319,22 @@ public final class DCTc {
 		}
 		
 		public default Expression simplified(final Expression simplifiedLeftOperand, final Expression simplifiedRightOperand) {
-			if (this.getLeftOperand() != simplifiedLeftOperand || this.getRightOperand() != simplifiedRightOperand) {
-				try {
-					return this.getClass().getConstructor(Expression.class, Expression.class).newInstance(simplifiedLeftOperand, simplifiedRightOperand).simplified();
-				} catch (final Exception exception) {
-					throw unchecked(exception);
-				}
-			}
+			final Expression newInstance = this.maybeNew(simplifiedLeftOperand, simplifiedRightOperand);
 			
-			return Expression.super.simplified();
+			return this != newInstance ? newInstance : Expression.super.simplified();
+		}
+		
+		public default BinaryOperation maybeNew(final Expression leftOperand, final Expression rightOperand) {
+			return this.getLeftOperand() == leftOperand && this.getRightOperand() == rightOperand ? this :
+				this.newInstance(leftOperand, rightOperand);
+		}
+		
+		public default BinaryOperation newInstance(final Expression leftOperand, final Expression rightOperand) {
+			try {
+				return this.getClass().getConstructor(Expression.class, Expression.class).newInstance(leftOperand, rightOperand);
+			} catch (final Exception exception) {
+				throw unchecked(exception);
+			}
 		}
 		
 		@Override
@@ -1211,7 +1343,7 @@ public final class DCTc {
 			final Expression approximatedRightOperand = this.getRightOperand().approximated(epsilon);
 			
 			try {
-				final BinaryOperation approximated = this.getClass().getConstructor(Expression.class, Expression.class).newInstance(approximatedLeftOperand, approximatedRightOperand);
+				final BinaryOperation approximated = this.newInstance(approximatedLeftOperand, approximatedRightOperand);
 				
 				if (approximatedLeftOperand instanceof Constant && approximatedRightOperand instanceof Constant) {
 					final double value = approximated.getAsDouble();
@@ -1227,6 +1359,23 @@ public final class DCTc {
 		
 		public default Expression approximated(final double epsilon, final Expression approximatedLeftOperand, final Expression approximatedRightOperand, final Expression defaultResult) {
 			return defaultResult;
+		}
+		
+		@Override
+		public default int compareTo(final Expression other) {
+			final BinaryOperation that = cast(this.getClass(), other);
+			
+			if (that != null) {
+				final int leftComparison = this.getLeftOperand().compareTo(that.getRightOperand());
+				
+				if (leftComparison != 0) {
+					return leftComparison;
+				}
+				
+				return this.getRightOperand().compareTo(that.getRightOperand());
+			}
+			
+			return Expression.super.compareTo(other);
 		}
 		
 		/**
