@@ -201,7 +201,11 @@ public final class MiniCAS {
 		
 		@Override
 		public default int compareTo(final Expression other) {
-			return this.getClass().getName().compareTo(other.getClass().getName());
+			return this.getType().compareTo(other.getType());
+		}
+		
+		public default String getType() {
+			return this.getClass().getName();
 		}
 		
 		/**
@@ -296,13 +300,17 @@ public final class MiniCAS {
 		
 		private final String name;
 		
-		private double value;
+		private Expression value;
 		
 		public Variable(final String name) {
 			this.name = name;
 		}
 		
-		public Variable setValue(final double value) {
+		public final Expression getValue() {
+			return this.value;
+		}
+		
+		public final Variable setValue(final Expression value) {
 			this.value = value;
 			
 			return this;
@@ -315,7 +323,7 @@ public final class MiniCAS {
 		
 		@Override
 		public final double getAsDouble() {
-			return this.value;
+			return this.getValue().getAsDouble();
 		}
 		
 		@Override
@@ -357,6 +365,10 @@ public final class MiniCAS {
 			}
 			
 			return Expression.super.compareTo(other);
+		}
+		
+		public default UnaryOperation maybeNew(final Expression operand) {
+			return this.getOperand() == operand ? this : this.newInstance(operand);
 		}
 		
 		public default UnaryOperation newInstance(final Expression operand) {
