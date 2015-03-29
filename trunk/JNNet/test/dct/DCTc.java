@@ -7,6 +7,7 @@ import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.deepClone;
 import static net.sourceforge.aprog.tools.Tools.swap;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
+import dct.DCTc.BinaryOperation;
 import dct.DCTc.Expression;
 
 import java.io.Serializable;
@@ -48,6 +49,8 @@ public final class DCTc {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		final double epsilon = 1.0E-12;
+		final Variable x = variable("x");
+		final Variable y = variable("y");
 		
 		if (true) {
 //			final double[] f = { 1.0, 2.0, 3.0, 4.0 };
@@ -59,17 +62,17 @@ public final class DCTc {
 			
 			dct(f, dct);
 			
-			final Expression[] y = new Expression[n];
+			final Expression[] g = new Expression[n];
 			
-			idct(dct, y);
+			idct(dct, g);
 			
 			Tools.debugPrint();
 			Tools.debugPrint(Arrays.deepToString(f));
 			Tools.debugPrint(Arrays.toString(toDoubles(dct)));
-			Tools.debugPrint(Arrays.toString(toDoubles(y)));
+			Tools.debugPrint(Arrays.toString(toDoubles(g)));
 			
 			Tools.debugPrint(contract(dct, DCTc::idct, expression(1.0)).approximated(epsilon).simplified());
-			Tools.debugPrint(contract(dct, DCTc::idct, expression("x")).approximated(epsilon).simplified());
+			Tools.debugPrint(contract(dct, DCTc::idct, x).approximated(epsilon).simplified());
 		}
 		
 		if (true) {
@@ -84,14 +87,14 @@ public final class DCTc {
 //					constants(2.0, 3.0),
 //			};
 			final Expression[][] dct = dct(f);
-			final Expression[][] y = idct(dct);
+			final Expression[][] g = idct(dct);
 			
 			Tools.debugPrint();
 			Tools.debugPrint(Arrays.deepToString(f));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
-			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
+			Tools.debugPrint(Arrays.deepToString(deepToDoubles(g)));
 			
-			Tools.debugPrint(contract(dct, DCTc::idct, expression("x"), expression("y")).approximated(epsilon).simplified());
+			Tools.debugPrint(contract(dct, DCTc::idct, x, y).approximated(epsilon).simplified());
 		}
 		
 		if (true) {
@@ -106,17 +109,28 @@ public final class DCTc {
 					},
 			};
 			final Expression[][][] dct = dct(f);
-			final Expression[][][] y = idct(dct);
+			final Expression[][][] g = idct(dct);
 			
 			Tools.debugPrint();
 			Tools.debugPrint(Arrays.deepToString(f));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
-			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
+			Tools.debugPrint(Arrays.deepToString(deepToDoubles(g)));
 			
-			final Expression simplified = deepExpand(contract(dct, DCTc::idct, expression("x"), expression("y"), expression("z"))).simplified();
-			Tools.debugPrint(simplified);
-			for (final Expression term : terms(simplified)) {
-				Tools.debugPrint(cosProductToSum(term).approximated(epsilon).simplified());
+			final Variable z = variable("z");
+			Expression simplified = deepExpand(contract(dct, DCTc::idct, x, y, z)).simplified();
+			simplified = add(terms(simplified).stream().map(DCTc::cosProductToSum).toArray()).simplified().reorder().simplified();
+			Tools.debugPrint(simplified.approximated(epsilon).simplified());
+			
+			for (int i = 0; i <= 1; ++i) {
+				for (int j = 0; j <= 1; ++j) {
+					for (int k = 0; k <= 1; ++k) {
+						x.setValue(i);
+						y.setValue(j);
+						z.setValue(k);
+						
+						Tools.debugPrint(i, j, k, simplified.getAsDouble());
+					}
+				}
 			}
 		}
 	}
@@ -135,11 +149,15 @@ public final class DCTc {
 					if (cosJ != null) {
 						final Expression u = cosI.getOperand();
 						final Expression v = cosJ.getOperand();
+						final Expression c1 = cos(subtract(u, v));
+						final Expression c2 = cos(add(u, v));
 						
-						factors.set(i, ONE);
-						factors.set(j, divide(add(cos(subtract(u, v)), cos(add(u, v))), 2.0));
+						factors.remove(j);
+						factors.remove(i);
 						
-						return deepExpand(multiply(factors.toArray()));
+						final Expression r = multiply(factors.toArray());
+						
+						return multiply(0.5, add(cosProductToSum(multiply(r, c1)), cosProductToSum(multiply(r, c2))));
 					}
 				}
 			}
@@ -535,7 +553,8 @@ public final class DCTc {
 	}
 	
 	public static final Expression subtract(final Object leftOperand, final Object rightOperand) {
-		return new Subtraction(expression(leftOperand), expression(rightOperand));
+//		return new Subtraction(expression(leftOperand), expression(rightOperand));
+		return add(leftOperand, multiply(MINUS_ONE, rightOperand));
 	}
 	
 	public static final Expression divide(final Object leftOperand, final Object rightOperand) {
@@ -756,6 +775,14 @@ public final class DCTc {
 		}
 		
 		@Override
+		public final Addition reorder() {
+			final Addition superResult = (Addition) super.reorder();
+			final Addition candidate = (Addition) add(terms(superResult).toArray());
+			
+			return this.equals(candidate) ? superResult : candidate;
+		}
+		
+		@Override
 		public final double getAsDouble() {
 			return this.getLeftOperand().getAsDouble() + this.getRightOperand().getAsDouble();
 		}
@@ -770,11 +797,13 @@ public final class DCTc {
 				return simplifiedLeftOperand;
 			}
 			
-			final Constant constantLeft = cast(Constant.class, simplifiedLeftOperand);
-			final Constant constantRight = cast(Constant.class, simplifiedRightOperand);
-			
-			if (constantLeft != null && constantRight != null) {
-				return constant(this.getAsDouble());
+			{
+				final Constant constantLeft = cast(Constant.class, simplifiedLeftOperand);
+				final Constant constantRight = cast(Constant.class, simplifiedRightOperand);
+				
+				if (constantLeft != null && constantRight != null) {
+					return constant(this.getAsDouble());
+				}
 			}
 			
 			return super.simplified(simplifiedLeftOperand, simplifiedRightOperand);
@@ -824,6 +853,10 @@ public final class DCTc {
 				return constant(this.getAsDouble());
 			}
 			
+			if (constantRight != null) {
+				return add(simplifiedLeftOperand, constant(-constantRight.getAsDouble())).simplified();
+			}
+			
 			return super.simplified(simplifiedLeftOperand, simplifiedRightOperand);
 		}
 		
@@ -846,6 +879,14 @@ public final class DCTc {
 		
 		public Multiplication(final Expression leftOperand, final Expression rightOperand) {
 			super(leftOperand, rightOperand);
+		}
+		
+		@Override
+		public final Multiplication reorder() {
+			final Multiplication superResult = (Multiplication) super.reorder();
+			final Multiplication candidate = (Multiplication) multiply(factors(superResult).toArray());
+			
+			return this.equals(candidate) ? superResult : candidate;
 		}
 		
 		@Override
@@ -1105,6 +1146,10 @@ public final class DCTc {
 			return this;
 		}
 		
+		public default Expression reorder() {
+			return this;
+		}
+		
 		@Override
 		public default int compareTo(final Expression other) {
 			return this.getClass().getName().compareTo(other.getClass().getName());
@@ -1209,6 +1254,16 @@ public final class DCTc {
 	 */
 	public static abstract interface UnaryOperation extends Expression {
 		
+		@Override
+		public default UnaryOperation reorder() {
+			if (this.getClass() == Cos.class) {
+				Tools.debugPrint();
+				Tools.debugPrint(this.getOperand());
+				Tools.debugPrint(this.getOperand().reorder().simplified());
+			}
+			return this.maybeNew(this.getOperand().reorder());
+		}
+		
 		public abstract Expression getOperand();
 		
 		@Override
@@ -1308,6 +1363,11 @@ public final class DCTc {
 	 * @author codistmonk (creation 2015-03-27)
 	 */
 	public static abstract interface BinaryOperation extends Expression {
+		
+		@Override
+		public default BinaryOperation reorder() {
+			return this.maybeNew(this.getLeftOperand().reorder(), this.getRightOperand().reorder());
+		}
 		
 		public abstract Expression getLeftOperand();
 		
