@@ -45,8 +45,6 @@ public final class DCTc {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		Tools.debugPrint(divide(divide(4.0, sqrt(2.0)), sqrt(2.0)).simplified());
-		
 		final double epsilon = 1.0E-12;
 		
 		if (true) {
@@ -65,9 +63,7 @@ public final class DCTc {
 			
 			Tools.debugPrint();
 			Tools.debugPrint(Arrays.deepToString(f));
-			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.toString(toDoubles(dct)));
-			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.toString(toDoubles(y)));
 			
 			Tools.debugPrint(contract(dct, DCTc::idct, expression(1.0)).approximated(epsilon).simplified());
@@ -90,9 +86,7 @@ public final class DCTc {
 			
 			Tools.debugPrint();
 			Tools.debugPrint(Arrays.deepToString(f));
-			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
-			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
 			
 			Tools.debugPrint(contract(dct, DCTc::idct, expression("x"), expression("y")).approximated(epsilon).simplified());
@@ -114,9 +108,7 @@ public final class DCTc {
 			
 			Tools.debugPrint();
 			Tools.debugPrint(Arrays.deepToString(f));
-			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(dct)));
-			Tools.debugPrint(Arrays.deepToString(y));
 			Tools.debugPrint(Arrays.deepToString(deepToDoubles(y)));
 			
 			Tools.debugPrint(contract(dct, DCTc::idct, expression("x"), expression("y"), expression("z")).approximated(epsilon).simplified());
@@ -391,33 +383,11 @@ public final class DCTc {
 	}
 	
 	public static final Expression dct1k(final Expression a, final Object x, final int k, final int n) {
-		final Expression cosOperand = divide(multiply(add(multiply(2.0, x), 1.0), k, PI), 2 * n);
-		
-		return add(terms(a).stream().map(t -> multiplyTermWithCos(t, cosOperand)).toArray());
-	}
-	
-	public static final Expression multiplyTermWithCos(final Expression term, final Expression cosOperand) {
-		final List<Expression> factors = factors(term);
-		final int n = factors.size();
-		
-		for (int i = 0; i < n; ++i) {
-			final Cos cosFactor = cast(Cos.class, factors.get(i));
-			
-			if (cosFactor != null) {
-				final Expression u = cosFactor.getOperand();
-				final Expression v = cosOperand;
-				
-				factors.set(i, divide(add(cos(subtract(u, v)), cos(add(u, v))), 2.0));
-				
-				return multiply(factors.toArray());
-			}
-		}
-		
-		return multiply(term, cos(cosOperand));
+		return multiply(a, cos(divide(multiply(add(multiply(2.0, x), 1.0), k, PI), 2 * n))).simplified();
 	}
 	
 	public static final Expression idct1k(final Expression a, final Object x, final int k, final int n) {
-		return multiply(dct1k(a, x, k, n), sqrt(2.0));
+		return multiply(dct1k(a, x, k, n), sqrt(2.0)).simplified();
 	}
 	
 	public static final Variable variable(final Object name) {
