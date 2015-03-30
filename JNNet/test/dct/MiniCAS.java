@@ -60,11 +60,11 @@ public final class MiniCAS {
 			expression instanceof CharSequence ? variable(expression) : constant(expression);
 	}
 	
-	public static final Expression sqrt(final Object expression) {
+	public static final Sqrt sqrt(final Object expression) {
 		return new Sqrt(expression(expression));
 	}
 	
-	public static final Expression cos(final Object operand) {
+	public static final Cos cos(final Object operand) {
 		return new Cos(expression(operand));
 	}
 	
@@ -72,11 +72,11 @@ public final class MiniCAS {
 		return multiply(MINUS_ONE, operand);
 	}
 	
-	public static final Expression invert(final Object operand) {
+	public static final Inverse invert(final Object operand) {
 		return new Inverse(expression(operand));
 	}
 	
-	public static final Expression add(final Object... operands) {
+	public static final Sum add(final Object... operands) {
 		final Sum result = new Sum();
 		
 		result.getOperands().addAll(Arrays.stream(operands).map(MiniCAS::expression).collect(toList()));
@@ -84,7 +84,7 @@ public final class MiniCAS {
 		return result;
 	}
 	
-	public static final Expression multiply(final Object... operands) {
+	public static final Product multiply(final Object... operands) {
 		final Product result = new Product();
 		
 		result.getOperands().addAll(Arrays.stream(operands).map(MiniCAS::expression).collect(toList()));
@@ -152,7 +152,18 @@ public final class MiniCAS {
 	/**
 	 * @author codistmonk (creation 2015-03-29)
 	 */
-	public static final class Canonicalize implements Expression.Visitor<Expression> {
+	public static final class Approximate implements Expression.Visitor<Expression> {
+		
+		private final double epsilon;
+		
+		public Approximate(final double epsilon) {
+			this.epsilon = epsilon;
+		}
+		
+		@Override
+		public final Expression visit(final Constant constant) {
+			return constant(this.approximate(constant.getAsDouble()));
+		}
 		
 		@Override
 		public final Expression visit(final Variable variable) {
@@ -160,8 +171,94 @@ public final class MiniCAS {
 		}
 		
 		@Override
+		public final Expression visit(final UnaryOperation operation) {
+			final Expression approximatedOperand = operation.getOperand().accept(this);
+			
+			if (approximatedOperand instanceof Constant) {
+				return constant(this.approximate(operation.maybeNew(approximatedOperand).getAsDouble()));
+			}
+			
+			return operation.maybeNew(approximatedOperand);
+		}
+		
+		@Override
+		public final Expression visit(final NaryOperation operation) {
+			final List<Expression> approximatedOperands = operation.getOperands().stream().map(o -> o.accept(this)).collect(toList());
+			boolean allConstant = true;
+			
+			for (final Expression approximatedOperand : approximatedOperands) {
+				if (!(approximatedOperand instanceof Constant)) {
+					allConstant = false;
+					break;
+				}
+			}
+			
+			if (allConstant) {
+				return constant(this.approximate(operation.maybeNew(approximatedOperands).getAsDouble()));
+			}
+			
+			if (operation.isCommutative()) {
+				sort(approximatedOperands);
+				int firstNonconstant = 0;
+				
+				while (firstNonconstant < approximatedOperands.size() && approximatedOperands.get(firstNonconstant) instanceof Constant) {
+					++firstNonconstant;
+				}
+				
+				final List<Expression> prefix = approximatedOperands.subList(0, firstNonconstant);
+				final Constant c = constant(this.approximate(operation.maybeNew(prefix).getAsDouble()));
+				
+				prefix.clear();
+				
+				{
+					final Product product = cast(Product.class, operation);
+					
+					if (product != null) {
+						if (ZERO.equals(c)) {
+							return ZERO;
+						}
+						
+						if (!ONE.equals(c)) {
+							prefix.add(c);
+						}
+					}
+				}
+				
+				{
+					final Sum sum = cast(Sum.class, operation);
+					
+					if (sum != null) {
+						if (!ZERO.equals(c)) {
+							prefix.add(c);
+						}
+					}
+				}
+			}
+			
+			return operation.maybeNew(approximatedOperands);
+		}
+		
+		public final double approximate(final double value) {
+			return Math.abs(value) < this.epsilon ? 0.0 : value;
+		}
+		
+		private static final long serialVersionUID = 8471721004761825219L;
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-03-29)
+	 */
+	public static final class Canonicalize implements Expression.Visitor<Expression> {
+		
+		@Override
 		public final Expression visit(final Constant constant) {
 			return constant;
+		}
+		
+		@Override
+		public final Expression visit(final Variable variable) {
+			return variable;
 		}
 		
 		@Override
@@ -214,6 +311,95 @@ public final class MiniCAS {
 				sort(flattened);
 			}
 			
+			{
+				final Product product = cast(Product.class, operation);
+				
+				if (product != null) {
+					Sum sum = null;
+					final List<Expression> factors = new ArrayList<>();
+					final List<Expression> terms = new ArrayList<>();
+					
+					for (final Expression factor : flattened) {
+						if (factor instanceof Sum) {
+							if (sum != null) {
+								if (!factors.isEmpty()) {
+									factors.add(0, null);
+									
+									for (final Expression expression : sum.getOperands()) {
+										factors.set(0, expression);
+										terms.add(product.maybeNew(factors));
+									}
+									
+									factors.clear();
+									sum = add(terms.toArray());
+									terms.clear();
+								}
+								
+								{
+									factors.add(null);
+									factors.add(null);
+									
+									for (final Expression left : sum.getOperands()) {
+										factors.set(0, left);
+										
+										for (final Expression right : ((Sum) factor).getOperands()) {
+											factors.set(1, right);
+											terms.add(product.maybeNew(factors));
+										}
+									}
+									
+									factors.clear();
+									sum = add(terms.toArray());
+									terms.clear();
+								}
+							} else if (!factors.isEmpty()) {
+								final int n = factors.size();
+								
+								factors.add(null);
+								
+								for (final Expression e : ((Sum) factor).getOperands()) {
+									factors.set(n, e);
+									terms.add(product.maybeNew(factors));
+								}
+								
+								factors.clear();
+								sum = add(terms.toArray());
+								terms.clear();
+							} else {
+								sum = (Sum) factor;
+							}
+						} else {
+							factors.add(factor);
+						}
+					}
+					if (sum != null) {
+						if (!factors.isEmpty()) {
+							factors.add(0, null);
+							
+							for (final Expression expression : sum.getOperands()) {
+								factors.set(0, expression);
+								terms.add(product.maybeNew(factors));
+							}
+							
+							factors.clear();
+							sum = add(terms.toArray());
+							terms.clear();
+						}
+					} else {
+						sum = add(product.maybeNew(factors));
+						factors.clear();
+					}
+					
+					Expression result = sum;
+					
+					while (result instanceof NaryOperation && ((NaryOperation) result).getOperands().size() == 1) {
+						result = ((NaryOperation) result).getOperands().get(0);
+					}
+					
+					return result;
+				}
+			}
+			
 			if (!sameElements(operands, flattened)) {
 				return operation.newInstance(flattened);
 			}
@@ -236,6 +422,21 @@ public final class MiniCAS {
 		
 		@Override
 		public default int compareTo(final Expression other) {
+			final boolean thisIsConstant = this instanceof Constant; 
+			final boolean otherIsConstant = other instanceof Constant;
+			
+			if (thisIsConstant && !otherIsConstant) {
+				return -1;
+			}
+			
+			if (thisIsConstant && otherIsConstant) {
+				return 0;
+			}
+			
+			if (!thisIsConstant && otherIsConstant) {
+				return +1;
+			}
+			
 			return this.getType().compareTo(other.getType());
 		}
 		
