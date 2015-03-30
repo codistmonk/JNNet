@@ -1,6 +1,5 @@
 package dct;
 
-import static java.util.stream.Collectors.toList;
 import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 import static dct.MiniCAS.*;
@@ -89,32 +88,11 @@ public final class Expressor extends ClassVisitor {
 					
 					this.variableNames.forEach((k, v) -> newVariables.put(this.context.get(k).toString(), variable(v)));
 					
-					setResult(this.stack.remove(0).accept(new Expression.Visitor<Expression>() {
-						
-						@Override
-						public final Expression visit(final Expression expression) {
-							return expression;
-						}
+					setResult(this.stack.remove(0).accept(new Expression.Rewriter() {
 						
 						@Override
 						public final Variable visit(final Variable variable) {
 							return newVariables.get(variable.toString());
-						}
-						
-						@Override
-						public final UnaryOperation visit(final UnaryOperation operation) {
-							final Expression operand = operation.getOperand();
-							final Expression newOperand = operand.accept(this);
-							
-							return operand == newOperand ? operation : operation.newInstance(newOperand);
-						}
-						
-						@Override
-						public final NaryOperation visit(final NaryOperation operation) {
-							final List<Expression> operands = operation.getOperands();
-							final List<Expression> newOperands = operands.stream().map(o -> o.accept(this)).collect(toList());
-							
-							return sameElements(operands, newOperands) ? operation : operation.newInstance(newOperands);
 						}
 						
 						private static final long serialVersionUID = 8473013804645366790L;
@@ -161,12 +139,7 @@ public final class Expressor extends ClassVisitor {
 							final List<String> names = new ArrayList<>(extractor.getNames().values());
 							final int n = names.size() - 1;
 							final int[] lastStackIndexUsed = { -1 };
-							final Expression expression = express(owner, name).accept(new Expression.Visitor<Expression>() {
-								
-								@Override
-								public final Expression visit(final Expression expression) {
-									return expression;
-								}
+							final Expression expression = express(owner, name).accept(new Expression.Rewriter() {
 								
 								@Override
 								public final Expression visit(final Variable variable) {
@@ -175,16 +148,6 @@ public final class Expressor extends ClassVisitor {
 									lastStackIndexUsed[0] = Math.max(lastStackIndexUsed[0], index);
 									
 									return stack.get(index);
-								}
-								
-								@Override
-								public final UnaryOperation visit(final UnaryOperation operation) {
-									return operation.maybeNew(operation.getOperand().accept(this));
-								}
-								
-								@Override
-								public final NaryOperation visit(final NaryOperation operation) {
-									return operation.maybeNew(operation.getOperands().stream().map(o -> o.accept(this)).collect(toList()));
 								}
 								
 								private static final long serialVersionUID = -9070289976187109964L;

@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.DoubleSupplier;
+import java.util.function.Function;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
@@ -149,10 +150,25 @@ public final class MiniCAS {
 		return result;
 	}
 	
+	public static final Expression limitOf(final Expression expression, final Expression.Visitor<Expression>... rewriters) {
+		Expression result = expression;
+		Expression tmp;
+		
+		do {
+			tmp = result;
+			
+			for (final Expression.Visitor<Expression> rewriter : rewriters) {
+				result = result.accept(rewriter);
+			}
+		} while (!tmp.equals(result));
+		
+		return result;
+	}
+	
 	/**
 	 * @author codistmonk (creation 2015-03-29)
 	 */
-	public static final class Approximate implements Expression.Visitor<Expression> {
+	public static final class Approximate implements Expression.Rewriter {
 		
 		private final double epsilon;
 		
@@ -163,11 +179,6 @@ public final class MiniCAS {
 		@Override
 		public final Expression visit(final Constant constant) {
 			return constant(this.approximate(constant.getAsDouble()));
-		}
-		
-		@Override
-		public final Expression visit(final Variable variable) {
-			return variable;
 		}
 		
 		@Override
@@ -183,7 +194,7 @@ public final class MiniCAS {
 		
 		@Override
 		public final Expression visit(final NaryOperation operation) {
-			final List<Expression> approximatedOperands = operation.getOperands().stream().map(o -> o.accept(this)).collect(toList());
+			final List<Expression> approximatedOperands = operation.getOperands().stream().map(this).collect(toList());
 			boolean allConstant = true;
 			
 			for (final Expression approximatedOperand : approximatedOperands) {
@@ -249,17 +260,7 @@ public final class MiniCAS {
 	/**
 	 * @author codistmonk (creation 2015-03-29)
 	 */
-	public static final class Canonicalize implements Expression.Visitor<Expression> {
-		
-		@Override
-		public final Expression visit(final Constant constant) {
-			return constant;
-		}
-		
-		@Override
-		public final Expression visit(final Variable variable) {
-			return variable;
-		}
+	public static final class Canonicalize implements Expression.Rewriter {
 		
 		@Override
 		public final Expression visit(final UnaryOperation operation) {
@@ -290,7 +291,7 @@ public final class MiniCAS {
 		@Override
 		public final Expression visit(final NaryOperation operation) {
 			final List<Expression> operands = operation.getOperands();
-			final List<Expression> canonicalOperands = operands.stream().map(operand -> operand.accept(this)).collect(toList());
+			final List<Expression> canonicalOperands = operands.stream().map(this).collect(toList());
 			final List<Expression> flattened;
 			
 			if (operation.isAssociative()) {
@@ -448,7 +449,12 @@ public final class MiniCAS {
 		 * @author codistmonk (creation 2015-03-28)
 		 * @param <V> 
 		 */
-		public static abstract interface Visitor<V> extends Serializable {
+		public static abstract interface Visitor<V> extends Serializable, Function<Expression, V> {
+			
+			@Override
+			public default V apply(final Expression expression) {
+				return expression.accept(this);
+			}
 			
 			public default V visit(final Expression expression) {
 				ignore(expression);
@@ -470,6 +476,39 @@ public final class MiniCAS {
 			
 			public default V visit(final NaryOperation operation) {
 				return this.visit((Expression) operation);
+			}
+			
+		}
+		
+		/**
+		 * @author codistmonk (creation 2015-03-30)
+		 */
+		public static abstract interface Rewriter extends Visitor<Expression> {
+			
+			@Override
+			public default Expression visit(final Expression expression) {
+				return expression;
+			}
+			
+			@Override
+			public default Expression visit(final Variable variable) {
+				return this.visit((Expression) variable);
+			}
+			
+			@Override
+			public default Expression visit(final Constant constant) {
+				return this.visit((Expression) constant);
+			}
+			
+			@Override
+			public default Expression visit(final UnaryOperation operation) {
+				return operation.maybeNew(operation.getOperand().accept(this));
+			}
+			
+			@Override
+			public default Expression visit(final NaryOperation operation) {
+				return operation.maybeNew(
+						operation.getOperands().stream().map(this).collect(toList()));
 			}
 			
 		}
@@ -762,7 +801,7 @@ public final class MiniCAS {
 		
 		@Override
 		public final String toString() {
-			return "cos(" + this.getOperand() + ")";
+			return "(cos " + this.getOperand() + ")";
 		}
 		
 		private static final long serialVersionUID = -4183372597787862911L;
@@ -785,7 +824,7 @@ public final class MiniCAS {
 		
 		@Override
 		public final String toString() {
-			return "sqrt(" + this.getOperand() + ")";
+			return "(sqrt " + this.getOperand() + ")";
 		}
 		
 		private static final long serialVersionUID = 5812533032365148428L;
