@@ -3,7 +3,7 @@ package dct;
 import static java.lang.Math.PI;
 import static java.lang.Math.sqrt;
 import static dct.MiniCAS.*;
-
+import dct.MiniCAS.Canonicalize;
 import dct.MiniCAS.Expression;
 
 import java.util.Arrays;
@@ -20,6 +20,8 @@ public final class DCTd {
 	private DCTd() {
 		throw new IllegalInstantiationException();
 	}
+	
+	static final Canonicalize CANONICALIZE = Canonicalize.INSTANCE;
 	
 	/**
 	 * @param commandLineArguments
@@ -93,6 +95,14 @@ public final class DCTd {
 			Tools.debugPrint(Arrays.deepToString(f));
 			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.deepToString(g));
+			
+			final Expression expression = idct(dct, "x1", "x2", "x3")
+					.accept(new Approximate(1.0E-8)).accept(CANONICALIZE)
+					.accept(new Approximate(1.0E-8)).accept(CANONICALIZE);
+			final Sum sum = (Sum) expression;
+			
+			Tools.debugPrint(sum.getOperands().size());
+			Tools.debugPrint(sum.getOperands());
 		}
 	}
 	
