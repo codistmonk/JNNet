@@ -380,8 +380,6 @@ public final class DCTc {
 		return contraction.contract(buffer, indices[indexIndex]);
 	}
 	
-	
-	
 	@SuppressWarnings("unchecked")
 	public static final <T> T get(final Object array, final int... indices) {
 		final int n = indices.length;
