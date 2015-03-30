@@ -50,7 +50,9 @@ public final class MiniCAS {
 	}
 	
 	public static final Constant constant(final Object value) {
-		return new Constant(((Number) value).doubleValue());
+		return value instanceof Constant ? (Constant) value :
+			new Constant(value instanceof Expression ? ((Expression) value).getAsDouble() :
+				((Number) value).doubleValue());
 	}
 	
 	public static final Expression expression(final Object expression) {
@@ -112,6 +114,39 @@ public final class MiniCAS {
 		}
 		
 		return true;
+	}
+	
+	public static final Expression[] constants(final double... values) {
+		final int n = values.length;
+		final Expression[] result = new Expression[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = constant(values[i]);
+		}
+		
+		return result;
+	}
+	
+	public static final Expression[] constants(final Expression... values) {
+		final int n = values.length;
+		final Expression[] result = new Expression[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = constant(values[i]);
+		}
+		
+		return result;
+	}
+	
+	public static final Expression[] expressions(final Object... expressions) {
+		final int n = expressions.length;
+		final Expression[] result = new Expression[n];
+		
+		for (int i = 0; i < n; ++i) {
+			result[i] = expression(expressions[i]);
+		}
+		
+		return result;
 	}
 	
 	/**

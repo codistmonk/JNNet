@@ -76,16 +76,16 @@ public final class DCTc {
 		}
 		
 		if (true) {
-			final Expression[][] f = {
-					constants(1.0, 2.0, 3.0, 4.0),
-					constants(2.0, 3.0, 4.0, 1.0),
-					constants(3.0, 4.0, 1.0, 2.0),
-					constants(4.0, 1.0, 2.0, 3.0),
-			};
 //			final Expression[][] f = {
-//					constants(1.0, 2.0),
-//					constants(2.0, 3.0),
+//					constants(1.0, 2.0, 3.0, 4.0),
+//					constants(2.0, 3.0, 4.0, 1.0),
+//					constants(3.0, 4.0, 1.0, 2.0),
+//					constants(4.0, 1.0, 2.0, 3.0),
 //			};
+			final Expression[][] f = {
+					constants(1.0, 2.0),
+					constants(2.0, 3.0),
+			};
 			final Expression[][] dct = dct(f);
 			final Expression[][] g = idct(dct);
 			
@@ -1257,8 +1257,6 @@ public final class DCTc {
 		@Override
 		public default UnaryOperation reorder() {
 			if (this.getClass() == Cos.class) {
-				Tools.debugPrint();
-				Tools.debugPrint(this.getOperand());
 				Tools.debugPrint(this.getOperand().reorder().simplified());
 			}
 			return this.maybeNew(this.getOperand().reorder());
