@@ -1,10 +1,7 @@
 package dct;
 
 import static java.lang.Math.PI;
-import static java.lang.Math.sqrt;
 import static dct.MiniCAS.*;
-import dct.MiniCAS.Canonicalize;
-import dct.MiniCAS.Expression;
 
 import java.util.Arrays;
 import java.util.function.BiFunction;
@@ -96,13 +93,26 @@ public final class DCTd {
 			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.deepToString(g));
 			
-			final Expression expression = idct(dct, "x1", "x2", "x3")
+			final Variable x1 = variable("x1");
+			final Variable x2 = variable("x2");
+			final Variable x3 = variable("x3");
+			final Expression expression = idct(dct, x1, x2, x3)
+					.accept(new Approximate(1.0E-8)).accept(CANONICALIZE)
 					.accept(new Approximate(1.0E-8)).accept(CANONICALIZE)
 					.accept(new Approximate(1.0E-8)).accept(CANONICALIZE);
-			final Sum sum = (Sum) expression;
 			
-			Tools.debugPrint(sum.getOperands().size());
-			Tools.debugPrint(sum.getOperands());
+			x1.setValue(expression(0));
+			x2.setValue(expression(1));
+			x3.setValue(expression(1));
+			
+			Tools.debugPrint(expression.getAsDouble());
+			
+			if (true) {
+				final Sum sum = (Sum) expression;
+				
+				Tools.debugPrint(sum.getOperands().size());
+				Tools.debugPrint(sum.getOperands());
+			}
 		}
 	}
 	
@@ -129,7 +139,7 @@ public final class DCTd {
 			values = Arrays.stream((Object[]) f).map(v -> apply(transform, v, indices, indexIndex + 1)).toArray(Expression[]::new);
 		}
 		
-		return dct(values, indices[indexIndex]);
+		return transform.apply(values, indices[indexIndex]);
 	}
 	
 	public static final Expression dct(final Expression[] f, final Object k) {
