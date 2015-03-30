@@ -6,7 +6,6 @@ import static java.util.stream.Collectors.toList;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.deepClone;
 import static net.sourceforge.aprog.tools.Tools.swap;
-import static dct.DCTa.getDimensionCount;
 import static dct.MiniCAS.*;
 
 import java.lang.reflect.Array;
@@ -23,9 +22,9 @@ import net.sourceforge.aprog.tools.Tools;
 /**
  * @author codistmonk (creation 2015-03-29)
  */
-public final class DCTd {
+public final class DCT {
 	
-	private DCTd() {
+	private DCT() {
 		throw new IllegalInstantiationException();
 	}
 	
@@ -180,11 +179,11 @@ public final class DCTd {
 	}
 	
 	public static final Expression dct(final Object f, final Object... indices) {
-		return apply(DCTd::dct, f, indices, 0);
+		return apply(DCT::dct, f, indices, 0);
 	}
 	
 	public static final Expression idct(final Object f, final Object... indices) {
-		return apply(DCTd::idct, f, indices, 0);
+		return apply(DCT::idct, f, indices, 0);
 	}
 	
 	public static final Expression apply(final BiFunction<Expression[], Object, Expression> transform,
@@ -217,11 +216,11 @@ public final class DCTd {
 	}
 	
 	public static final <T> T dct(final T f) {
-		return applyToAllDimensions(DCTd::dct, f, deepClone(f));
+		return applyToAllDimensions(DCT::dct, f, deepClone(f));
 	}
 	
 	public static final <T> T idct(final T f) {
-		return applyToAllDimensions(DCTd::idct, f, deepClone(f));
+		return applyToAllDimensions(DCT::idct, f, deepClone(f));
 	}
 	
 	public static final <T> T applyToAllDimensions(final BiFunction<Expression[], Object, Expression> transform, final T f, final T result) {
