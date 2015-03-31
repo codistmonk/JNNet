@@ -8,12 +8,15 @@ import static net.sourceforge.aprog.tools.Tools.*;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.DoubleUnaryOperator;
 
 import net.sourceforge.aprog.tools.Tools;
 import dct.MiniCAS.Constant;
 import dct.MiniCAS.Expression;
+import dct.MiniCAS.Variable;
 
 /**
  * @author codistmonk (creation 2015-03-30)
@@ -30,7 +33,7 @@ public final class ANN implements Serializable {
 	}
 	
 	public final Layer addLayer(final DoubleUnaryOperator activation) {
-		final int previousDimensions = this.getLayers().isEmpty() ? this.getInputDimensions() : getOutputLayer().getInputDimensions();
+		final int previousDimensions = this.getLayers().isEmpty() ? this.getInputDimensions() + 1 : getOutputLayer().getNeurons().size() + 1;
 		final Layer result = new Layer(previousDimensions, activation);
 		
 		this.getLayers().add(result);
@@ -55,6 +58,10 @@ public final class ANN implements Serializable {
 			if (result == null || result.length != o) {
 				result = new double[o];
 			}
+			
+			layer.evaluate(actualInput, result);
+			
+			actualInput = result;
 		}
 		
 		return result;
@@ -79,9 +86,19 @@ public final class ANN implements Serializable {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final ANN ann = newIDCTNetwork(constants(1, 2, 3, 4));
+		final ANN ann = newIDCTNetwork(dct(constants(1, 2, 3, 4)));
 		
-		// TODO Auto-generated method stub
+		for (final Layer layer : ann.getLayers()) {
+			Tools.debugPrint(layer.getActivation());
+			
+			for (final double[] neuron : layer.getNeurons()) {
+				Tools.debugPrint(Arrays.toString(neuron));
+			}
+		}
+		
+		for (double x = 0.0; x < 4; x += 0.5) {
+			Tools.debugPrint(x, Arrays.toString(ann.evaluate(x)));
+		}
 	}
 	
 	public static final ANN newIDCTNetwork(final Object dct) {
@@ -96,6 +113,9 @@ public final class ANN implements Serializable {
 		final Expression idct = approximate(separateCosProducts(idct(dct, input)), 1.0E-8);
 		Expression bias = ZERO;
 		final List<Expression> terms = idct instanceof Sum ? ((Sum) idct).getOperands() : Arrays.asList(idct);
+		final Map<Variable, Constant> weights = new HashMap<>();
+		Layer hiddenLayer = null;
+		final List<Double> magnitudes = new ArrayList<>();
 		
 		for (final Expression term : terms) {
 			Constant magnitude = ONE;
@@ -111,15 +131,73 @@ public final class ANN implements Serializable {
 				}
 				
 				bias = add(bias, term);
+				
+				continue;
 			}
 			
-			if (cos != null) {
-				Tools.debugPrint(magnitude, cos);
+			final Expression argument = cos.getOperand();
+			final List<Expression> argumentTerms = argument instanceof Sum ? ((Sum) argument).getOperands() : Arrays.asList(argument);
+			
+			weights.clear();
+			
+			for (final Expression argumentTerm : argumentTerms) {
+				Constant weight = ZERO;
+				Variable variable = cast(Variable.class, argumentTerm);
+				final Product p = cast(Product.class, argumentTerm);
+				
+				if (p != null) {
+					weight = (Constant) p.getOperands().get(0);
+					variable = (Variable) p.getOperands().get(1);
+				} else if (variable == null) {
+					if (!(argumentTerm instanceof Constant)) {
+						debugError("Unexpected term:", argumentTerm);
+					}
+					
+					weight = constant(argumentTerm.getAsDouble());
+				}
+				
+				if (!ZERO.equals(weight)) {
+					weights.put(variable, weight);
+				}
+			}
+			
+			if (!weights.isEmpty()) {
+				if (hiddenLayer == null) {
+					// TODO replace with pairs of sinmoids
+					hiddenLayer = result.addLayer(Math::cos);
+				}
+				
+				final double[] hiddenNeuron = hiddenLayer.addNeuron();
+				
+				for (int i = 0; i < n; ++i) {
+					final Constant weight = weights.get(input[i]);
+					
+					if (weight != null) {
+						hiddenNeuron[i] = weight.getAsDouble();
+					}
+				}
+				
+				{
+					final Constant weight = weights.get(null);
+					
+					if (weight != null) {
+						hiddenNeuron[n] = weight.getAsDouble();
+					}
+				}
+				
+				magnitudes.add(magnitude.getAsDouble());
 			}
 		}
 		
 		{
-			result.addLayer(ANN::identity).addNeuron()[n - 1] = bias.getAsDouble();
+			final double[] outputNeuron = result.addLayer(ANN::identity).addNeuron();
+			final int m = magnitudes.size();
+			
+			for (int i = 0; i < m; ++i) {
+				outputNeuron[i] = magnitudes.get(i);
+			}
+			
+			outputNeuron[m] = bias.getAsDouble();
 			
 			return result;
 		}
