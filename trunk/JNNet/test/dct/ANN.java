@@ -87,7 +87,9 @@ public final class ANN implements Serializable {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 //		final ANN ann = newIDCTNetwork(fullDCT(constants(1, 2, 3, 4)));
-		final ANN ann = newIDCTNetwork(fullDCT(array(constants(1, 2), constants(3, 4))));
+//		final Object fullDCT = fullDCT(array(constants(1, 2), constants(3, 4)));
+		final Object fullDCT = fullDCT(array(array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)), array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
+		final ANN ann = newIDCTNetwork(fullDCT);
 		
 		for (final Layer layer : ann.getLayers()) {
 			Tools.debugPrint(layer.getNeurons().size(), layer.getActivation());
@@ -102,9 +104,16 @@ public final class ANN implements Serializable {
 //		for (double x = 0.0; x < 4; x += 0.5) {
 //			Tools.debugPrint(x, Arrays.toString(ann.evaluate(x)));
 //		}
+//		for (double x1 = 0.0; x1 < 2; ++x1) {
+//			for (double x2 = 0.0; x2 < 2; ++x2) {
+//				Tools.debugPrint(x1, x2, Arrays.toString(ann.evaluate(x1, x2)));
+//			}
+//		}
 		for (double x1 = 0.0; x1 < 2; ++x1) {
 			for (double x2 = 0.0; x2 < 2; ++x2) {
-				Tools.debugPrint(x1, x2, Arrays.toString(ann.evaluate(x1, x2)));
+				for (double x3 = 0.0; x3 < 2; ++x3) {
+					Tools.debugPrint(x1, x2, x3, Arrays.toString(ann.evaluate(x1, x2, x3)));
+				}
 			}
 		}
 	}
@@ -142,7 +151,7 @@ public final class ANN implements Serializable {
 					debugError("Unexpected term:", term);
 				}
 				
-				bias = add(bias, term);
+				bias = approximate(add(bias, term), 1.0E-8);
 				
 				continue;
 			}
@@ -192,7 +201,7 @@ public final class ANN implements Serializable {
 						magnitudes.add(-magnitude.getAsDouble());
 					}
 					
-					bias = subtract(bias, magnitude);
+					bias = approximate(subtract(bias, magnitude), 1.0E-8);
 				}
 			}
 		}
