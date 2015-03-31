@@ -86,7 +86,8 @@ public final class ANN implements Serializable {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final ANN ann = newIDCTNetwork(dct(constants(1, 2, 3, 4)));
+//		final ANN ann = newIDCTNetwork(fullDCT(constants(1, 2, 3, 4)));
+		final ANN ann = newIDCTNetwork(fullDCT(array(constants(1, 2), constants(3, 4))));
 		
 		for (final Layer layer : ann.getLayers()) {
 			Tools.debugPrint(layer.getActivation());
@@ -96,8 +97,13 @@ public final class ANN implements Serializable {
 			}
 		}
 		
-		for (double x = 0.0; x < 4; x += 0.5) {
-			Tools.debugPrint(x, Arrays.toString(ann.evaluate(x)));
+//		for (double x = 0.0; x < 4; x += 0.5) {
+//			Tools.debugPrint(x, Arrays.toString(ann.evaluate(x)));
+//		}
+		for (double x1 = 0.0; x1 < 2; ++x1) {
+			for (double x2 = 0.0; x2 < 2; ++x2) {
+				Tools.debugPrint(x1, x2, Arrays.toString(ann.evaluate(x1, x2)));
+			}
 		}
 	}
 	

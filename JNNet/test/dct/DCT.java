@@ -35,7 +35,7 @@ public final class DCT {
 	public static final void main(final String[] commandLineArguments) {
 		if (true) {
 			final Expression[] f = expressions(121, 58);
-			final Expression[] dct = deepApply(MiniCAS::constant, dct(f));
+			final Expression[] dct = deepApply(MiniCAS::constant, fullDCT(f));
 			final Expression[] g = constants(idct(dct, 0), idct(dct, 1));
 			
 			Tools.debugPrint();
@@ -49,7 +49,7 @@ public final class DCT {
 					expressions(1, 2),
 					expressions(3, 4),
 			};
-			final Expression[][] dct = deepApply(MiniCAS::constant, dct(f));
+			final Expression[][] dct = deepApply(MiniCAS::constant, fullDCT(f));
 			final Expression[][] g = {
 					constants(idct(dct, 0, 0), idct(dct, 0, 1)),
 					constants(idct(dct, 1, 0), idct(dct, 1, 1)),
@@ -72,7 +72,7 @@ public final class DCT {
 						constants(7.0, 8.0),
 					},
 			};
-			final Expression[][][] dct = deepApply(MiniCAS::constant, dct(f));
+			final Expression[][][] dct = deepApply(MiniCAS::constant, fullDCT(f));
 			final Expression[][][] g = {
 					{
 						constants(idct(dct, 0, 0, 0), idct(dct, 0, 0, 1)),
@@ -88,7 +88,7 @@ public final class DCT {
 			Tools.debugPrint(Arrays.deepToString(f));
 			Tools.debugPrint(Arrays.deepToString(dct));
 			Tools.debugPrint(Arrays.deepToString(g));
-			Tools.debugPrint(Arrays.deepToString(deepApply(MiniCAS::constant, idct(dct))));
+			Tools.debugPrint(Arrays.deepToString(deepApply(MiniCAS::constant, fullIDCT(dct))));
 			
 			final Variable x1 = variable("x1");
 			final Variable x2 = variable("x2");
@@ -215,11 +215,11 @@ public final class DCT {
 		return result;
 	}
 	
-	public static final <T> T dct(final T f) {
+	public static final <T> T fullDCT(final T f) {
 		return applyToAllDimensions(DCT::dct, f, deepClone(f));
 	}
 	
-	public static final <T> T idct(final T f) {
+	public static final <T> T fullIDCT(final T f) {
 		return applyToAllDimensions(DCT::idct, f, deepClone(f));
 	}
 	
