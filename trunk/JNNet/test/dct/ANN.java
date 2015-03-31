@@ -90,10 +90,12 @@ public final class ANN implements Serializable {
 		final ANN ann = newIDCTNetwork(fullDCT(array(constants(1, 2), constants(3, 4))));
 		
 		for (final Layer layer : ann.getLayers()) {
-			Tools.debugPrint(layer.getActivation());
+			Tools.debugPrint(layer.getNeurons().size(), layer.getActivation());
 			
-			for (final double[] neuron : layer.getNeurons()) {
-				Tools.debugPrint(Arrays.toString(neuron));
+			if (false) {
+				for (final double[] neuron : layer.getNeurons()) {
+					Tools.debugPrint(Arrays.toString(neuron));
+				}
 			}
 		}
 		
@@ -117,11 +119,15 @@ public final class ANN implements Serializable {
 		
 		final ANN result = new ANN(n);
 		final Expression idct = approximate(separateCosProducts(idct(dct, input)), 1.0E-8);
+		
 		Expression bias = ZERO;
 		final List<Expression> terms = idct instanceof Sum ? ((Sum) idct).getOperands() : Arrays.asList(idct);
 		final Map<Variable, Constant> weights = new HashMap<>();
 		Layer hiddenLayer = null;
 		final List<Double> magnitudes = new ArrayList<>();
+		final DoubleUnaryOperator cosActivation = Math::cos;
+		final DoubleUnaryOperator sinmoidActivation = ANN::sinmoid;
+		final DoubleUnaryOperator activation = sinmoidActivation;
 		
 		for (final Expression term : terms) {
 			Constant magnitude = ONE;
@@ -147,8 +153,8 @@ public final class ANN implements Serializable {
 			weights.clear();
 			
 			for (final Expression argumentTerm : argumentTerms) {
-				Constant weight = ZERO;
 				Variable variable = cast(Variable.class, argumentTerm);
+				Constant weight = variable == null ? ZERO : ONE;
 				final Product p = cast(Product.class, argumentTerm);
 				
 				if (p != null) {
@@ -168,30 +174,26 @@ public final class ANN implements Serializable {
 			}
 			
 			if (!weights.isEmpty()) {
+				
 				if (hiddenLayer == null) {
-					// TODO replace with pairs of sinmoids
-					hiddenLayer = result.addLayer(Math::cos);
+					hiddenLayer = result.addLayer(activation);
 				}
 				
-				final double[] hiddenNeuron = hiddenLayer.addNeuron();
-				
-				for (int i = 0; i < n; ++i) {
-					final Constant weight = weights.get(input[i]);
+				if (activation == cosActivation) {
+					addNeuron(hiddenLayer, weights, input);
+					magnitudes.add(magnitude.getAsDouble());
+				} else {
+					final int l = 3;
 					
-					if (weight != null) {
-						hiddenNeuron[i] = weight.getAsDouble();
+					for (int k = -l; k <= l; ++k) {
+						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k - 0.5) * Math.PI;
+						magnitudes.add(magnitude.getAsDouble());
+						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k + 0.5) * Math.PI;
+						magnitudes.add(-magnitude.getAsDouble());
 					}
-				}
-				
-				{
-					final Constant weight = weights.get(null);
 					
-					if (weight != null) {
-						hiddenNeuron[n] = weight.getAsDouble();
-					}
+					bias = subtract(bias, magnitude);
 				}
-				
-				magnitudes.add(magnitude.getAsDouble());
 			}
 		}
 		
@@ -209,6 +211,29 @@ public final class ANN implements Serializable {
 		}
 	}
 	
+	static final double[] addNeuron(final Layer layer, final Map<Variable, Constant> weights, final Object[] input) {
+		final int n = input.length;
+		final double[] result = layer.addNeuron();
+		
+		for (int i = 0; i < n; ++i) {
+			final Constant weight = weights.get(input[i]);
+			
+			if (weight != null) {
+				result[i] = weight.getAsDouble();
+			}
+		}
+		
+		{
+			final Constant weight = weights.get(null);
+			
+			if (weight != null) {
+				result[n] = weight.getAsDouble();
+			}
+		}
+		
+		return result;
+	}
+	
 	public static final double identity(final double x) {
 		return x;
 	}
@@ -218,7 +243,7 @@ public final class ANN implements Serializable {
 			return -1.0;
 		}
 		
-		if (x <= Math.PI / 2.0) {
+		if (x < Math.PI / 2.0) {
 			return Math.sin(x);
 		}
 		
@@ -250,6 +275,7 @@ public final class ANN implements Serializable {
 			for (int i = 0; i < n; ++i) {
 				result[i] = this.getActivation().applyAsDouble(dot(this.getNeurons().get(i), input));
 			}
+			
 			
 			return result;
 		}
