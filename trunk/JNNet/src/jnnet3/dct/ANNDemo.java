@@ -1,14 +1,16 @@
 package jnnet3.dct;
 
+import static jnnet3.dct.ANN.newIDCTNetwork;
 import static jnnet3.dct.DCT.fullDCT;
 import static jnnet3.dct.MiniCAS.constants;
-import static net.sourceforge.aprog.tools.Tools.array;
-import static net.sourceforge.aprog.tools.Tools.debugPrint;
+import static net.sourceforge.aprog.tools.Tools.*;
 
 import java.util.Arrays;
+import java.util.List;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 import jnnet3.dct.ANN.Layer;
+import jnnet3.dct.MiniCAS.Expression;
 
 /**
  * @author codistmonk (creation 2015-04-01)
@@ -24,33 +26,56 @@ public final class ANNDemo {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-//		final ANN ann = newIDCTNetwork(fullDCT(constants(1, 2, 3, 4)));
-//		final Object fullDCT = fullDCT(array(constants(1, 2), constants(3, 4)));
-		final Object fullDCT = fullDCT(array(array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)), array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
-		final ANN ann = ANN.newIDCTNetwork(fullDCT, 4);
+		final int dimensions = 3;
 		
-		for (final Layer layer : ann.getLayers()) {
-			debugPrint(layer.getNeurons().size(), layer.getActivation());
+		if (dimensions == 1) {
+			final Expression[] fullDCT = fullDCT(constants(1, 2, 3, 4));
+			final ANN ann = newIDCTNetwork(fullDCT, 3);
+			
+			print(ann);
+			
+			for (double x = 0.0; x < 4; x += 0.5) {
+				debugPrint("input:", x, "output:", Arrays.toString(ann.evaluate(x)));
+			}
+		} else if (dimensions == 2) {
+			final Object fullDCT = fullDCT(array(constants(1, 2), constants(3, 4)));
+			final ANN ann = newIDCTNetwork(fullDCT, 4);
+			
+			print(ann);
+			
+			for (double x1 = 0.0; x1 < 2; ++x1) {
+				for (double x2 = 0.0; x2 < 2; ++x2) {
+					debugPrint("input:", x1, x2, "output:", Arrays.toString(ann.evaluate(x1, x2)));
+				}
+			}
+		} else if (dimensions == 3) {
+			final Object fullDCT = fullDCT(array(array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)), array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
+			final ANN ann = newIDCTNetwork(fullDCT, 4);
+			
+			print(ann);
+			
+			for (double x1 = 0.0; x1 < 2; ++x1) {
+				for (double x2 = 0.0; x2 < 2; ++x2) {
+					for (double x3 = 0.0; x3 < 2; ++x3) {
+						debugPrint("input:", x1, x2, x3, "output:", Arrays.toString(ann.evaluate(x1, x2, x3)));
+					}
+				}
+			}
+		}
+	}
+	
+	public static final void print(final ANN ann) {
+		final List<Layer> layers = ann.getLayers();
+		final int n = layers.size();
+		
+		for (int i = 0; i < n; ++i) {
+			final Layer layer = layers.get(i);
+			
+			debugPrint("layer:", i, "neurons:", layer.getNeurons().size());
 			
 			if (false) {
 				for (final double[] neuron : layer.getNeurons()) {
 					debugPrint(Arrays.toString(neuron));
-				}
-			}
-		}
-		
-//		for (double x = 0.0; x < 4; x += 0.5) {
-//			debugPrint(x, Arrays.toString(ann.evaluate(x)));
-//		}
-//		for (double x1 = 0.0; x1 < 2; ++x1) {
-//			for (double x2 = 0.0; x2 < 2; ++x2) {
-//				debugPrint(x1, x2, Arrays.toString(ann.evaluate(x1, x2)));
-//			}
-//		}
-		for (double x1 = 0.0; x1 < 2; ++x1) {
-			for (double x2 = 0.0; x2 < 2; ++x2) {
-				for (double x3 = 0.0; x3 < 2; ++x3) {
-					debugPrint(x1, x2, x3, Arrays.toString(ann.evaluate(x1, x2, x3)));
 				}
 			}
 		}
