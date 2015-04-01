@@ -16,7 +16,6 @@ import java.util.function.DoubleUnaryOperator;
 import jnnet3.dct.MiniCAS.Constant;
 import jnnet3.dct.MiniCAS.Expression;
 import jnnet3.dct.MiniCAS.Variable;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-03-30)
@@ -92,27 +91,27 @@ public final class ANN implements Serializable {
 		final ANN ann = newIDCTNetwork(fullDCT);
 		
 		for (final Layer layer : ann.getLayers()) {
-			Tools.debugPrint(layer.getNeurons().size(), layer.getActivation());
+			debugPrint(layer.getNeurons().size(), layer.getActivation());
 			
 			if (false) {
 				for (final double[] neuron : layer.getNeurons()) {
-					Tools.debugPrint(Arrays.toString(neuron));
+					debugPrint(Arrays.toString(neuron));
 				}
 			}
 		}
 		
 //		for (double x = 0.0; x < 4; x += 0.5) {
-//			Tools.debugPrint(x, Arrays.toString(ann.evaluate(x)));
+//			debugPrint(x, Arrays.toString(ann.evaluate(x)));
 //		}
 //		for (double x1 = 0.0; x1 < 2; ++x1) {
 //			for (double x2 = 0.0; x2 < 2; ++x2) {
-//				Tools.debugPrint(x1, x2, Arrays.toString(ann.evaluate(x1, x2)));
+//				debugPrint(x1, x2, Arrays.toString(ann.evaluate(x1, x2)));
 //			}
 //		}
 		for (double x1 = 0.0; x1 < 2; ++x1) {
 			for (double x2 = 0.0; x2 < 2; ++x2) {
 				for (double x3 = 0.0; x3 < 2; ++x3) {
-					Tools.debugPrint(x1, x2, x3, Arrays.toString(ann.evaluate(x1, x2, x3)));
+					debugPrint(x1, x2, x3, Arrays.toString(ann.evaluate(x1, x2, x3)));
 				}
 			}
 		}
