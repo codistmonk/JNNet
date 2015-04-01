@@ -27,7 +27,7 @@ public final class ANNDemo {
 //		final ANN ann = newIDCTNetwork(fullDCT(constants(1, 2, 3, 4)));
 //		final Object fullDCT = fullDCT(array(constants(1, 2), constants(3, 4)));
 		final Object fullDCT = fullDCT(array(array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)), array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
-		final ANN ann = ANN.newIDCTNetwork(fullDCT);
+		final ANN ann = ANN.newIDCTNetwork(fullDCT, 4);
 		
 		for (final Layer layer : ann.getLayers()) {
 			debugPrint(layer.getNeurons().size(), layer.getActivation());
