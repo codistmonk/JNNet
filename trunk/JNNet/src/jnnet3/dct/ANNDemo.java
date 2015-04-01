@@ -39,7 +39,7 @@ public final class ANNDemo {
 			}
 		} else if (dimensions == 2) {
 			final Object fullDCT = fullDCT(array(constants(1, 2), constants(3, 4)));
-			final ANN ann = newIDCTNetwork(fullDCT, 4);
+			final ANN ann = newIDCTNetwork(fullDCT, 1);
 			
 			print(ann);
 			
@@ -49,14 +49,16 @@ public final class ANNDemo {
 				}
 			}
 		} else if (dimensions == 3) {
-			final Object fullDCT = fullDCT(array(array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)), array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
+			final Object fullDCT = fullDCT(array(
+					array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)),
+					array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
 			final ANN ann = newIDCTNetwork(fullDCT, 4);
 			
 			print(ann);
 			
 			for (double x1 = 0.0; x1 < 2; ++x1) {
 				for (double x2 = 0.0; x2 < 2; ++x2) {
-					for (double x3 = 0.0; x3 < 2; ++x3) {
+					for (double x3 = 0.0; x3 < 4; ++x3) {
 						debugPrint("input:", x1, x2, x3, "output:", Arrays.toString(ann.evaluate(x1, x2, x3)));
 					}
 				}
