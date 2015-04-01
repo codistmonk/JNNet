@@ -3,6 +3,7 @@ package jnnet3.dct;
 import static java.lang.Math.min;
 import static java.util.Collections.sort;
 import static java.util.stream.Collectors.toList;
+import static jnnet3.dct.MiniCAS.limitOf;
 import static net.sourceforge.aprog.tools.Tools.*;
 
 import java.io.Serializable;
@@ -148,6 +149,11 @@ public final class MiniCAS {
 		}
 		
 		return result;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static final Expression approximate(final Expression expression, final double epsilon) {
+		return limitOf(expression, Canonicalize.INSTANCE, new Approximate(epsilon));
 	}
 	
 	public static final Expression limitOf(final Expression expression, final Expression.Visitor<Expression>... rewriters) {
