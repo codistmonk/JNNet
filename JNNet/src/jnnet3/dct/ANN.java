@@ -1,8 +1,8 @@
-package dct;
+package jnnet3.dct;
 
-import static dct.DCT.*;
-import static dct.MiniCAS.*;
 import static java.util.Arrays.fill;
+import static jnnet3.dct.DCT.*;
+import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.*;
 
 import java.io.Serializable;
@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleUnaryOperator;
 
+import jnnet3.dct.MiniCAS.Constant;
+import jnnet3.dct.MiniCAS.Expression;
+import jnnet3.dct.MiniCAS.Variable;
 import net.sourceforge.aprog.tools.Tools;
-import dct.MiniCAS.Constant;
-import dct.MiniCAS.Expression;
-import dct.MiniCAS.Variable;
 
 /**
  * @author codistmonk (creation 2015-03-30)

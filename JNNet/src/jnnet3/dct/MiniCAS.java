@@ -1,4 +1,4 @@
-package dct;
+package jnnet3.dct;
 
 import static java.lang.Math.min;
 import static java.util.Collections.sort;
