@@ -76,7 +76,7 @@ public final class ANN implements Serializable {
 	
 	private static final long serialVersionUID = -7594919042796851934L;
 	
-	public static final ANN newIDCTNetwork(final Object dct) {
+	public static final ANN newIDCTNetwork(final Object dct, final int cosApproximationQuality) {
 		final int n = DCT.getDimensionCount(dct.getClass());
 		final Object[] input = new Expression[n];
 		
@@ -94,7 +94,7 @@ public final class ANN implements Serializable {
 		final List<Double> magnitudes = new ArrayList<>();
 		final DoubleUnaryOperator cosActivation = Math::cos;
 		final DoubleUnaryOperator sinmoidActivation = ANN::sinmoid;
-		final DoubleUnaryOperator activation = sinmoidActivation;
+		final DoubleUnaryOperator activation = cosApproximationQuality < 0 ? cosActivation : sinmoidActivation;
 		
 		for (final Expression term : terms) {
 			Constant magnitude = ONE;
@@ -150,9 +150,7 @@ public final class ANN implements Serializable {
 					addNeuron(hiddenLayer, weights, input);
 					magnitudes.add(magnitude.getAsDouble());
 				} else {
-					final int l = 3;
-					
-					for (int k = -l; k <= l; ++k) {
+					for (int k = -cosApproximationQuality; k <= cosApproximationQuality; ++k) {
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k - 0.5) * Math.PI;
 						magnitudes.add(magnitude.getAsDouble());
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k + 0.5) * Math.PI;
