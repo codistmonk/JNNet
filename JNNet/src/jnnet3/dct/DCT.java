@@ -4,9 +4,7 @@ import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
 import static java.util.stream.Collectors.toList;
 import static jnnet3.dct.MiniCAS.*;
-import static net.sourceforge.aprog.tools.Tools.cast;
-import static net.sourceforge.aprog.tools.Tools.deepClone;
-import static net.sourceforge.aprog.tools.Tools.swap;
+import static net.sourceforge.aprog.tools.Tools.*;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -17,7 +15,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-03-29)
@@ -38,10 +35,10 @@ public final class DCT {
 			final Expression[] dct = deepApply(MiniCAS::constant, fullDCT(f));
 			final Expression[] g = constants(idct(dct, 0), idct(dct, 1));
 			
-			Tools.debugPrint();
-			Tools.debugPrint((Object[]) f);
-			Tools.debugPrint((Object[]) dct);
-			Tools.debugPrint((Object[]) g);
+			debugPrint();
+			debugPrint((Object[]) f);
+			debugPrint((Object[]) dct);
+			debugPrint((Object[]) g);
 		}
 		
 		if (true) {
@@ -55,10 +52,10 @@ public final class DCT {
 					constants(idct(dct, 1, 0), idct(dct, 1, 1)),
 			};
 			
-			Tools.debugPrint();
-			Tools.debugPrint(Arrays.deepToString(f));
-			Tools.debugPrint(Arrays.deepToString(dct));
-			Tools.debugPrint(Arrays.deepToString(g));
+			debugPrint();
+			debugPrint(Arrays.deepToString(f));
+			debugPrint(Arrays.deepToString(dct));
+			debugPrint(Arrays.deepToString(g));
 		}
 		
 		if (true) {
@@ -84,11 +81,11 @@ public final class DCT {
 					},
 			};
 			
-			Tools.debugPrint();
-			Tools.debugPrint(Arrays.deepToString(f));
-			Tools.debugPrint(Arrays.deepToString(dct));
-			Tools.debugPrint(Arrays.deepToString(g));
-			Tools.debugPrint(Arrays.deepToString(deepApply(MiniCAS::constant, fullIDCT(dct))));
+			debugPrint();
+			debugPrint(Arrays.deepToString(f));
+			debugPrint(Arrays.deepToString(dct));
+			debugPrint(Arrays.deepToString(g));
+			debugPrint(Arrays.deepToString(deepApply(MiniCAS::constant, fullIDCT(dct))));
 			
 			final Variable x1 = variable("x1");
 			final Variable x2 = variable("x2");
@@ -99,10 +96,10 @@ public final class DCT {
 			x2.setValue(expression(1));
 			x3.setValue(expression(1));
 			
-			Tools.debugPrint(expression.getAsDouble());
+			debugPrint(expression.getAsDouble());
 			
 			if (true) {
-				Tools.debugPrint();
+				debugPrint();
 				((Sum) expression).getOperands().forEach(System.out::println);
 			}
 		}
