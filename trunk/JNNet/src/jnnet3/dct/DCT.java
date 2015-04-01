@@ -1,12 +1,12 @@
-package dct;
+package jnnet3.dct;
 
 import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
 import static java.util.stream.Collectors.toList;
+import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.cast;
 import static net.sourceforge.aprog.tools.Tools.deepClone;
 import static net.sourceforge.aprog.tools.Tools.swap;
-import static dct.MiniCAS.*;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;

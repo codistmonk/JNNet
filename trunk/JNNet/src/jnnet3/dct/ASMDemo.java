@@ -1,10 +1,10 @@
-package dct;
+package jnnet3.dct;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 import static java.lang.Math.sqrt;
+import static jnnet3.dct.Expressor.express;
 import static net.sourceforge.aprog.tools.Tools.*;
-import static dct.Expressor.express;
 
 import java.io.PrintWriter;
 

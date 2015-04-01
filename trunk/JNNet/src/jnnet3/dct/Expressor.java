@@ -1,8 +1,8 @@
-package dct;
+package jnnet3.dct;
 
+import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import static dct.MiniCAS.*;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

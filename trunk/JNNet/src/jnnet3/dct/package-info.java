@@ -1,4 +1,4 @@
 /**
  * @author codistmonk (creation 2015-03-27)
  */
-package dct;
+package jnnet3.dct;
