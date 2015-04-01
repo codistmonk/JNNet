@@ -6,8 +6,11 @@ import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.*;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import jnnet3.dct.ANN.Layer;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
@@ -65,13 +68,21 @@ public final class ANNDemo {
 	}
 	
 	public static final void print(final ANN ann) {
+		final Map<Object, String> activationToString = new HashMap<Object, String>();
+		
+		activationToString.put(ANN.IDENTITY, "identity");
+		activationToString.put(ANN.COS, "cos");
+		activationToString.put(ANN.SINMOID, "sinmoid");
+		
 		final List<Layer> layers = ann.getLayers();
 		final int n = layers.size();
+		
+		debugPrint("inputs:", ann.getInputDimensions(), "layers:", n);
 		
 		for (int i = 0; i < n; ++i) {
 			final Layer layer = layers.get(i);
 			
-			debugPrint("layer:", i, "neurons:", layer.getNeurons().size());
+			debugPrint("layer:", i, "inputs:", layer.getInputDimensions(), "neurons:", layer.getNeurons().size(), "activation:", activationToString.get(layer.getActivation()));
 			
 			if (false) {
 				for (final double[] neuron : layer.getNeurons()) {
