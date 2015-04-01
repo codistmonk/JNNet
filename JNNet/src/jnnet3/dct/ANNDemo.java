@@ -1,16 +1,14 @@
 package jnnet3.dct;
 
-import static jnnet3.dct.ANN.newIDCTNetwork;
+import static jnnet3.dct.ANN.*;
 import static jnnet3.dct.DCT.fullDCT;
-import static jnnet3.dct.MiniCAS.constants;
+import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.*;
 
 import java.util.Arrays;
 import java.util.List;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import jnnet3.dct.ANN.Layer;
-import jnnet3.dct.MiniCAS.Expression;
 
 /**
  * @author codistmonk (creation 2015-04-01)
