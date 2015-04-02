@@ -1,6 +1,7 @@
 package jnnet3.dct;
 
 import static java.util.Arrays.fill;
+import static java.util.stream.Collectors.toList;
 import static jnnet3.dct.DCT.*;
 import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.*;
@@ -12,6 +13,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleUnaryOperator;
+
+import net.sourceforge.aprog.tools.Tools;
+import jnnet3.dct.MiniCAS.Constant;
+import jnnet3.dct.MiniCAS.Cos;
+import jnnet3.dct.MiniCAS.Expression;
+import jnnet3.dct.MiniCAS.NaryOperation;
+import jnnet3.dct.MiniCAS.Product;
+import jnnet3.dct.MiniCAS.Sum;
 
 /**
  * @author codistmonk (creation 2015-03-30)
@@ -76,6 +85,8 @@ public final class ANN implements Serializable {
 	
 	private static final long serialVersionUID = -7594919042796851934L;
 	
+	static final double EPSILON = 1.0E-8;
+	
 	static final DoubleUnaryOperator COS = Math::cos;
 	
 	static final DoubleUnaryOperator SINMOID = ANN::sinmoid;
@@ -91,7 +102,7 @@ public final class ANN implements Serializable {
 		}
 		
 		final ANN result = new ANN(n);
-		final Expression idct = approximate(separateCosProducts(idct(dct, input)), 1.0E-8);
+		final Expression idct = approximate(separateCosProducts(idct(dct, input)), EPSILON).accept(new PhasorAddition(EPSILON));
 		
 		Expression bias = ZERO;
 		final List<Expression> terms = idct instanceof Sum ? ((Sum) idct).getOperands() : Arrays.asList(idct);
@@ -113,7 +124,7 @@ public final class ANN implements Serializable {
 					debugError("Unexpected term:", term);
 				}
 				
-				bias = approximate(add(bias, term), 1.0E-8);
+				bias = approximate(add(bias, term), EPSILON);
 				
 				continue;
 			}
@@ -161,7 +172,7 @@ public final class ANN implements Serializable {
 						magnitudes.add(-magnitude.getAsDouble());
 					}
 					
-					bias = approximate(subtract(bias, magnitude), 1.0E-8);
+					bias = approximate(subtract(bias, magnitude), EPSILON);
 				}
 			}
 		}
@@ -280,6 +291,139 @@ public final class ANN implements Serializable {
 			}
 			
 			return result;
+		}
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-04-02)
+	 */
+	public static final class PhasorAddition implements Expression.Rewriter {
+		
+		private final double epsilon;
+		
+		public PhasorAddition(final double epsilon) {
+			this.epsilon = epsilon;
+		}
+		
+		@Override
+		public final Expression visit(final NaryOperation operation) {
+			final Sum sum = cast(Sum.class, operation);
+			
+			if (sum != null) {
+				final List<Expression> operands = operation.getOperands().stream().map(this).collect(toList());
+				final CosTerm[] cosTerms = operands.stream().map(CosTerm::new).toArray(CosTerm[]::new);
+				final int n = operands.size();
+				
+				for (int i = 0; i < n; ++i) {
+					final CosTerm cosTermI = cosTerms[i];
+					
+					for (int j = i + 1; j < n; ++j) {
+						final CosTerm cosTermJ = cosTerms[j];
+						
+						if (cosTermI.getFrequency().equals(cosTermJ.getFrequency())) {
+							Tools.debugPrint(cosTermI, cosTermJ);
+						}
+					}
+				}
+			}
+			
+			return operation;
+		}
+		
+		private static final long serialVersionUID = -2969190749620211785L;
+		
+		/**
+		 * @author codistmonk (creation 2015-04-02)
+		 */
+		public static final class CosTerm implements Serializable {
+			
+			private final Expression magnitude;
+			
+			private final Cos cos;
+			
+			private final Constant phase;
+			
+			private final Expression frequency;
+			
+			public CosTerm(final Expression term) {
+				{
+					final Product product = cast(Product.class, term);
+					
+					if (product != null) {
+						if (product.getOperands().size() != 2) {
+							throw new IllegalArgumentException(term.toString());
+						}
+						
+						this.magnitude = product.getOperands().get(0);
+						this.cos = (Cos) product.getOperands().get(1);
+					} else {
+						final Cos cos = cast(Cos.class, term);
+						
+						if (cos != null) {
+							this.magnitude = ONE;
+							this.cos = cos;
+						} else {
+							this.magnitude = term;
+							this.cos = cos(ZERO);
+						}
+					}
+				}
+				
+				{
+					final Expression argument = this.cos.getOperand();
+					final Sum sum = cast(Sum.class, argument);
+					
+					if (sum != null) {
+						final List<Expression> sumOperands = sum.getOperands();
+						final Constant phase = cast(Constant.class, sumOperands.get(0));
+						
+						if (phase != null) {
+							this.phase = phase;
+							this.frequency = add(sumOperands.subList(1, sumOperands.size()).toArray());
+						} else {
+							this.phase = ZERO;
+							this.frequency = argument;
+						}
+					} else {
+						final Constant phase = cast(Constant.class, argument);
+						
+						if (phase != null) {
+							this.phase = phase;
+							this.frequency = ZERO;
+						} else {
+							this.phase = ZERO;
+							this.frequency = argument;
+						}
+					}
+				}
+				
+				debugPrint(term, "->", this);
+			}
+			
+			public final Expression getMagnitude() {
+				return this.magnitude;
+			}
+			
+			public final Cos getCos() {
+				return this.cos;
+			}
+			
+			public final Constant getPhase() {
+				return this.phase;
+			}
+			
+			public final Expression getFrequency() {
+				return this.frequency;
+			}
+			
+			@Override
+			public final String toString() {
+				return "(" + this.getMagnitude() + " " + this.getPhase() + " " + this.getFrequency() + ")";
+			}
+			
+			private static final long serialVersionUID = -4928748997284860125L;
+			
 		}
 		
 	}
