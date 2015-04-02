@@ -3,7 +3,6 @@ package jnnet3.dct;
 import static java.lang.Math.min;
 import static java.util.Collections.sort;
 import static java.util.stream.Collectors.toList;
-import static jnnet3.dct.MiniCAS.limitOf;
 import static net.sourceforge.aprog.tools.Tools.*;
 
 import java.io.Serializable;
@@ -427,6 +426,10 @@ public final class MiniCAS {
 		
 		public abstract <V> V accept(Visitor<V> visitor);
 		
+		public default boolean equals(final Expression other, final double epsilon) {
+			return this.equals(other);
+		}
+		
 		@Override
 		public default int compareTo(final Expression other) {
 			final boolean thisIsConstant = this instanceof Constant; 
@@ -566,6 +569,13 @@ public final class MiniCAS {
 		}
 		
 		@Override
+		public final boolean equals(final Expression other, final double epsilon) {
+			final Constant that = cast(this.getClass(), other);
+			
+			return that != null && Math.abs(this.getAsDouble() - that.getAsDouble()) < epsilon;
+		}
+		
+		@Override
 		public final String toString() {
 			return String.format(Locale.ENGLISH, "%.2f", this.getAsDouble());
 		}
@@ -646,6 +656,13 @@ public final class MiniCAS {
 			}
 			
 			return Expression.super.compareTo(other);
+		}
+		
+		@Override
+		public default boolean equals(final Expression other, final double epsilon) {
+			final UnaryOperation that = cast(this.getClass(), other);
+			
+			return that != null && this.getOperand().equals(that.getOperand(), epsilon);
 		}
 		
 		public default UnaryOperation maybeNew(final Expression operand) {
@@ -738,6 +755,31 @@ public final class MiniCAS {
 			}
 			
 			return Expression.super.compareTo(other);
+		}
+		
+		@Override
+		public default boolean equals(final Expression other, final double epsilon) {
+			final NaryOperation that = cast(this.getClass(), other);
+			
+			if (that == null) {
+				return false;
+			}
+			
+			final List<Expression> thisOperands = this.getOperands();
+			final List<Expression> thatOperands = that.getOperands();
+			final int n = thisOperands.size();
+			
+			if (n != thatOperands.size()) {
+				return false;
+			}
+			
+			for (int i = 0; i < n; ++i) {
+				if (!thisOperands.get(i).equals(thatOperands.get(i), epsilon)) {
+					return false;
+				}
+			}
+			
+			return true;
 		}
 		
 		public default NaryOperation maybeNew(final Collection<Expression> operands) {
