@@ -2,7 +2,7 @@ package jnnet3.dct;
 
 import static imj3.tools.CommonTools.cartesian;
 import static java.lang.Math.PI;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toCollection;
 import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.*;
 
@@ -270,7 +270,7 @@ public final class DCT {
 		
 		@Override
 		public final Expression visit(final NaryOperation operation) {
-			final List<Expression> operands = operation.getOperands().stream().map(this).collect(toList());
+			final List<Expression> operands = operation.getOperands().stream().map(this).collect(toCollection(ArrayList::new));
 			
 			for (int i = 0, n = operands.size(); i < n; ++i) {
 				final Cos cosI = cast(Cos.class, operands.get(i));

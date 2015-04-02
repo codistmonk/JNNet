@@ -1,6 +1,7 @@
 package jnnet3.dct;
 
 import static java.util.Arrays.fill;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static jnnet3.dct.DCT.*;
 import static jnnet3.dct.MiniCAS.*;
@@ -14,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleUnaryOperator;
 
-import net.sourceforge.aprog.tools.Tools;
 import jnnet3.dct.MiniCAS.Constant;
 import jnnet3.dct.MiniCAS.Cos;
 import jnnet3.dct.MiniCAS.Expression;
@@ -102,7 +102,7 @@ public final class ANN implements Serializable {
 		}
 		
 		final ANN result = new ANN(n);
-		final Expression idct = approximate(separateCosProducts(idct(dct, input)), EPSILON).accept(new PhasorAddition(EPSILON));
+		final Expression idct = approximate(separateCosProducts(idct(dct, input)), EPSILON).accept(new AddPhasors(EPSILON));
 		
 		Expression bias = ZERO;
 		final List<Expression> terms = idct instanceof Sum ? ((Sum) idct).getOperands() : Arrays.asList(idct);
@@ -298,11 +298,11 @@ public final class ANN implements Serializable {
 	/**
 	 * @author codistmonk (creation 2015-04-02)
 	 */
-	public static final class PhasorAddition implements Expression.Rewriter {
+	public static final class AddPhasors implements Expression.Rewriter {
 		
 		private final double epsilon;
 		
-		public PhasorAddition(final double epsilon) {
+		public AddPhasors(final double epsilon) {
 			this.epsilon = epsilon;
 		}
 		
@@ -312,17 +312,20 @@ public final class ANN implements Serializable {
 			
 			if (sum != null) {
 				final List<Expression> operands = operation.getOperands().stream().map(this).collect(toList());
-				final CosTerm[] cosTerms = operands.stream().map(CosTerm::new).toArray(CosTerm[]::new);
+				final List<CosTerm> cosTerms = operands.stream().map(CosTerm::new).collect(toCollection(ArrayList::new));
+				
 				final int n = operands.size();
 				
 				for (int i = 0; i < n; ++i) {
-					final CosTerm cosTermI = cosTerms[i];
+					final CosTerm cosTermI = cosTerms.get(i);
 					
 					for (int j = i + 1; j < n; ++j) {
-						final CosTerm cosTermJ = cosTerms[j];
+						final CosTerm cosTermJ = cosTerms.get(j);
 						
-						if (cosTermI.getFrequency().equals(cosTermJ.getFrequency())) {
-							Tools.debugPrint(cosTermI, cosTermJ);
+						if (cosTermI.getFrequency().equals(cosTermJ.getFrequency(), this.epsilon)) {
+							debugPrint(cosTermI, cosTermJ);
+						} else if (cosTermI.getFrequency().equals(approximate(multiply(MINUS_ONE, cosTermJ.getFrequency()), this.epsilon), this.epsilon)) {
+							debugPrint(cosTermI, cosTermJ);
 						}
 					}
 				}

@@ -2,6 +2,7 @@ package jnnet3.dct;
 
 import static java.lang.Math.min;
 import static java.util.Collections.sort;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static net.sourceforge.aprog.tools.Tools.*;
 
@@ -199,7 +200,7 @@ public final class MiniCAS {
 		
 		@Override
 		public final Expression visit(final NaryOperation operation) {
-			final List<Expression> approximatedOperands = operation.getOperands().stream().map(this).collect(toList());
+			final List<Expression> approximatedOperands = operation.getOperands().stream().map(this).collect(toCollection(ArrayList::new));
 			boolean allConstant = true;
 			
 			for (final Expression approximatedOperand : approximatedOperands) {
@@ -296,7 +297,7 @@ public final class MiniCAS {
 		@Override
 		public final Expression visit(final NaryOperation operation) {
 			final List<Expression> operands = operation.getOperands();
-			final List<Expression> canonicalOperands = operands.stream().map(this).collect(toList());
+			final List<Expression> canonicalOperands = operands.stream().map(this).collect(toCollection(ArrayList::new));
 			final List<Expression> flattened;
 			
 			if (operation.isAssociative()) {
