@@ -30,11 +30,11 @@ public final class ANNDemo {
 		
 		if (dimensions == 1) {
 			final Expression[] fullDCT = fullDCT(constants(1, 2, 3, 4));
-			final ANN ann = newIDCTNetwork(fullDCT);
+			final ANN ann = newIDCTNetwork(fullDCT, 1.0 / 3.0, 1.5);
 			
 			print(ann);
 			
-			for (double x = 0.0; x < 4; x += 0.5) {
+			for (double x = -4.5; x < 5.0; x += 3.0) {
 				debugPrint("input:", x, "output:", Arrays.toString(ann.evaluate(x)));
 			}
 		} else if (dimensions == 2) {
@@ -52,7 +52,7 @@ public final class ANNDemo {
 			final Object fullDCT = fullDCT(array(
 					array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)),
 					array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
-			final ANN ann = newIDCTNetwork(fullDCT, SIGMOID);
+			final ANN ann = newIDCTNetwork(fullDCT);
 			
 			print(ann);
 			
