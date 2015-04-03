@@ -155,7 +155,7 @@ public final class ANN implements Serializable {
 					addNeuron(hiddenLayer, weights, input);
 					magnitudes.add(magnitude.getAsDouble());
 				} else {
-					for (int k = -cosApproximationQuality; k <= cosApproximationQuality; ++k) {
+					for (int k = 0; k <= cosApproximationQuality; ++k) {
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k - 0.5) * Math.PI;
 						magnitudes.add(magnitude.getAsDouble());
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k + 0.5) * Math.PI;
