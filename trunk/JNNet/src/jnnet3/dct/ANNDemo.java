@@ -26,11 +26,11 @@ public final class ANNDemo {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final int dimensions = 3;
+		final int dimensions = 1;
 		
 		if (dimensions == 1) {
 			final Expression[] fullDCT = fullDCT(constants(1, 2, 3, 4));
-			final ANN ann = newIDCTNetwork(fullDCT, 1.0 / 3.0, 1.5);
+			final ANN ann = newIDCTNetwork(fullDCT, 1.0 / 3.0, 1.5, SINMOID);
 			
 			print(ann);
 			

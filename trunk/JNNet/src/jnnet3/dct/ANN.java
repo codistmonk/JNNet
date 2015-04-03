@@ -84,7 +84,7 @@ public final class ANN implements Serializable {
 	
 	static final DoubleUnaryOperator SINMOID = ANN::sinmoid;
 	
-	static final DoubleUnaryOperator SIGMOID = ANN::sinmoid;
+	static final DoubleUnaryOperator SIGMOID = ANN::sigmoid;
 	
 	static final DoubleUnaryOperator IDENTITY = ANN::identity;
 	
