@@ -84,8 +84,13 @@ public final class ANN implements Serializable {
 	
 	static final DoubleUnaryOperator IDENTITY = ANN::identity;
 	
-	public static final ANN newIDCTNetwork(final Object dct, final int cosApproximationQuality) {
-		final int n = DCT.getDimensionCount(dct.getClass());
+	public static final ANN newIDCTNetwork(final Object dct) {
+		return newIDCTNetwork(dct, SINMOID);
+	}
+	
+	static final ANN newIDCTNetwork(final Object dct, final DoubleUnaryOperator activation) {
+		final int[] dimensions = DCT.getDimensions(dct);
+		final int n = dimensions.length;
 		final Object[] input = new Expression[n];
 		
 		for (int i = 0; i < n; ++i) {
@@ -99,7 +104,6 @@ public final class ANN implements Serializable {
 		final Map<Variable, Constant> weights = new HashMap<>();
 		Layer hiddenLayer = null;
 		final List<Double> magnitudes = new ArrayList<>();
-		final DoubleUnaryOperator activation = cosApproximationQuality < 0 ? COS : SINMOID;
 		
 		for (final Expression term : terms) {
 			Constant magnitude = ONE;
@@ -146,7 +150,6 @@ public final class ANN implements Serializable {
 			}
 			
 			if (!weights.isEmpty()) {
-//				DCT.getDimensionCount(cls)
 				if (hiddenLayer == null) {
 					hiddenLayer = result.addLayer(activation);
 				}
@@ -155,7 +158,15 @@ public final class ANN implements Serializable {
 					addNeuron(hiddenLayer, weights, input);
 					magnitudes.add(magnitude.getAsDouble());
 				} else {
-					for (int k = 0; k <= cosApproximationQuality; ++k) {
+					double max = 0.0;
+					
+					for (int i = 0; i < n; ++i) {
+						max += dimensions[i] * Math.abs(weights.getOrDefault(input[i], ZERO).getAsDouble());
+					}
+					
+					final int l = (int) Math.round(max / 2.0 / Math.PI - 0.5);
+					
+					for (int k = 0; k <= l; ++k) {
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k - 0.5) * Math.PI;
 						magnitudes.add(magnitude.getAsDouble());
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k + 0.5) * Math.PI;
