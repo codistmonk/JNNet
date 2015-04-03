@@ -76,7 +76,7 @@ public final class ANN implements Serializable {
 	
 	private static final long serialVersionUID = -7594919042796851934L;
 	
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	
 	static final double EPSILON = 1.0E-12;
 	
