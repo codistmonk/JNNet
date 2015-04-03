@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jnnet3.dct.ANN.Layer;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**

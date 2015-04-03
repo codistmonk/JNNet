@@ -13,12 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleUnaryOperator;
 
-import jnnet3.dct.MiniCAS.Constant;
-import jnnet3.dct.MiniCAS.Cos;
-import jnnet3.dct.MiniCAS.Expression;
-import jnnet3.dct.MiniCAS.Product;
-import jnnet3.dct.MiniCAS.Sum;
-
 /**
  * @author codistmonk (creation 2015-03-30)
  */
