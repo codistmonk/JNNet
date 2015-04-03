@@ -17,6 +17,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-03-28)
@@ -397,26 +398,29 @@ public final class MiniCAS {
 						factors.clear();
 					}
 					
-					Expression result = sum;
-					
-					while (result instanceof NaryOperation && ((NaryOperation) result).getOperands().size() == 1) {
-						result = ((NaryOperation) result).getOperands().get(0);
-					}
-					
-					return result;
+					return strip(sum);
 				}
 			}
 			
-			if (!sameElements(operands, flattened)) {
-				return operation.newInstance(flattened);
+			if (flattened.size() == 1 && (operation instanceof Sum || operation instanceof Product)) {
+				return strip(flattened.get(0));
 			}
 			
-			return operation;
+			return operation.maybeNew(flattened);
 		}
 		
 		private static final long serialVersionUID = 1135894630542113318L;
 		
 		public static final Canonicalize INSTANCE = new Canonicalize();
+		
+		public static final Expression strip(final Expression expression) {
+			Expression result = expression;
+			
+			while ((result instanceof Sum || result instanceof Product) && ((NaryOperation) result).getOperands().size() == 1) {
+				result = ((NaryOperation) result).getOperands().get(0);
+			}
+			return result;
+		}
 		
 	}
 	
@@ -578,7 +582,8 @@ public final class MiniCAS {
 		
 		@Override
 		public final String toString() {
-			return String.format(Locale.ENGLISH, "%.2f", this.getAsDouble());
+//			return String.format(Locale.ENGLISH, "%.2f", this.getAsDouble());
+			return Double.toString(this.getAsDouble());
 		}
 		
 		private static final long serialVersionUID = 4701039521481142899L;
