@@ -17,7 +17,6 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
-import net.sourceforge.aprog.tools.Tools;
 
 /**
  * @author codistmonk (creation 2015-03-28)
@@ -582,11 +581,16 @@ public final class MiniCAS {
 		
 		@Override
 		public final String toString() {
-//			return String.format(Locale.ENGLISH, "%.2f", this.getAsDouble());
-			return Double.toString(this.getAsDouble());
+			if (DEBUG) {
+				return Double.toString(this.getAsDouble());
+			} else {
+				return String.format(Locale.ENGLISH, "%.2f", this.getAsDouble());
+			}
 		}
 		
 		private static final long serialVersionUID = 4701039521481142899L;
+		
+		private static final boolean DEBUG = false;
 		
 	}
 	

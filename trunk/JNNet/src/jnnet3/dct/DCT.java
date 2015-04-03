@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toCollection;
 import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.*;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,6 +14,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import jnnet3.dct.MiniCAS.Constant;
+import jnnet3.dct.MiniCAS.Cos;
+import jnnet3.dct.MiniCAS.Expression;
+import jnnet3.dct.MiniCAS.NaryOperation;
+import jnnet3.dct.MiniCAS.Product;
+import jnnet3.dct.MiniCAS.Sum;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
@@ -87,8 +95,9 @@ public final class DCT {
 		return result;
 	}
 	
-	public static final Expression separateCosProducts(final Expression expression) {
-		return limitOf(expression, Canonicalize.INSTANCE, CosProductSeparator.INSTANCE);
+	public static final Expression separateCosProducts(final Expression expression, final double epsilon) {
+		return limitOf(approximate(expression, epsilon), CosProductSeparator.INSTANCE,
+				Canonicalize.INSTANCE, new Approximate(epsilon)).accept(new AddPhasors(epsilon));
 	}
 	
 	public static final Expression dct(final Object f, final Object... indices) {
@@ -300,6 +309,197 @@ public final class DCT {
 		private static final long serialVersionUID = -4592831680416231630L;
 		
 		public static final CosProductSeparator INSTANCE = new CosProductSeparator();
+		
+	}
+	
+	/**
+	 * @author codistmonk (creation 2015-04-02)
+	 */
+	public static final class AddPhasors implements Expression.Rewriter {
+		
+		private final double epsilon;
+		
+		public AddPhasors(final double epsilon) {
+			this.epsilon = epsilon;
+		}
+		
+		@Override
+		public final Expression visit(final NaryOperation operation) {
+			final List<Expression> operands = operation.getOperands().stream().map(this).collect(toCollection(ArrayList::new));
+			final Sum sum = cast(Sum.class, operation);
+			
+			if (sum != null) {
+				try {
+					final List<CosTerm> cosTerms = operands.stream().map(CosTerm::new).collect(toCollection(ArrayList::new));
+					
+					operands.clear();
+					
+					for (int i = 0; i < cosTerms.size(); ++i) {
+						final CosTerm cosTermI = cosTerms.get(i);
+						final Expression approximatedFrequencyI = approximate(cosTermI.getFrequency(), this.epsilon);
+						final List<Double> magnitudes = new ArrayList<>();
+						final List<Double> phases = new ArrayList<>();
+						
+						magnitudes.add(cosTermI.getMagnitude().getAsDouble());
+						phases.add(cosTermI.getPhase().getAsDouble());
+						
+						for (int j = i + 1; j < cosTerms.size(); ++j) {
+							final CosTerm cosTermJ = cosTerms.get(j);
+							final Expression approximatedFrequencyJ = approximate(cosTermJ.getFrequency(), this.epsilon);
+							final Expression approximatedOppositeFrequencyJ = approximate(
+									multiply(MINUS_ONE, cosTermJ.getFrequency()), this.epsilon);
+							
+							if (approximatedFrequencyI.equals(approximatedFrequencyJ, this.epsilon)) {
+								phases.add(cosTermJ.getPhase().getAsDouble());
+							} else if (approximatedFrequencyI.equals(approximatedOppositeFrequencyJ, this.epsilon)) {
+								phases.add(-cosTermJ.getPhase().getAsDouble());
+							} else {
+								continue;
+							}
+							
+							magnitudes.add(cosTermJ.getMagnitude().getAsDouble());
+							cosTerms.remove(j);
+							--j;
+						}
+						
+						final int n = magnitudes.size();
+						
+						if (n == 1) {
+							operands.add(cosTermI.getTerm());
+						} else {
+							double a2 = 0.0;
+							double tandN = 0.0;
+							double tandD = 0.0;
+							
+							for (int j = 0; j < n; ++j) {
+								final double mj = magnitudes.get(j);
+								final double pj = phases.get(j);
+								
+								for (int k = 0; k < n; ++k) {
+									final double mk = magnitudes.get(k);
+									final double pk = phases.get(k);
+									
+									a2 += mj * mk * Math.cos(pj - pk);
+								}
+								
+								tandN += mj * Math.sin(pj);
+								tandD += mj * Math.cos(pj);
+							}
+							
+							final double magnitude = Math.sqrt(Math.max(this.epsilon, a2));
+							final double phase = Math.atan2(tandN, tandD);
+							
+							operands.add(multiply(magnitude, cos(add(phase, cosTermI.getFrequency()))));
+						}
+					}
+				} catch (final Exception exception) {
+					ignore(exception);
+				}
+			}
+			
+			return approximate(operation.maybeNew(operands), this.epsilon);
+		}
+		
+		private static final long serialVersionUID = -2969190749620211785L;
+		
+		/**
+		 * @author codistmonk (creation 2015-04-02)
+		 */
+		public static final class CosTerm implements Serializable {
+			
+			private final Expression term;
+			
+			private final Constant magnitude;
+			
+			private final Cos cos;
+			
+			private final Constant phase;
+			
+			private final Expression frequency;
+			
+			public CosTerm(final Expression term) {
+				this.term = term;
+				
+				{
+					final Product product = cast(Product.class, term);
+					
+					if (product != null) {
+						if (product.getOperands().size() != 2) {
+							throw new IllegalArgumentException(term.toString());
+						}
+						
+						this.magnitude = (Constant) product.getOperands().get(0);
+						this.cos = (Cos) product.getOperands().get(1);
+					} else {
+						final Cos cos = cast(Cos.class, term);
+						
+						if (cos != null) {
+							this.magnitude = ONE;
+							this.cos = cos;
+						} else {
+							this.magnitude = (Constant) term;
+							this.cos = cos(ZERO);
+						}
+					}
+				}
+				
+				{
+					final Expression argument = this.cos.getOperand();
+					final Sum sum = cast(Sum.class, argument);
+					
+					if (sum != null) {
+						final List<Expression> sumOperands = sum.getOperands();
+						final Constant phase = cast(Constant.class, sumOperands.get(0));
+						
+						if (phase != null) {
+							this.phase = phase;
+							this.frequency = add(sumOperands.subList(1, sumOperands.size()).toArray());
+						} else {
+							this.phase = ZERO;
+							this.frequency = argument;
+						}
+					} else {
+						final Constant phase = cast(Constant.class, argument);
+						
+						if (phase != null) {
+							this.phase = phase;
+							this.frequency = ZERO;
+						} else {
+							this.phase = ZERO;
+							this.frequency = argument;
+						}
+					}
+				}
+			}
+			
+			public final Expression getTerm() {
+				return this.term;
+			}
+			
+			public final Constant getMagnitude() {
+				return this.magnitude;
+			}
+			
+			public final Cos getCos() {
+				return this.cos;
+			}
+			
+			public final Constant getPhase() {
+				return this.phase;
+			}
+			
+			public final Expression getFrequency() {
+				return this.frequency;
+			}
+			
+			@Override
+			public final String toString() {
+				return "(" + this.getMagnitude() + " " + this.getPhase() + " " + this.getFrequency() + ")";
+			}
+			
+			private static final long serialVersionUID = -4928748997284860125L;
+			
+		}
 		
 	}
 	
