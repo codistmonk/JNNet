@@ -38,7 +38,7 @@ public final class ANNDemo {
 				debugPrint("input:", x, "output:", Arrays.toString(ann.evaluate(x)));
 			}
 		} else if (dimensions == 2) {
-			final Object fullDCT = fullDCT(array(constants(1, 2), constants(3, 4)));
+			final Object fullDCT = fullDCT(array(constants(0, 1), constants(1, 0)));
 			final ANN ann = newIDCTNetwork(fullDCT);
 			
 			print(ann);
@@ -52,7 +52,7 @@ public final class ANNDemo {
 			final Object fullDCT = fullDCT(array(
 					array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)),
 					array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
-			final ANN ann = newIDCTNetwork(fullDCT);
+			final ANN ann = newIDCTNetwork(fullDCT, SIGMOID);
 			
 			print(ann);
 			
@@ -69,9 +69,10 @@ public final class ANNDemo {
 	public static final void print(final ANN ann) {
 		final Map<Object, String> activationToString = new HashMap<Object, String>();
 		
-		activationToString.put(ANN.IDENTITY, "identity");
-		activationToString.put(ANN.COS, "cos");
-		activationToString.put(ANN.SINMOID, "sinmoid");
+		activationToString.put(IDENTITY, "identity");
+		activationToString.put(COS, "cos");
+		activationToString.put(SINMOID, "sinmoid");
+		activationToString.put(SIGMOID, "sigmoid");
 		
 		final List<Layer> layers = ann.getLayers();
 		final int n = layers.size();

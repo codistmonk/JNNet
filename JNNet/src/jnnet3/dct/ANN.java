@@ -82,13 +82,15 @@ public final class ANN implements Serializable {
 	
 	static final DoubleUnaryOperator SINMOID = ANN::sinmoid;
 	
+	static final DoubleUnaryOperator SIGMOID = ANN::sinmoid;
+	
 	static final DoubleUnaryOperator IDENTITY = ANN::identity;
 	
 	public static final ANN newIDCTNetwork(final Object dct) {
-		return newIDCTNetwork(dct, SINMOID);
+		return newIDCTNetwork(dct, SIGMOID);
 	}
 	
-	static final ANN newIDCTNetwork(final Object dct, final DoubleUnaryOperator activation) {
+	public static final ANN newIDCTNetwork(final Object dct, final DoubleUnaryOperator activation) {
 		final int[] dimensions = DCT.getDimensions(dct);
 		final int n = dimensions.length;
 		final Object[] input = new Expression[n];
@@ -99,7 +101,7 @@ public final class ANN implements Serializable {
 		
 		final ANN result = new ANN(n);
 		final Expression idct = separateCosProducts(idct(dct, input), EPSILON);
-		Expression bias = ZERO;
+		double bias = 0.0;
 		final List<Expression> terms = idct instanceof Sum ? ((Sum) idct).getOperands() : Arrays.asList(idct);
 		final Map<Variable, Constant> weights = new HashMap<>();
 		Layer hiddenLayer = null;
@@ -118,7 +120,7 @@ public final class ANN implements Serializable {
 					debugError("Unexpected term:", term);
 				}
 				
-				bias = approximate(add(bias, term), EPSILON);
+				bias += term.getAsDouble();
 				
 				continue;
 			}
@@ -165,15 +167,18 @@ public final class ANN implements Serializable {
 					}
 					
 					final int l = (int) (max / 2.0 / Math.PI);
+					final double c0 = protocosinoid(activation, l, 0);
+					final double cpi = protocosinoid(activation, l, Math.PI);
+					final double scale = 2.0 / (c0 - cpi);
 					
 					for (int k = 0; k <= l; ++k) {
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k - 0.5) * Math.PI;
-						magnitudes.add(magnitude.getAsDouble());
+						magnitudes.add(magnitude.getAsDouble() * scale);
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k + 0.5) * Math.PI;
-						magnitudes.add(-magnitude.getAsDouble());
+						magnitudes.add(-magnitude.getAsDouble() * scale);
 					}
 					
-					bias = approximate(subtract(bias, magnitude), EPSILON);
+					bias -= (magnitude.getAsDouble() + cpi) * scale;
 				}
 			}
 		}
@@ -186,10 +191,24 @@ public final class ANN implements Serializable {
 				outputNeuron[i] = magnitudes.get(i);
 			}
 			
-			outputNeuron[m] = bias.getAsDouble();
+			outputNeuron[m] = bias;
 			
 			return result;
 		}
+	}
+	
+	private static final double pair(final DoubleUnaryOperator activation, final int k, final double x) {
+		return activation.applyAsDouble(x - (2.0 * k - 0.5) * Math.PI) - activation.applyAsDouble(x - (2.0 * k + 0.5) * Math.PI);
+	}
+	
+	private static final double protocosinoid(final DoubleUnaryOperator activation, final int l, final double x) {
+		double result = 0.0;
+		
+		for (int k = 0; k <= l; ++k) {
+			result += pair(activation, k, x);
+		}
+		
+		return result;
 	}
 	
 	private static final double[] addNeuron(final Layer layer, final Map<Variable, Constant> weights, final Object[] input) {
@@ -229,6 +248,10 @@ public final class ANN implements Serializable {
 		}
 		
 		return 1.0;
+	}
+	
+	public static final double sigmoid(final double x) {
+		return 1.0 / (1.0 + Math.exp(-x));
 	}
 	
 	/**
