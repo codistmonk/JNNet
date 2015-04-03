@@ -26,7 +26,7 @@ public final class ANNDemo {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final int dimensions = 2;
+		final int dimensions = 3;
 		
 		if (dimensions == 1) {
 			final Expression[] fullDCT = fullDCT(constants(1, 2, 3, 4));
