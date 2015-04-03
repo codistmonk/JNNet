@@ -2,7 +2,6 @@ package jnnet3.dct;
 
 import static java.util.Arrays.fill;
 import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.Collectors.toList;
 import static jnnet3.dct.DCT.*;
 import static jnnet3.dct.MiniCAS.*;
 import static net.sourceforge.aprog.tools.Tools.*;
@@ -308,30 +307,77 @@ public final class ANN implements Serializable {
 		
 		@Override
 		public final Expression visit(final NaryOperation operation) {
+			final List<Expression> operands = operation.getOperands().stream().map(this).collect(toCollection(ArrayList::new));
 			final Sum sum = cast(Sum.class, operation);
 			
 			if (sum != null) {
-				final List<Expression> operands = operation.getOperands().stream().map(this).collect(toList());
-				final List<CosTerm> cosTerms = operands.stream().map(CosTerm::new).collect(toCollection(ArrayList::new));
-				
-				final int n = operands.size();
-				
-				for (int i = 0; i < n; ++i) {
-					final CosTerm cosTermI = cosTerms.get(i);
+				try {
+					final List<CosTerm> cosTerms = operands.stream().map(CosTerm::new).collect(toCollection(ArrayList::new));
 					
-					for (int j = i + 1; j < n; ++j) {
-						final CosTerm cosTermJ = cosTerms.get(j);
+					operands.clear();
+					
+					for (int i = 0; i < cosTerms.size(); ++i) {
+						final CosTerm cosTermI = cosTerms.get(i);
+						final Expression approximatedFrequencyI = approximate(cosTermI.getFrequency(), this.epsilon);
+						final List<Double> magnitudes = new ArrayList<>();
+						final List<Double> phases = new ArrayList<>();
 						
-						if (cosTermI.getFrequency().equals(cosTermJ.getFrequency(), this.epsilon)) {
-							debugPrint(cosTermI, cosTermJ);
-						} else if (cosTermI.getFrequency().equals(approximate(multiply(MINUS_ONE, cosTermJ.getFrequency()), this.epsilon), this.epsilon)) {
-							debugPrint(cosTermI, cosTermJ);
+						magnitudes.add(cosTermI.getMagnitude().getAsDouble());
+						phases.add(cosTermI.getPhase().getAsDouble());
+						
+						for (int j = i + 1; j < cosTerms.size(); ++j) {
+							final CosTerm cosTermJ = cosTerms.get(j);
+							final Expression approximatedFrequencyJ = approximate(cosTermJ.getFrequency(), this.epsilon);
+							final Expression approximatedOppositeFrequencyJ = approximate(multiply(MINUS_ONE, cosTermJ.getFrequency()), this.epsilon);
+							
+							if (approximatedFrequencyI.equals(approximatedFrequencyJ, this.epsilon)) {
+								phases.add(cosTermJ.getPhase().getAsDouble());
+							} else if (approximatedFrequencyI.equals(approximatedOppositeFrequencyJ, this.epsilon)) {
+								phases.add(-cosTermJ.getPhase().getAsDouble());
+							} else {
+								continue;
+							}
+							
+							magnitudes.add(cosTermJ.getMagnitude().getAsDouble());
+							cosTerms.remove(j);
+						}
+						
+						final int n = magnitudes.size();
+						
+						if (n == 1) {
+							operands.add(cosTermI.getTerm());
+						} else {
+							double a2 = 0.0;
+							double tandN = 0.0;
+							double tandD = 0.0;
+							
+							for (int j = 0; j < n; ++j) {
+								final double mj = magnitudes.get(j);
+								final double pj = phases.get(j);
+								
+								for (int k = 0; k < n; ++k) {
+									final double mk = magnitudes.get(k);
+									final double pk = phases.get(k);
+									
+									a2 += mj * mk * Math.cos(pj - pk);
+								}
+								
+								tandN += mj * Math.sin(pj);
+								tandD += mj * Math.cos(pj);
+							}
+							
+							final double magnitude = Math.sqrt(a2);
+							final double phase = Math.atan2(tandN, tandD);
+							
+							operands.add(multiply(magnitude, cos(add(phase, cosTermI.getFrequency()))));
 						}
 					}
+				} catch (final Exception exception) {
+					ignore(exception);
 				}
 			}
 			
-			return operation;
+			return approximate(operation.maybeNew(operands), this.epsilon);
 		}
 		
 		private static final long serialVersionUID = -2969190749620211785L;
@@ -341,7 +387,9 @@ public final class ANN implements Serializable {
 		 */
 		public static final class CosTerm implements Serializable {
 			
-			private final Expression magnitude;
+			private final Expression term;
+			
+			private final Constant magnitude;
 			
 			private final Cos cos;
 			
@@ -350,6 +398,8 @@ public final class ANN implements Serializable {
 			private final Expression frequency;
 			
 			public CosTerm(final Expression term) {
+				this.term = term;
+				
 				{
 					final Product product = cast(Product.class, term);
 					
@@ -358,7 +408,7 @@ public final class ANN implements Serializable {
 							throw new IllegalArgumentException(term.toString());
 						}
 						
-						this.magnitude = product.getOperands().get(0);
+						this.magnitude = (Constant) product.getOperands().get(0);
 						this.cos = (Cos) product.getOperands().get(1);
 					} else {
 						final Cos cos = cast(Cos.class, term);
@@ -367,7 +417,7 @@ public final class ANN implements Serializable {
 							this.magnitude = ONE;
 							this.cos = cos;
 						} else {
-							this.magnitude = term;
+							this.magnitude = (Constant) term;
 							this.cos = cos(ZERO);
 						}
 					}
@@ -400,11 +450,13 @@ public final class ANN implements Serializable {
 						}
 					}
 				}
-				
-				debugPrint(term, "->", this);
 			}
 			
-			public final Expression getMagnitude() {
+			public final Expression getTerm() {
+				return this.term;
+			}
+			
+			public final Constant getMagnitude() {
 				return this.magnitude;
 			}
 			
