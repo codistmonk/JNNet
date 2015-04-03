@@ -82,7 +82,7 @@ public final class DCTDemo {
 			final Variable x1 = variable("x1");
 			final Variable x2 = variable("x2");
 			final Variable x3 = variable("x3");
-			final Expression expression = approximate(separateCosProducts(idct(dct, x1, x2, x3)), 1.0E-8);
+			final Expression expression = separateCosProducts(idct(dct, x1, x2, x3), 1.0E-8);
 			
 			x1.setValue(expression(0));
 			x2.setValue(expression(1));
