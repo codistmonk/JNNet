@@ -164,7 +164,7 @@ public final class ANN implements Serializable {
 						max += dimensions[i] * Math.abs(weights.getOrDefault(input[i], ZERO).getAsDouble());
 					}
 					
-					final int l = (int) Math.round(max / 2.0 / Math.PI - 0.5);
+					final int l = (int) (max / 2.0 / Math.PI);
 					
 					for (int k = 0; k <= l; ++k) {
 						addNeuron(hiddenLayer, weights, input)[n] -= (2.0 * k - 0.5) * Math.PI;
