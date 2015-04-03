@@ -399,7 +399,8 @@ public final class DCT {
 				}
 			}
 			
-			return approximate(operation.maybeNew(operands), this.epsilon);
+			// XXX find out how to really adjust epsilon to minimize error
+			return approximate(operation.maybeNew(operands), Math.sqrt(this.epsilon) * 2.0);
 		}
 		
 		private static final long serialVersionUID = -2969190749620211785L;

@@ -76,6 +76,8 @@ public final class ANN implements Serializable {
 	
 	private static final long serialVersionUID = -7594919042796851934L;
 	
+	private static final boolean DEBUG = true;
+	
 	static final double EPSILON = 1.0E-12;
 	
 	static final DoubleUnaryOperator COS = Math::cos;
@@ -101,6 +103,11 @@ public final class ANN implements Serializable {
 		
 		final ANN result = new ANN(n);
 		final Expression idct = separateCosProducts(idct(dct, input), EPSILON);
+		
+		if (DEBUG) {
+			debugPrint(idct);
+		}
+		
 		double bias = 0.0;
 		final List<Expression> terms = idct instanceof Sum ? ((Sum) idct).getOperands() : Arrays.asList(idct);
 		final Map<Variable, Constant> weights = new HashMap<>();
@@ -163,10 +170,10 @@ public final class ANN implements Serializable {
 					double max = 0.0;
 					
 					for (int i = 0; i < n; ++i) {
-						max += dimensions[i] * Math.abs(weights.getOrDefault(input[i], ZERO).getAsDouble());
+						max += (dimensions[i] - 1) * Math.abs(weights.getOrDefault(input[i], ZERO).getAsDouble());
 					}
 					
-					final int l = (int) (max / 2.0 / Math.PI);
+					final int l = (int) Math.round(max / 2.0 / Math.PI);
 					final double c0 = protocosinoid(activation, l, 0);
 					final double cpi = protocosinoid(activation, l, Math.PI);
 					final double scale = 2.0 / (c0 - cpi);
