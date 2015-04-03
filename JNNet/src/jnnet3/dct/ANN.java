@@ -102,7 +102,6 @@ public final class ANN implements Serializable {
 		
 		final ANN result = new ANN(n);
 		final Expression idct = approximate(separateCosProducts(idct(dct, input)), EPSILON).accept(new AddPhasors(EPSILON));
-		
 		Expression bias = ZERO;
 		final List<Expression> terms = idct instanceof Sum ? ((Sum) idct).getOperands() : Arrays.asList(idct);
 		final Map<Variable, Constant> weights = new HashMap<>();
@@ -328,7 +327,8 @@ public final class ANN implements Serializable {
 						for (int j = i + 1; j < cosTerms.size(); ++j) {
 							final CosTerm cosTermJ = cosTerms.get(j);
 							final Expression approximatedFrequencyJ = approximate(cosTermJ.getFrequency(), this.epsilon);
-							final Expression approximatedOppositeFrequencyJ = approximate(multiply(MINUS_ONE, cosTermJ.getFrequency()), this.epsilon);
+							final Expression approximatedOppositeFrequencyJ = approximate(
+									multiply(MINUS_ONE, cosTermJ.getFrequency()), this.epsilon);
 							
 							if (approximatedFrequencyI.equals(approximatedFrequencyJ, this.epsilon)) {
 								phases.add(cosTermJ.getPhase().getAsDouble());
