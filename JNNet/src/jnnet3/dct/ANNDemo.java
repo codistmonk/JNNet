@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.DoubleUnaryOperator;
 
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
@@ -26,11 +27,12 @@ public final class ANNDemo {
 	 * <br>Unused
 	 */
 	public static final void main(final String[] commandLineArguments) {
-		final int dimensions = 1;
+		final int dimensions = 3; // options: 1, 2, 3
+		final DoubleUnaryOperator activation = SINMOID; // options: COS, SINMOID, SIGMOID
 		
 		if (dimensions == 1) {
 			final Expression[] fullDCT = fullDCT(constants(1, 2, 3, 4));
-			final ANN ann = newIDCTNetwork(fullDCT, 1.0 / 3.0, 1.5, SINMOID);
+			final ANN ann = newIDCTNetwork(fullDCT, 1.0 / 3.0, 1.5, activation);
 			
 			print(ann);
 			
@@ -39,7 +41,7 @@ public final class ANNDemo {
 			}
 		} else if (dimensions == 2) {
 			final Object fullDCT = fullDCT(array(constants(0, 1), constants(1, 0)));
-			final ANN ann = newIDCTNetwork(fullDCT);
+			final ANN ann = newIDCTNetwork(fullDCT, activation);
 			
 			print(ann);
 			
@@ -52,7 +54,7 @@ public final class ANNDemo {
 			final Object fullDCT = fullDCT(array(
 					array(constants(1, 2, 3, 4), constants(3, 4, 5, 6)),
 					array(constants(5, 6, 7, 8), constants(7, 8, 9, 10))));
-			final ANN ann = newIDCTNetwork(fullDCT);
+			final ANN ann = newIDCTNetwork(fullDCT, activation);
 			
 			print(ann);
 			

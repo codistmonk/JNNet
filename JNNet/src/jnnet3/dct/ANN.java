@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleUnaryOperator;
 
+import net.sourceforge.aprog.tools.MathTools.Statistics;
+
 /**
  * @author codistmonk (creation 2015-03-30)
  */
@@ -172,28 +174,34 @@ public final class ANN implements Serializable {
 				}
 				
 				if (activation == COS) {
-					addNeuron(hiddenLayer, weights, inputScale, inputBias, input);
+					addNeuron(hiddenLayer, weights, inputScale, inputBias, 1.0, input);
 					magnitudes.add(magnitude.getAsDouble());
 				} else {
-					double max = 0.0;
+					final Statistics statistics = new Statistics();
+					final Double phase = weights.getOrDefault(null, 0.0);
+					final double h = activation == SIGMOID ? 2.5 : 1.0;
+					
+					statistics.addValue(phase);
 					
 					for (int i = 0; i < n; ++i) {
-						max += (dimensions[i] - 1) * Math.abs(weights.getOrDefault(input[i], 0.0));
+						statistics.addValue(phase + (dimensions[i] - 1) * weights.getOrDefault(input[i], 0.0));
 					}
 					
-					final int l = (int) Math.round(max / 2.0 / Math.PI);
-					final double c0 = protocosinoid(activation, l, 0);
-					final double cpi = protocosinoid(activation, l, Math.PI);
+					final int firstK = (int) Math.floor(statistics.getMinimum() / 2.0 / Math.PI);
+					final int lastK = (int) Math.floor(statistics.getMaximum() / 2.0 / Math.PI);
+					final double z = firstK * 2.0 * Math.PI;
+					final double c0 = protocosinoid(activation, firstK, lastK, z, h);
+					final double cpi = protocosinoid(activation, firstK, lastK, z + Math.PI, h);
 					final double scale = 2.0 / (c0 - cpi);
 					
-					for (int k = 0; k <= l; ++k) {
-						addNeuron(hiddenLayer, weights, inputScale, inputBias, input)[n] -= (2.0 * k - 0.5) * Math.PI;
+					for (int k = firstK; k <= lastK; ++k) {
+						addNeuron(hiddenLayer, weights, inputScale, inputBias, h, input)[n] -= (2.0 * k + 0.5) * Math.PI * h;
 						magnitudes.add(magnitude.getAsDouble() * scale);
-						addNeuron(hiddenLayer, weights, inputScale, inputBias, input)[n] -= (2.0 * k + 0.5) * Math.PI;
+						addNeuron(hiddenLayer, weights, inputScale, inputBias, h, input)[n] -= (2.0 * k + 1.5) * Math.PI * h;
 						magnitudes.add(-magnitude.getAsDouble() * scale);
 					}
 					
-					bias -= (magnitude.getAsDouble() + cpi) * scale;
+					bias += magnitude.getAsDouble() * (1.0 - scale * c0);
 				}
 			}
 		}
@@ -212,21 +220,23 @@ public final class ANN implements Serializable {
 		}
 	}
 	
-	private static final double pair(final DoubleUnaryOperator activation, final int k, final double x) {
-		return activation.applyAsDouble(x - (2.0 * k - 0.5) * Math.PI) - activation.applyAsDouble(x - (2.0 * k + 0.5) * Math.PI);
+	private static final double pair(final DoubleUnaryOperator activation, final int k, final double x, final double h) {
+		return activation.applyAsDouble(x * h - (2.0 * k + 0.5) * Math.PI * h)
+				- activation.applyAsDouble(x * h - (2.0 * k + 1.5) * Math.PI * h);
 	}
 	
-	private static final double protocosinoid(final DoubleUnaryOperator activation, final int l, final double x) {
+	private static final double protocosinoid(final DoubleUnaryOperator activation, final int firstK, final int lastK, final double x, final double h) {
 		double result = 0.0;
 		
-		for (int k = 0; k <= l; ++k) {
-			result += pair(activation, k, x);
+		for (int k = firstK; k <= lastK; ++k) {
+			result += pair(activation, k, x, h);
 		}
 		
 		return result;
 	}
 	
-	private static final double[] addNeuron(final Layer layer, final Map<Variable, Double> weights, final double inputScale, final double inputBias, final Object[] input) {
+	private static final double[] addNeuron(final Layer layer, final Map<Variable, Double> weights,
+			final double inputScale, final double inputBias, final double h, final Object[] input) {
 		final int n = input.length;
 		final double[] result = layer.addNeuron();
 		double w = 0.0;
@@ -236,7 +246,7 @@ public final class ANN implements Serializable {
 			
 			if (weight != null) {
 				w += weight;
-				result[i] = weight * inputScale;
+				result[i] = weight * inputScale * h;
 			}
 		}
 		
@@ -244,7 +254,7 @@ public final class ANN implements Serializable {
 			final Double weight = weights.get(null);
 			
 			if (weight != null) {
-				result[n] = weight + w * inputBias;
+				result[n] = (weight + w * inputBias) * h;
 			}
 		}
 		
