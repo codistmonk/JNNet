@@ -146,7 +146,7 @@ public final class ANN implements Serializable {
 			}
 			
 			if (!weights.isEmpty()) {
-				
+//				DCT.getDimensionCount(cls)
 				if (hiddenLayer == null) {
 					hiddenLayer = result.addLayer(activation);
 				}

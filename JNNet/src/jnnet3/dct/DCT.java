@@ -150,25 +150,15 @@ public final class DCT {
 	
 	public static final <T> T applyToDimension(final int dimensionIndex, final BiFunction<Expression[], Object, Expression> transform,
 			final T f, final T result) {
-		final List<Integer> dimensions = new ArrayList<>();
-		
-		{
-			Object tmp = f;
-			
-			while (tmp.getClass().isArray()) {
-				dimensions.add(Array.getLength(tmp));
-				tmp = Array.get(tmp, 0);
-			}
-		}
-		
-		final int n = dimensions.size();
+		final int[] dimensions = getDimensions(f);
+		final int n = dimensions.length;
 		final int[] minMaxes = new int[n * 2];
 		
 		for (int i = 0; i < n; ++i) {
-			minMaxes[2 * i + 1] = dimensions.get(i) - 1;
+			minMaxes[2 * i + 1] = dimensions[i] - 1;
 		}
 		
-		final Expression[] inputBuffer = new Expression[dimensions.get(dimensionIndex)];
+		final Expression[] inputBuffer = new Expression[dimensions[dimensionIndex]];
 		final Expression[] outputBuffer = inputBuffer.clone();
 		
 		swap(minMaxes, 2 * dimensionIndex + 1, 2 * n - 1);
@@ -195,6 +185,25 @@ public final class DCT {
 						swap(outputIndices, dimensionIndex, n - 1);
 					}
 				}
+			}
+		}
+		
+		return result;
+	}
+	
+	public static final <T> int[] getDimensions(final T array) {
+		final int n = getDimensionCount(array.getClass());
+		final int[] result = new int[n];
+		Object tmp = array;
+		
+		for (int i = 0; i < n && tmp != null; ++i) {
+			final int m = Array.getLength(tmp);
+			
+			if (0 < m) {
+				result[i] = m;
+				tmp = Array.get(tmp, 0);
+			} else {
+				tmp = null;
 			}
 		}
 		
