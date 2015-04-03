@@ -15,13 +15,6 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import jnnet3.dct.MiniCAS.Constant;
-import jnnet3.dct.MiniCAS.Cos;
-import jnnet3.dct.MiniCAS.Expression;
-import jnnet3.dct.MiniCAS.NaryOperation;
-import jnnet3.dct.MiniCAS.Product;
-import jnnet3.dct.MiniCAS.Sum;
-
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
 
 /**
