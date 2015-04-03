@@ -178,13 +178,16 @@ public final class ANN implements Serializable {
 					magnitudes.add(magnitude.getAsDouble());
 				} else {
 					final Statistics statistics = new Statistics();
-					final Double phase = weights.getOrDefault(null, 0.0);
+					final double phase = weights.getOrDefault(null, 0.0);
 					final double h = activation == SIGMOID ? 2.5 : 1.0;
 					
 					statistics.addValue(phase);
 					
 					for (int i = 0; i < n; ++i) {
-						statistics.addValue(phase + (dimensions[i] - 1) * weights.getOrDefault(input[i], 0.0));
+						// assume 0 <= input[i] <= dimensions[i] - 1
+						final double value = (dimensions[i] - 1) * weights.getOrDefault(input[i], 0.0);
+						statistics.addValue(statistics.getMinimum() + value);
+						statistics.addValue(statistics.getMaximum() + value);
 					}
 					
 					final int firstK = (int) Math.floor(statistics.getMinimum() / 2.0 / Math.PI);
