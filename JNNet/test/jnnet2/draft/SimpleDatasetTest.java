@@ -2,9 +2,9 @@ package jnnet2.draft;
 
 import static org.junit.Assert.*;
 
-import imj2.tools.VectorStatistics;
-
 import java.util.Map;
+
+import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 
 import org.junit.Test;
 

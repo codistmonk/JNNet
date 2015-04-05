@@ -20,7 +20,6 @@ import static net.sourceforge.aprog.tools.Tools.debugPrint;
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
-import imj2.tools.VectorStatistics;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -37,8 +36,10 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jgencode.primitivelists.DoubleList;
+
 import net.sourceforge.aprog.tools.Factory;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Tools;
 

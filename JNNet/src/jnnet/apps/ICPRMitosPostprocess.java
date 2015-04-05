@@ -3,7 +3,6 @@ package jnnet.apps;
 import static imj.MorphologicalOperations.dilate;
 import static imj.MorphologicalOperations.dilate4;
 import static imj.MorphologicalOperations.filterRank;
-import static imj2.tools.VectorStatistics.STATISTICS_FACTORY;
 import static java.lang.Math.sqrt;
 import static jnnet.apps.ICPRMitos.newEnglishScanner;
 import static net.sourceforge.aprog.tools.Factory.DefaultFactory.TREE_MAP_FACTORY;
@@ -81,7 +80,7 @@ public final class ICPRMitosPostprocess {
 		final Map<Integer, AtomicInteger> truePositiveSizeHistogram = (Map<Integer, AtomicInteger>) getOrCreate(
 				progress, "truePositiveSizeHistogram", (Factory) TREE_MAP_FACTORY);
 		final Statistics truePositivePatchSize = (Statistics) getOrCreate(
-				progress, "truePositivePatchSize", (Factory) STATISTICS_FACTORY);
+				progress, "truePositivePatchSize", (Factory) Statistics.FACTORY);
 		final boolean clearMasks = arguments.get("clearMasks", 0)[0] != 0;
 		final double structuringElementSize = 2.0;
 		
