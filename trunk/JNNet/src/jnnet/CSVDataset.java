@@ -10,8 +10,6 @@ import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.ignore;
 
-import imj2.tools.VectorStatistics;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -23,6 +21,7 @@ import java.util.regex.Pattern;
 
 import jgencode.primitivelists.DoubleList;
 
+import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 import net.sourceforge.aprog.tools.TicToc;
 
 /**
@@ -170,7 +169,7 @@ public final class CSVDataset implements Dataset {
 					debugPrint("means:", Arrays.toString(this.statistics[i].getMeans()));
 					debugPrint("minima:", Arrays.toString(this.statistics[i].getMinima()));
 					debugPrint("maxima:", Arrays.toString(this.statistics[i].getMaxima()));
-					debugPrint("stddev:", Arrays.toString(this.statistics[i].getStandardDeviations()));
+					debugPrint("stddev:", Arrays.toString(Arrays.stream(this.statistics[i].getVariances()).map(Math::sqrt).toArray()));
 				}
 			} else {
 				debugPrint("High-dimensional statistics not shown");

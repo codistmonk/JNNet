@@ -5,8 +5,6 @@ import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 import static net.sourceforge.aprog.tools.Tools.instances;
 import static net.sourceforge.aprog.tools.Tools.unchecked;
 
-import imj2.tools.VectorStatistics;
-
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -21,6 +19,7 @@ import jnnet.draft.CSV2Bin.DataType;
 
 import net.sourceforge.aprog.tools.ConsoleMonitor;
 import net.sourceforge.aprog.tools.IllegalInstantiationException;
+import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 import net.sourceforge.aprog.tools.TicToc;
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
 
@@ -201,7 +200,7 @@ public abstract interface Dataset extends Serializable {
 					out.println("means: " + Arrays.toString(this.getStatistics()[i].getMeans()));
 					out.println("minima: " + Arrays.toString(this.getStatistics()[i].getMinima()));
 					out.println("maxima: " + Arrays.toString(this.getStatistics()[i].getMaxima()));
-					out.println("stddev: " + Arrays.toString(this.getStatistics()[i].getStandardDeviations()));
+					out.println("stddev: " + Arrays.toString(Arrays.stream(this.statistics[i].getVariances()).map(Math::sqrt).toArray()));
 				}
 			} else {
 				out.println("High-dimensional statistics not shown");

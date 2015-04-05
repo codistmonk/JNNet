@@ -2,14 +2,13 @@ package jnnet2.core;
 
 import static net.sourceforge.aprog.tools.Tools.getOrCreate;
 
-import imj2.tools.VectorStatistics;
-
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
 import net.sourceforge.aprog.tools.Factory.DefaultFactory;
+import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 
 /**
  * @author codistmonk (creation 2014-07-08)

@@ -4,7 +4,6 @@ import static net.sourceforge.aprog.tools.Tools.debugError;
 import static net.sourceforge.aprog.tools.Tools.getResourceAsStream;
 import static net.sourceforge.aprog.tools.Tools.getThisPackagePath;
 import static org.junit.Assert.*;
-import imj2.tools.VectorStatistics;
 
 import java.util.Collection;
 import java.util.Map;
@@ -12,6 +11,7 @@ import java.util.Map;
 import jnnet2.core.Classifier;
 import jnnet2.core.ConfusionMatrix;
 import jnnet2.core.Dataset;
+import net.sourceforge.aprog.tools.MathTools.VectorStatistics;
 import net.sourceforge.aprog.tools.Tools;
 
 import org.junit.Test;
