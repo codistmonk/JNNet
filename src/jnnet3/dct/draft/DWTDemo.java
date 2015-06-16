@@ -24,6 +24,7 @@ public final class DWTDemo {
 	 */
 	public static final void main(final String[] commandLineArguments) {
 		demo1D();
+		demo2D();
 	}
 	
 	public static final void demo1D() {
@@ -40,11 +41,42 @@ public final class DWTDemo {
 		debugPrint(g.transpose().multiplyRight(newWaveColumn(n, 2.0 / n)).doubleValue(0));
 	}
 	
+	public static final void demo2D() {
+		final BasicMatrix f = newColumn(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
+		final int n1 = 3;
+		final int n2 = f.size() / n1;
+		final BasicMatrix m = newIDWTMatrix(n1, n2);
+		final BasicMatrix g = m.solve(f);
+		
+		debugPrint(m);
+		debugPrint(f);
+		debugPrint(g);
+		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 0.0 / n1, 0.0 / n2)).doubleValue(0));
+		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 0.0 / n1, 1.0 / n2)).doubleValue(0));
+		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 1.0 / n1, 0.0 / n2)).doubleValue(0));
+		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 1.0 / n1, 1.0 / n2)).doubleValue(0));
+		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 2.0 / n1, 0.0 / n2)).doubleValue(0));
+		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 2.0 / n1, 1.0 / n2)).doubleValue(0));
+	}
+	
 	public static final BasicMatrix newWaveColumn(final int n, final double x) {
 		final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(n, 1);
 		
 		for (int i = 0; i < n; ++i) {
 			builder.set(i, wave(i, x));
+		}
+		
+		return builder.build();
+	}
+	
+	public static final BasicMatrix newWaveColumn(final int n1, final int n2, final double x1, final double x2) {
+		final int n = n1 * n2;
+		final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(n, 1);
+		
+		for (int k1 = 0, i = 0; k1 < n1; ++k1) {
+			for (int k2 = 0; k2 < n2; ++k2, ++i) {
+				builder.set(i, wave(k1, x1) + wave(k2, x2));
+			}
 		}
 		
 		return builder.build();
@@ -61,12 +93,42 @@ public final class DWTDemo {
 		return builder.build();
 	}
 	
+//	public static final BasicMatrix newColumns(final int rowCount, final double... values) {
+//		final int columnCount = values.length / rowCount;
+//		final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(rowCount, columnCount);
+//		
+//		for (int i = 0, k = 0; i < rowCount; ++i) {
+//			for (int j = 0; j < columnCount; ++j, ++k) {
+//				builder.set(i, j, values[k]);
+//			}
+//		}
+//		
+//		return builder.build();
+//	}
+	
 	public static final BasicMatrix newIDWTMatrix(final int n) {
 		final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(n, n);
 		
 		for (int x = 0; x < n; ++x) {
 			for (int k = 0; k < n; ++k) {
 				builder.set(x, k, wave(k, (double) x / n));
+			}
+		}
+		
+		return builder.build();
+	}
+	
+	public static final BasicMatrix newIDWTMatrix(final int n1, final int n2) {
+		final int n = n1 * n2;
+		final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(n, n);
+		
+		for (int x1 = 0, i = 0; x1 < n1; ++x1) {
+			for (int x2 = 0; x2 < n2; ++x2, ++i) {
+				for (int k1 = 0, j = 0; k1 < n1; ++k1) {
+					for (int k2 = 0; k2 < n2; ++k2, ++j) {
+						builder.set(i, j, wave(k1, (double) x1 / n1) + wave(k2, (double) x2 / n2));
+					}
+				}
 			}
 		}
 		
