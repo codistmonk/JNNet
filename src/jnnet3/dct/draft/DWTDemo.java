@@ -108,7 +108,7 @@ public final class DWTDemo {
 			for (int x2 = 0; x2 < n2; ++x2, ++i) {
 				for (int k1 = 0, j = 0; k1 < n1; ++k1) {
 					for (int k2 = 0; k2 < n2; ++k2, ++j) {
-						builder.set(i, j, wave(1 + k1, (double) x1 / n1) + wave(1 + k2, (double) x2 / n2));
+						builder.set(i, j, waveCell((double) x1 / n1, k1, (double) x2 / n2, k2));
 					}
 				}
 			}
@@ -117,13 +117,18 @@ public final class DWTDemo {
 		return builder.build();
 	}
 	
+	public static final double waveCell(final double x1, final int k1, final double x2, final int k2) {
+//		return wave(1 + k1, x1) + wave(1 + k2, x2);
+		return wave(1 + k1 + k2, k1 * x1 + k2 * x2);
+	}
+	
 	public static final BasicMatrix newWaveColumn(final int n1, final int n2, final double x1, final double x2) {
 		final int n = n1 * n2;
 		final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(n, 1);
 		
 		for (int k1 = 0, i = 0; k1 < n1; ++k1) {
 			for (int k2 = 0; k2 < n2; ++k2, ++i) {
-				builder.set(i, wave(1 + k1, x1) + wave(1 + k2, x2));
+				builder.set(i, waveCell(x1, k1, x2, k2));
 			}
 		}
 		
