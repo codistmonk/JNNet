@@ -43,11 +43,12 @@ public final class DWTDemo {
 	
 	public static final void demo2D() {
 		final BasicMatrix f = newColumn(
-				1.0, 2.0, 3.0,
-				4.0, -5.0, 6.0,
-				7.0, 8.0, 9.0/*, 10.0, 11.0, 12.0,
-				13.0, 14.0, 15.0, 16.0*/);
-		final int n1 = 3;
+				1, 2, 3, 4, 5,
+				6, 7, 8, 9, 10,
+				11, 12, -13, 14, 15,
+				16, 17, 18, 19, 20,
+				21, 22, 23, 24, 25);
+		final int n1 = 5;
 		final int n2 = f.size() / n1;
 		final BasicMatrix m = newIDWTMatrix(n1, n2);
 		
@@ -122,8 +123,7 @@ public final class DWTDemo {
 	}
 	
 	public static final double waveCell(final double x1, final int k1, final double x2, final int k2) {
-//		return wave(1 + k1, x1) + wave(1 + k2, x2);
-		return wave(1 + k1 + k2, k1 * x1 + k2 * x2);
+		return wave(1 + k1 + k2, k1 * x1 + k2 * x2) + wave(1 + k1 + k2, k1 * x1 - k2 * x2);
 	}
 	
 	public static final BasicMatrix newWaveColumn(final int n1, final int n2, final double x1, final double x2) {
