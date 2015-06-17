@@ -3,6 +3,8 @@ package jnnet3.dct.draft;
 import static java.lang.Math.*;
 import static multij.tools.Tools.*;
 
+import java.util.Arrays;
+
 import multij.tools.IllegalInstantiationException;
 
 import org.ojalgo.matrix.BasicMatrix;
@@ -42,17 +44,19 @@ public final class DWTDemo {
 	}
 	
 	public static final void demo2D() {
-		final BasicMatrix f = newColumn(
-				1, 2, 3, 4, 5,
-				6, 7, 8, 9, 10,
-				11, 12, -13, 14, 15,
-				16, 17, 18, 19, 20,
-				21, 22, 23, 24, 25);
 		final int n1 = 5;
+		final double[] values = Arrays.stream(intRange(n1 * n1)).mapToDouble(x -> x).toArray();
+		values[n1 * n1 / 2] *= -1.0;
+		final BasicMatrix f = newColumn(values);
 		final int n2 = f.size() / n1;
+		
+		debugPrint(n1, n2);
+		
 		final BasicMatrix m = newIDWTMatrix(n1, n2);
 		
-		debugPrint(m);
+		if (f.size() < 50) {
+			debugPrint(m);
+		}
 		
 		final int rank = m.getRank();
 		
@@ -88,18 +92,22 @@ public final class DWTDemo {
 		
 		for (int x = 0; x < n; ++x) {
 			for (int k = 0; k < n; ++k) {
-				builder.set(x, k, wave(k + 1, (double) x / n));
+				builder.set(x, k, waveCell((double) x / n, k));
 			}
 		}
 		
 		return builder.build();
 	}
 	
+	public static final double waveCell(final double x, final int k) {
+		return wave(1 + k, k * x / (1 + k));
+	}
+	
 	public static final BasicMatrix newWaveColumn(final int n, final double x) {
 		final MatrixBuilder<Double> builder = PrimitiveMatrix.getBuilder(n, 1);
 		
-		for (int i = 0; i < n; ++i) {
-			builder.set(i, wave(i + 1, x));
+		for (int k = 0; k < n; ++k) {
+			builder.set(k, waveCell(x, k));
 		}
 		
 		return builder.build();
@@ -123,7 +131,7 @@ public final class DWTDemo {
 	}
 	
 	public static final double waveCell(final double x1, final int k1, final double x2, final int k2) {
-		return wave(1 + k1 + k2, k1 * x1 + k2 * x2) + wave(1 + k1 + k2, k1 * x1 - k2 * x2);
+		return wave(1 + k1 + k2, k1 * x1 / (1 + k1 + k2) + k2 * x2 / (1 + k1 + k2)) + wave(1 + k1 + k2, k1 * x1 / (1 + k1 + k2) - k2 * x2 / (1 + k1 + k2));
 	}
 	
 	public static final BasicMatrix newWaveColumn(final int n1, final int n2, final double x1, final double x2) {
