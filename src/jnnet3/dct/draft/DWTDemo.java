@@ -42,7 +42,11 @@ public final class DWTDemo {
 	}
 	
 	public static final void demo2D() {
-		final BasicMatrix f = newColumn(1.0, 2.0, 3.0, 4.0, -5.0, 6.0);
+		final BasicMatrix f = newColumn(
+				1.0, 2.0, 3.0,
+				4.0, -5.0, 6.0,
+				7.0, 8.0, 9.0/*, 10.0, 11.0, 12.0,
+				13.0, 14.0, 15.0, 16.0*/);
 		final int n1 = 3;
 		final int n2 = f.size() / n1;
 		final BasicMatrix m = newIDWTMatrix(n1, n2);
@@ -59,12 +63,12 @@ public final class DWTDemo {
 		
 		debugPrint(f);
 		debugPrint(g);
-		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 0.0 / n1, 0.0 / n2)).doubleValue(0));
-		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 0.0 / n1, 1.0 / n2)).doubleValue(0));
-		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 1.0 / n1, 0.0 / n2)).doubleValue(0));
-		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 1.0 / n1, 1.0 / n2)).doubleValue(0));
-		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 2.0 / n1, 0.0 / n2)).doubleValue(0));
-		debugPrint(g.transpose().multiplyRight(newWaveColumn(n1, n2, 2.0 / n1, 1.0 / n2)).doubleValue(0));
+		
+		for (int x1 = 0; x1 < n1; ++x1) {
+			for (int x2 = 0; x2 < n2; ++x2) {
+				debugPrint(x1, x2, g.transpose().multiplyRight(newWaveColumn(n1, n2, (double) x1 / n1, (double) x2 / n2)).doubleValue(0));
+			}
+		}
 	}
 	
 	public static final BasicMatrix newColumn(final double... values) {
