@@ -131,7 +131,11 @@ public final class DWTDemo {
 	}
 	
 	public static final double waveCell(final double x1, final int k1, final double x2, final int k2) {
-		return wave(1 + k1 + k2, k1 * x1 / (1 + k1 + k2) + k2 * x2 / (1 + k1 + k2)) + wave(1 + k1 + k2, k1 * x1 / (1 + k1 + k2) - k2 * x2 / (1 + k1 + k2));
+		final int n = 1 + k1 + k2;
+		final double xx1 = k1 * x1 / n;
+		final double xx2 = k2 * x2 / n;
+		
+		return wave(n, xx1 + xx2) + wave(n, xx1 - xx2);
 	}
 	
 	public static final BasicMatrix newWaveColumn(final int n1, final int n2, final double x1, final double x2) {
