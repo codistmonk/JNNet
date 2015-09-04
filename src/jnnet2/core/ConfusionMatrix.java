@@ -16,8 +16,9 @@ public final class ConfusionMatrix implements Serializable {
 	
 	private final Map<Double, Map<Double, double[]>> data = new TreeMap<>();
 	
+	@SuppressWarnings("unchecked")
 	public final ConfusionMatrix count(final double predictedLabel, final double referenceLabel) {
-		++getOrCreate(getOrCreate(this.data, predictedLabel, (Factory) DefaultFactory.TREE_MAP_FACTORY)
+		++getOrCreate((Map<Double, double[]>) getOrCreate(this.data, predictedLabel, (Factory) DefaultFactory.TREE_MAP_FACTORY)
 				, referenceLabel, INDIRECT_DOUBLE_FACTORY)[0];
 		
 		return this;
