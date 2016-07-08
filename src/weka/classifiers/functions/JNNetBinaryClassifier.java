@@ -11,7 +11,7 @@ import java.util.Vector;
 import jnnet.BinaryClassifier;
 import jnnet.SimpleConfusionMatrix;
 import jnnet.SimplifiedNeuralBinaryClassifier;
-
+import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.WekaDataset;
 import weka.core.Capabilities;
@@ -25,7 +25,7 @@ import weka.filters.SupervisedFilter;
 /**
  * @author codistmonk (creation 2014-04-20)
  */
-public final class JNNetBinaryClassifier extends Classifier implements SupervisedFilter, OptionHandler {
+public final class JNNetBinaryClassifier extends AbstractClassifier implements SupervisedFilter, OptionHandler {
 	
 	private BinaryClassifier classifier;
 	

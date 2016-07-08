@@ -12,6 +12,7 @@ import org.junit.Test;
 
 import weka.classifiers.functions.JNNetBinaryClassifier;
 import weka.core.Attribute;
+import weka.core.DenseInstance;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -78,10 +79,10 @@ public final class JNNetBinaryClassifierTest {
 		
 		result.setClassIndex(1);
 		
-		result.add(new Instance(1.0, doubles(1.0, 0.0)));
-		result.add(new Instance(1.0, doubles(2.0, 0.0)));
-		result.add(new Instance(1.0, doubles(3.0, 1.0)));
-		result.add(new Instance(1.0, doubles(4.0, 1.0)));
+		result.add(new DenseInstance(1.0, doubles(1.0, 0.0)));
+		result.add(new DenseInstance(1.0, doubles(2.0, 0.0)));
+		result.add(new DenseInstance(1.0, doubles(3.0, 1.0)));
+		result.add(new DenseInstance(1.0, doubles(4.0, 1.0)));
 		
 		return result;
 	}
